@@ -17,8 +17,6 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-// TOOD Convert all IDs to int64
-
 type config struct {
 	DBUser   string `json:"dbUser"`
 	DBPass   string `json:"dbPass"`
