@@ -2,7 +2,7 @@
 <div class="new-spec-page">
 	<label>
 		Name:
-		<el-input v-model="newSpecName" clearable/>
+		<el-input ref="nameInput" v-model="newSpecName" clearable/>
 	</label>
 	<label>
 		Description:
@@ -15,7 +15,7 @@
 
 <script>
 import $ from 'jquery';
-import {alertError} from '../utils.js';
+import {ajaxCreateSpec} from '../spec/ajax.js';
 
 export default {
 	data() {
@@ -29,12 +29,21 @@ export default {
 			return !this.newSpecName.trim();
 		},
 	},
+	beforeRouteEnter (to, from, next) {
+		next(vm => vm.nextTickFocusNameInput());
+	},
 	beforeRouteUpdate(to, from, next) {
 		this.newSpecName = '';
 		this.newSpecDesc = '';
+		this.nextTickFocusNameInput();
 		next();
 	},
 	methods: {
+		nextTickFocusNameInput() {
+			this.$nextTick(() => {
+				$('input', this.$refs.nameInput.$el).focus();
+			});
+		},
 		cancel() {
 			this.$router.push({name: 'index'});
 		},
@@ -42,12 +51,9 @@ export default {
 			if (this.disableCreate) {
 				return;
 			}
-			$.post('/ajax/create-spec', {
-				name: this.newSpecName,
-				desc: this.newSpecDesc,
-			}).then(specId => {
+			ajaxCreateSpec(this.newSpecName, this.newSpecDesc).then(specId => {
 				this.$router.push({name: 'spec', params: {specId}});
-			}).fail(alertError);
+			});
 		},
 	},
 };

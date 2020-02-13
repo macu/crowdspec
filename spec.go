@@ -1,52 +1,12 @@
 package main
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
-	"log"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 )
-
-func inTransaction(c context.Context, db *sql.DB, f func(*sql.Tx) (interface{}, int, error)) (interface{}, int, error) {
-	tx, err := db.BeginTx(c, nil)
-	if err != nil {
-		rbErr := tx.Rollback()
-		if rbErr != nil {
-			log.Println(rbErr)
-		}
-		return nil, http.StatusInternalServerError, err
-	}
-
-	response, statusCode, err := f(tx)
-	if err != nil {
-		rbErr := tx.Rollback()
-		if rbErr != nil {
-			log.Println(rbErr)
-		}
-		return nil, statusCode, err
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		rbErr := tx.Rollback()
-		if rbErr != nil {
-			log.Println(rbErr)
-		}
-		return nil, http.StatusInternalServerError, err
-	}
-
-	return response, statusCode, nil
-}
-
-// AtoUint converts base 10 string to uint.
-func AtoUint(s string) (uint, error) {
-	r, err := strconv.ParseUint(s, 10, 64)
-	return uint(r), err
-}
 
 // Spec represents a db spec row
 type Spec struct {
@@ -61,9 +21,37 @@ type Spec struct {
 	Desc string `json:"desc"`
 
 	Public bool `json:"public"`
+
+	RootPoints []*SpecSubpoint `json:"points,omitempty"`
 }
 
+// SpecUserAccess represents a spec accessed by a user
+type SpecUserAccess struct {
+	Spec
+
+	UserIsAdmin       bool `json:"userIsAdmin"`
+	UserIsContributor bool `json:"userIsContributor"`
+}
+
+// SpecSubpoint represents a subpoint in a nesting list spec.
+type SpecSubpoint struct {
+	ID      uint      `json:"id"`
+	SpecID  uint      `json:"specId"`
+	Created time.Time `json:"created"`
+
+	ParentID uint `json:"parentId"`
+
+	Title string `json:"title"`
+	Desc  string `json:"desc"`
+
+	OrderNumber uint `json:"orderNumber"`
+
+	SubPoints []*SpecSubpoint `json:"points,omitempty"`
+}
+
+// Returns the ID of the newly created spec.
 func ajaxCreateSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
+	// POST
 	var ownerType string
 	var ownerID uint
 
@@ -107,15 +95,8 @@ func ajaxCreateSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Requ
 	})
 }
 
-// SpecUserAccess represents a spec accessed by a user
-type SpecUserAccess struct {
-	Spec
-
-	UserIsAdmin       bool `json:"userIsAdmin"`
-	UserIsContributor bool `json:"userIsContributor"`
-}
-
 func ajaxSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
+	// GET
 	query := r.URL.Query()
 
 	specID := query.Get("specId")
@@ -144,10 +125,46 @@ func ajaxSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (
 		return nil, http.StatusInternalServerError, err
 	}
 
+	points := []*SpecSubpoint{}
+	pointsByID := map[uint]*SpecSubpoint{}
+	rows, err := db.Query(`
+		SELECT id, spec_id, created, parent_id, title, description, order_number
+		FROM spec_subpoint
+		WHERE spec_id=?
+		ORDER BY order_number
+		`, specID)
+	if err != nil {
+		return nil, http.StatusInternalServerError, err
+	}
+	for rows.Next() {
+		p := &SpecSubpoint{}
+		err = rows.Scan(&p.ID, &p.SpecID, &p.Created, &p.ParentID, &p.Title, &p.Desc, &p.OrderNumber)
+		if err != nil {
+			return nil, http.StatusInternalServerError, err
+		}
+		points = append(points, p)
+		pointsByID[p.ID] = p
+	}
+
+	rootPoints := []*SpecSubpoint{}
+	for _, p := range points {
+		if p.ParentID == 0 {
+			rootPoints = append(rootPoints, p)
+		} else {
+			parentPoint, ok := pointsByID[p.ParentID]
+			if ok {
+				parentPoint.SubPoints = append(parentPoint.SubPoints, p)
+			}
+		}
+	}
+
+	s.RootPoints = rootPoints
+
 	return s, http.StatusOK, nil
 }
 
 func ajaxUserSpecs(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
+	// GET
 	rows, err := db.Query(`
 		SELECT spec.id, spec.created, spec.owner_type, spec.owner_id, spec.name, spec.description, spec.public,
 			user.username AS owner_name
@@ -175,6 +192,7 @@ func ajaxUserSpecs(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reque
 }
 
 func ajaxPublicSpecs(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
+	// GET
 	// TODO Finish owner_name, user_is_admin, user_is_contributor
 	rows, err := db.Query(`
 		SELECT spec.id, spec.created, spec.owner_type, spec.owner_id, spec.name, spec.description, spec.public,
@@ -202,4 +220,67 @@ func ajaxPublicSpecs(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Req
 	}
 
 	return specs, http.StatusOK, nil
+}
+
+func ajaxSpecAddSubpoint(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
+	// POST
+	err := r.ParseForm()
+	if err != nil {
+		return nil, http.StatusInternalServerError, err
+	}
+
+	specID, err := AtoUint(r.Form.Get("specId"))
+	if specID == 0 || err != nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("Valid specId required: %d, %v", specID, err)
+	}
+
+	// TODO Verify write access to spec
+
+	parentID, err := AtoUint(r.Form.Get("parentId"))
+	if err != nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("Valid parentId required: %v", err)
+	}
+
+	// TODO Verify parent point exists in same spec
+
+	title := strings.TrimSpace(r.Form.Get("title"))
+	desc := strings.TrimSpace(r.Form.Get("desc"))
+	if title == "" && desc == "" {
+		return nil, http.StatusBadRequest, fmt.Errorf("Either title or desc required")
+	}
+
+	orderNumber, err := AtoUint(r.Form.Get("orderNumber"))
+	if err != nil {
+		orderNumber = 0
+	}
+
+	return inTransaction(r.Context(), db, func(tx *sql.Tx) (interface{}, int, error) {
+		res, err := tx.Exec(`
+			INSERT INTO spec_subpoint (spec_id, created, parent_id, title, description, order_number)
+			VALUES (?, ?, ?, ?, ?, ?)
+			`, specID, time.Now(), parentID, title, desc, orderNumber)
+		if err != nil {
+			return nil, http.StatusInternalServerError, err
+		}
+
+		newID, err := res.LastInsertId()
+		if err != nil {
+			return nil, http.StatusInternalServerError, err
+		}
+
+		// Load new point from DB
+		newPoint := &SpecSubpoint{}
+		row := tx.QueryRow(`
+			SELECT id, spec_id, created, parent_id, title, description, order_number
+			FROM spec_subpoint
+			WHERE id=?
+			`, newID)
+		err = row.Scan(&newPoint.ID, &newPoint.SpecID, &newPoint.Created,
+			&newPoint.ParentID, &newPoint.Title, &newPoint.Desc, &newPoint.OrderNumber)
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("Failed to read new subpoint: %v", err)
+		}
+
+		return newPoint, http.StatusCreated, nil
+	})
 }

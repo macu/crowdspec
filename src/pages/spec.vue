@@ -1,5 +1,5 @@
 <template>
-<div class="spec-page">
+<div v-if="spec" class="spec-page">
 	<h2>{{spec.name}}</h2>
 	<div v-if="spec.desc" class="desc">{{spec.desc}}</div>
 	<p>Owner: {{spec.ownerName}}</p>
@@ -8,18 +8,23 @@
 	<p v-else>Not public</p>
 	<p v-if="spec.userIsAdmin">You are admin</p>
 	<p v-if="spec.userIsContributor">You are a contributor</p>
+	<hr/>
+	<spec-ul
+		:spec-id="spec.id"
+		:initial-points="spec.points"
+		/>
 </div>
 </template>
 
 <script>
 import $ from 'jquery';
-import {alertError} from '../utils.js';
-
-function ajaxLoadSpec(specId) {
-	return $.get('/ajax/spec', {specId}).fail(alertError);
-}
+import SpecUl from '../spec/spec-ul.vue';
+import {ajaxLoadSpec} from '../spec/ajax.js';
 
 export default {
+	components: {
+		SpecUl,
+	},
 	data() {
 		return {
 			spec: null,

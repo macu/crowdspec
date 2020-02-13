@@ -31,3 +31,12 @@ CREATE TABLE spec (
 	description TEXT NOT NULL,
 	public TINYINT(1) NOT NULL DEFAULT 0
 );
+CREATE TABLE spec_subpoint (
+	id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+	spec_id INT UNSIGNED NOT NULL,
+	parent_id INT UNSIGNED NOT NULL,
+	created DATETIME NOT NULL,
+	title TEXT NOT NULL,
+	description TEXT NOT NULL,
+	order_number INT UNSIGNED NOT NULL
+);

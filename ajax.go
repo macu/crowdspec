@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"log"
@@ -19,7 +20,8 @@ var ajaxHandlers = map[string]map[string]AjaxRoute{
 		"/ajax/public-specs": ajaxPublicSpecs,
 	},
 	http.MethodPost: map[string]AjaxRoute{
-		"/ajax/create-spec": ajaxCreateSpec,
+		"/ajax/spec/create":       ajaxCreateSpec,
+		"/ajax/spec/add-subpoint": ajaxSpecAddSubpoint,
 	},
 }
 
@@ -57,4 +59,35 @@ func ajaxTest(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (
 	return struct {
 		Message string `json:"message"`
 	}{"Message retrieved using AJAX"}, http.StatusOK, nil
+}
+
+func inTransaction(c context.Context, db *sql.DB, f func(tx *sql.Tx) (interface{}, int, error)) (interface{}, int, error) {
+	tx, err := db.BeginTx(c, nil)
+	if err != nil {
+		rbErr := tx.Rollback()
+		if rbErr != nil {
+			log.Println(rbErr)
+		}
+		return nil, http.StatusInternalServerError, err
+	}
+
+	response, statusCode, err := f(tx)
+	if err != nil {
+		rbErr := tx.Rollback()
+		if rbErr != nil {
+			log.Println(rbErr)
+		}
+		return nil, statusCode, err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		rbErr := tx.Rollback()
+		if rbErr != nil {
+			log.Println(rbErr)
+		}
+		return nil, http.StatusInternalServerError, err
+	}
+
+	return response, statusCode, nil
 }

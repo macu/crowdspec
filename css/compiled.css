@@ -4,6 +4,10 @@
 
 .new-spec-page>label{display:block;margin-bottom:20px}.new-spec-page>label>input{display:block;width:100%}
 
+.spec-add-point-modal label{display:block}.spec-add-point-modal label input,.spec-add-point-modal label textarea{display:block;width:100%}.spec-add-point-modal label+label{margin-top:10px}
+
+.spec-li{margin-bottom:5px}.spec-li:last-child{margin-bottom:0}.spec-li>.title{font-weight:bold;margin-bottom:5px}.spec-li>.desc{white-space:pre-wrap;margin-bottom:5px}.spec-li>:last-child{margin-bottom:0}
+
 .spec-page>h2{margin-top:0}.spec-page>.desc{white-space:pre-wrap;margin-bottom:10px}
 
 .app{height:100%}.app>.header{display:flex;background-color:lightblue;padding:20px 1cm;align-items:center}.app>.header>h1{flex:1;margin:0;cursor:pointer}.app>.header>*:not(:last-child){margin-right:20px}.app>.content-area{padding:1cm}
