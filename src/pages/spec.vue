@@ -1,29 +1,28 @@
 <template>
 <div v-if="spec" class="spec-page">
+
 	<h2>{{spec.name}}</h2>
 	<div v-if="spec.desc" class="desc">{{spec.desc}}</div>
-	<p>Owner: {{spec.ownerName}}</p>
+	<p>Owner: {{spec.ownerType}} {{spec.ownerId}}</p>
 	<p>Created: {{spec.created}}</p>
 	<p v-if="spec.public">Public</p>
 	<p v-else>Not public</p>
-	<p v-if="spec.userIsAdmin">You are admin</p>
-	<p v-if="spec.userIsContributor">You are a contributor</p>
+
 	<hr/>
-	<spec-ul
-		:spec-id="spec.id"
-		:initial-points="spec.points"
-		/>
+
+	<spec-view :spec="spec"/>
+
 </div>
 </template>
 
 <script>
 import $ from 'jquery';
-import SpecUl from '../spec/spec-ul.vue';
+import SpecView from '../spec/view.vue';
 import {ajaxLoadSpec} from '../spec/ajax.js';
 
 export default {
 	components: {
-		SpecUl,
+		SpecView,
 	},
 	data() {
 		return {

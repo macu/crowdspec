@@ -1,18 +1,29 @@
 import $ from 'jquery';
 import {alertError} from '../utils.js';
+import {END_INDEX} from './const.js';
 
 export function ajaxLoadSpec(specId) {
-	return $.get('/ajax/spec', {specId}).fail(alertError);
-}
-
-export function ajaxCreateSpec(name, desc) {
-	return $.post('/ajax/spec/create', {
-		name, desc,
+	return $.get('/ajax/spec', {
+		specId,
 	}).fail(alertError);
 }
 
-export function ajaxCreateSubpoint(specId, parentId, orderNumber, title, desc) {
-	return $.post('/ajax/spec/add-subpoint', {
-		specId, parentId, title, desc,
+export function ajaxCreateSpec(name, desc) {
+	return $.post('/ajax/spec/create-spec', {
+		name,
+		desc,
+	}).fail(alertError);
+}
+
+export function ajaxCreateBlock(specId, subspaceId, parentId, insertAt, refType, refId, title, body) {
+	return $.post('/ajax/spec/create-block', {
+		specId, // must be provided
+		subspaceId: subspaceId ? subspaceId : 0, // send 0 for no subspace
+		parentId: parentId ? parentId : 0, // send 0 for no parent
+		insertAt: (insertAt || insertAt === 0) ? insertAt : END_INDEX, // default insert at end
+		refType, // must be valid
+		refId, // may be null or empty string
+		title, // must be provided if no refId
+		body, // may be null or empty string
 	}).fail(alertError);
 }

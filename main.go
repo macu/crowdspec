@@ -14,7 +14,8 @@ import (
 
 	"database/sql"
 
-	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
+	// _ "github.com/go-sql-driver/mysql"
 )
 
 type config struct {
@@ -46,21 +47,31 @@ func main() {
 	// Include file and line in log output
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
-	db, err := sql.Open("mysql", config.DBUser+":"+config.DBPass+"@/"+config.DBName+"?charset=utf8&parseTime=true")
+	//fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", config.DBUser, config.DBPass, config.DBName)
+	db, err := sql.Open("postgres", "postgres://"+config.DBUser+":"+config.DBPass+"@localhost/"+config.DBName+"?sslmode=disable")
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	err = db.Ping()
 	if err != nil {
 		log.Fatalln(err)
 	}
 
 	if *initDB {
 		// Load initializing SQL
-		initFileContents, err := ioutil.ReadFile("sql/init.sql")
+		initFileContents, err := ioutil.ReadFile("sql/init.pgsql")
 		if err != nil {
 			log.Fatalln(err)
 		}
 
-		// Remove comment lines
-		commentMatcher := regexp.MustCompile("(?m)[\r\n]+^--.*$")
-		withoutComments := commentMatcher.ReplaceAllString(string(initFileContents), "")
+		// Remove comments
+		blockCommentMatcher := regexp.MustCompile("(?s)/\\*.*?\\*/")
+		// Match dashed comment lines and trailing dashed comments
+		dashedCommentMatcher := regexp.MustCompile("(?m)(^\\s*--.*$[\r\n]*)|(\\s*--.*$)")
+		// Remove block comments first
+		withoutComments := dashedCommentMatcher.ReplaceAllString(
+			blockCommentMatcher.ReplaceAllString(string(initFileContents), ""), "")
 
 		// Split into statements
 		lines := strings.Split(withoutComments, ";")
@@ -68,7 +79,10 @@ func main() {
 		// Execute each statement
 		for i := 0; i < len(lines); i++ {
 			line := strings.TrimSpace(lines[i])
-			db.Exec(line)
+			_, err = db.Exec(line)
+			if err != nil {
+				log.Fatalln(err)
+			}
 		}
 		log.Println("Database initialized")
 	}
@@ -113,7 +127,7 @@ func main() {
 var indexTemplate = template.Must(template.ParseFiles("index.html"))
 
 func indexHandler(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) {
-	row := db.QueryRow("SELECT username FROM user WHERE id=?", userID)
+	row := db.QueryRow("SELECT username FROM user_account WHERE id=$1", userID)
 	var username string
 	err := row.Scan(&username)
 	if err != nil {

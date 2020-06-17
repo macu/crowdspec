@@ -1,7 +1,7 @@
 <template>
 <div class="index-page">
 
-	<el-button @click="gotoNewSpec()">New Spec</el-button>
+	<el-button @click="gotoNewSpec()">New spec</el-button>
 
 	<div class="user-specs">
 		<h2>Your specs</h2>
@@ -11,18 +11,7 @@
 				<router-link :to="{name: 'spec', params: {specId: s.id}}">{{s.name}}</router-link>
 			</li>
 		</ul>
-		<p v-else>You do not have any specs</p>
-	</div>
-
-	<div class="public-specs">
-		<h2>Public specs</h2>
-		<p v-if="loading">Loading public specs...</p>
-		<ul v-else-if="publicSpecs && publicSpecs.length">
-			<li v-for="s in publicSpecs" :key="s.id">
-				<router-link :to="{name: 'spec', params: {specId: s.id}}">{{s.name}}</router-link>
-			</li>
-		</ul>
-		<p v-else>No public specs</p>
+		<p v-else>You do not have any specs.</p>
 	</div>
 
 </div>
@@ -36,7 +25,6 @@ export default {
 	data() {
 		return {
 			userSpecs: [],
-			publicSpecs: [],
 			loading: true,
 		};
 	},
@@ -52,13 +40,7 @@ export default {
 			this.loading = true;
 			$.get('/ajax/user-specs').then(specs => {
 				this.userSpecs = specs;
-				$.get('/ajax/public-specs').then(publicSpecs => {
-					this.publicSpecs = publicSpecs;
-					this.loading = false;
-				}).fail(jqXHR => {
-					this.loading = false;
-					alertError(jqXHR);
-				});
+				this.loading = false;
 			}).fail(jqXHR => {
 				this.loading = false;
 				alertError(jqXHR);

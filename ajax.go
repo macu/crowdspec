@@ -14,14 +14,21 @@ type AjaxRoute func(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Requ
 
 var ajaxHandlers = map[string]map[string]AjaxRoute{
 	http.MethodGet: map[string]AjaxRoute{
-		"/ajax/test":         ajaxTest,
-		"/ajax/spec":         ajaxSpec,
-		"/ajax/user-specs":   ajaxUserSpecs,
-		"/ajax/public-specs": ajaxPublicSpecs,
+		"/ajax/test":       ajaxTest,
+		"/ajax/user-specs": ajaxUserSpecs,
+		"/ajax/spec":       ajaxSpec,
 	},
 	http.MethodPost: map[string]AjaxRoute{
-		"/ajax/spec/create":       ajaxCreateSpec,
-		"/ajax/spec/add-subpoint": ajaxSpecAddSubpoint,
+		"/ajax/spec/create-spec":     ajaxCreateSpec,
+		"/ajax/spec/save-spec":       ajaxSaveSpec,
+		"/ajax/spec/delete-spec":     ajaxDeleteSpec,
+		"/ajax/spec/create-block":    ajaxSpecCreateBlock,
+		"/ajax/spec/save-block":      ajaxSpecSaveBlock,
+		"/ajax/spec/move-block":      ajaxSpecMoveBlock,
+		"/ajax/spec/delete-block":    ajaxSpecDeleteBlock,
+		"/ajax/spec/create-subspace": ajaxSpecCreateSubspace,
+		"/ajax/spec/save-subspace":   ajaxSpecSaveSubspace,
+		"/ajax/spec/delete-subspace": ajaxSpecDeleteSubspace,
 	},
 }
 

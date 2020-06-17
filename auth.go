@@ -34,11 +34,11 @@ func isAjax(r *http.Request) bool {
 // the authenticated user ID and occasionally updates the expiry of the session cookie.
 // The wrapped handler is not called and 401 is returned if no user is authenticated.
 func makeAuthenticator(db *sql.DB) func(handler AuthenticatedRoute) func(http.ResponseWriter, *http.Request) {
-	selectUserStmt, err := db.Prepare("SELECT user_id, expires FROM session WHERE token=? AND expires>?")
+	selectUserStmt, err := db.Prepare("SELECT user_id, expires FROM user_session WHERE token=$1 AND expires>$2")
 	if err != nil {
 		panic(err)
 	}
-	updateSessionStmt, err := db.Prepare("UPDATE session SET expires=? WHERE token=?")
+	updateSessionStmt, err := db.Prepare("UPDATE user_session SET expires=$1 WHERE token=$2")
 	if err != nil {
 		panic(err)
 	}
@@ -109,11 +109,11 @@ func makeAuthenticator(db *sql.DB) func(handler AuthenticatedRoute) func(http.Re
 }
 
 func makeLoginHandler(db *sql.DB) func(http.ResponseWriter, *http.Request) {
-	selectUserStmt, err := db.Prepare("SELECT id, auth_hash FROM user WHERE username=?")
+	selectUserStmt, err := db.Prepare("SELECT id, auth_hash FROM user_account WHERE username=$1")
 	if err != nil {
 		panic(err)
 	}
-	insertSessionStmt, err := db.Prepare("INSERT INTO session (token, user_id, expires) VALUES (?, ?, ?)")
+	insertSessionStmt, err := db.Prepare("INSERT INTO user_session (token, user_id, expires) VALUES ($1, $2, $3)")
 	if err != nil {
 		panic(err)
 	}
@@ -170,7 +170,7 @@ func makeLoginHandler(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 
 func logoutHandler(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) {
 	sessionTokenCookie, _ := r.Cookie(sessionTokenCookieName)
-	_, err := db.Exec("DELETE FROM session WHERE token=?", sessionTokenCookie.Value)
+	_, err := db.Exec("DELETE FROM session WHERE token=$1", sessionTokenCookie.Value)
 	if err != nil {
 		log.Println(err)
 	}

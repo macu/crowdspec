@@ -36,7 +36,7 @@ func createUser(db *sql.DB, username, password, email string) (int64, error) {
 		return 0, errors.New("Password must not be empty")
 	}
 
-	existing := db.QueryRow("SELECT EXISTS(SELECT * FROM user WHERE username=?)", username)
+	existing := db.QueryRow("SELECT EXISTS(SELECT * FROM user_account WHERE username = $1)", username)
 	var exists bool
 	err := existing.Scan(&exists)
 	if err != nil {
@@ -56,13 +56,10 @@ func createUser(db *sql.DB, username, password, email string) (int64, error) {
 		return 0, err
 	}
 
-	res, err := tx.Exec("INSERT INTO user (username, email, auth_hash, created_at) VALUES (?, ?, ?, ?)",
-		username, email, authHash, time.Now())
-	if err != nil {
-		_ = tx.Rollback()
-		return 0, err
-	}
-	userID, err := res.LastInsertId()
+	var userID int64
+	err = tx.QueryRow(
+		"INSERT INTO user_account (username, email, auth_hash, created_at) VALUES ($1, $2, $3, $4) RETURNING id",
+		username, email, authHash, time.Now()).Scan(&userID)
 	if err != nil {
 		_ = tx.Rollback()
 		return 0, err

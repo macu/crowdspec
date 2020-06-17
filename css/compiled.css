@@ -4,9 +4,10 @@
 
 .new-spec-page>label{display:block;margin-bottom:20px}.new-spec-page>label>input{display:block;width:100%}
 
-.spec-add-point-modal label{display:block}.spec-add-point-modal label input,.spec-add-point-modal label textarea{display:block;width:100%}.spec-add-point-modal label+label{margin-top:10px}
+.spec-block{padding-top:10px;padding-bottom:10px}.spec-block>ul{margin-top:10px}.spec-block>button{margin-top:10px}
 
-.spec-li{margin-bottom:5px}.spec-li:last-child{margin-bottom:0}.spec-li>.title{font-weight:bold;margin-bottom:5px}.spec-li>.desc{white-space:pre-wrap;margin-bottom:5px}.spec-li>:last-child{margin-bottom:0}
+.spec-add-block-modal label{display:block}.spec-add-block-modal label input,.spec-add-block-modal label textarea{display:block;width:100%}.spec-add-block-modal label+label{margin-top:10px}
+
 
 .spec-page>h2{margin-top:0}.spec-page>.desc{white-space:pre-wrap;margin-bottom:10px}
 
