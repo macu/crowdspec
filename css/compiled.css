@@ -4,7 +4,7 @@
 
 .new-spec-page>label{display:block;margin-bottom:20px}.new-spec-page>label>input{display:block;width:100%}
 
-.spec-block{padding-top:10px;padding-bottom:10px}.spec-block>ul{margin-top:10px}.spec-block>button{margin-top:10px}
+.spec-block{padding-top:10px;padding-bottom:10px}.spec-block>.title{font-weight:bold}.spec-block>.body{white-space:pre-wrap}.spec-block>ul{margin-top:10px}.spec-block>button{margin-top:10px}
 
 .spec-add-block-modal label{display:block}.spec-add-block-modal label input,.spec-add-block-modal label textarea{display:block;width:100%}.spec-add-block-modal label+label{margin-top:10px}
 

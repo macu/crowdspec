@@ -1,19 +1,20 @@
 -- Clean up previous instance
-DROP TABLE IF EXISTS user_session;
-DROP TABLE IF EXISTS user_account;
-DROP TABLE IF EXISTS user_group;
-DROP TABLE IF EXISTS organisation;
-DROP TYPE IF EXISTS org_permission;
+DROP TABLE IF EXISTS org_permission;
 DROP TYPE IF EXISTS org_permission_level;
-DROP TABLE IF EXISTS spec;
-DROP TYPE IF EXISTS spec_owner_type;
+DROP TABLE IF EXISTS organisation;
 DROP TABLE IF EXISTS spec_permission;
 DROP TYPE IF EXISTS spec_permission_level;
-DROP TABLE IF EXISTS spec_subspace;
 DROP TABLE IF EXISTS spec_block;
 DROP TYPE IF EXISTS spec_block_type;
+DROP TABLE IF EXISTS spec_subspace;
+DROP TABLE IF EXISTS spec;
+DROP TYPE IF EXISTS spec_owner_type;
+DROP TABLE IF EXISTS user_group_member;
+DROP TABLE IF EXISTS user_group;
 DROP TYPE IF EXISTS grant_type;
 DROP TABLE IF EXISTS text_intern;
+DROP TABLE IF EXISTS user_session;
+DROP TABLE IF EXISTS user_account;
 
 -- Create minimal tables for user authentication and session management
 CREATE TABLE user_account (
@@ -25,9 +26,24 @@ CREATE TABLE user_account (
 );
 CREATE TABLE user_session (
 	token VARCHAR(30) PRIMARY KEY,
-	user_id INTEGER NOT NULL,
-	expires TIMESTAMP NOT NULL,
-	FOREIGN KEY (user_id) REFERENCES user_account(id)
+	user_id INTEGER NOT NULL REFERENCES user_account (id) ON DELETE CASCADE,
+	expires TIMESTAMP NOT NULL
+);
+
+CREATE TABLE user_group (
+	id SERIAL PRIMARY KEY,
+	group_name VARCHAR(50),
+	created_at TIMESTAMP NOT NULL
+);
+CREATE TABLE user_group_member (
+	group_id INTEGER NOT NULL REFERENCES user_group (id) ON DELETE CASCADE,
+	user_id INTEGER NOT NULL REFERENCES user_account (id) ON DELETE CASCADE,
+	PRIMARY KEY (group_id, user_id)
+);
+
+CREATE TYPE grant_type AS ENUM (
+	'user', -- grant applies to user_account
+	'group' -- grant applies to user_group
 );
 
 CREATE TABLE organisation (
@@ -36,15 +52,6 @@ CREATE TABLE organisation (
 	org_name VARCHAR(120) NOT NULL,
 	org_intro TEXT
 );
-CREATE TABLE user_group (
-	id SERIAL PRIMARY KEY,
-	group_name VARCHAR(50),
-	created_at TIMESTAMP NOT NULL
-);
-CREATE TYPE grant_type AS ENUM (
-	'user', -- grant applies to user_account
-	'group' -- grant applies to user_group
-);
 CREATE TYPE org_permission_level AS ENUM (
 	'owner', -- user or group owns org
 	'admin', -- user or group can administrate org
@@ -52,22 +59,11 @@ CREATE TYPE org_permission_level AS ENUM (
 	'external' -- user or group are external (can view and contribute to listed org specs)
 );
 CREATE TABLE org_permission (
-	org_id INTEGER NOT NULL,
+	org_id INTEGER NOT NULL REFERENCES organisation (id) ON DELETE CASCADE,
 	grant_type grant_type NOT NULL,
 	grant_id INTEGER NOT NULL,
 	permission_level org_permission_level NOT NULL,
 	CONSTRAINT user_owns CHECK (grant_type = 'user' OR permission_level != 'owner')
-);
-CREATE TYPE spec_permission_level AS ENUM (
-	'admin', -- user or group can administrate spec
-	'editor', -- user or group can manage spec
-	'contributor' -- user or group can view and contribute to spec
-);
-CREATE TABLE spec_permission (
-	spec_id INTEGER NOT NULL,
-	grant_type grant_type NOT NULL,
-	grant_id INTEGER NOT NULL,
-	permission_level spec_permission_level NOT NULL
 );
 
 -- Create spec tables
@@ -84,9 +80,20 @@ CREATE TABLE spec (
 	spec_desc TEXT,
 	is_public BOOLEAN NOT NULL DEFAULT false
 );
+CREATE TYPE spec_permission_level AS ENUM (
+	'admin', -- user or group can administrate spec
+	'editor', -- user or group can manage spec
+	'contributor' -- user or group can view and contribute to spec
+);
+CREATE TABLE spec_permission (
+	spec_id INTEGER NOT NULL REFERENCES spec (id) ON DELETE CASCADE,
+	grant_type grant_type NOT NULL,
+	grant_id INTEGER NOT NULL,
+	permission_level spec_permission_level NOT NULL
+);
 CREATE TABLE spec_subspace (
 	id SERIAL PRIMARY KEY,
-	spec_id INTEGER NOT NULL,
+	spec_id INTEGER NOT NULL REFERENCES spec (id) ON DELETE CASCADE,
 	created_at TIMESTAMP NOT NULL,
 	subspace_name VARCHAR(255) NOT NULL,
 	subspace_desc TEXT
@@ -102,9 +109,9 @@ CREATE TYPE spec_block_type AS ENUM (
 );
 CREATE TABLE spec_block (
 	id SERIAL PRIMARY KEY,
-	spec_id INTEGER NOT NULL,
-	subspace_id INTEGER NOT NULL,
-	parent_id INTEGER NOT NULL,
+	spec_id INTEGER NOT NULL REFERENCES spec (id) ON DELETE CASCADE,
+	subspace_id INTEGER REFERENCES spec_subspace (id) ON DELETE CASCADE,
+	parent_id INTEGER REFERENCES spec_block (id) ON DELETE CASCADE,
 	order_number INTEGER NOT NULL,
 	block_type spec_block_type NOT NULL,
 	ref_id INTEGER,

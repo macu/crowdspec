@@ -37,7 +37,7 @@ export default {
 	},
 	methods: {
 		promptAddBlock() {
-			this.$refs.addBlockModal.show(0, 0, END_INDEX, newBlock => {
+			this.$refs.addBlockModal.show(null, null, END_INDEX, newBlock => {
 				this.blocks.push(newBlock);
 			});
 		},

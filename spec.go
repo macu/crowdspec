@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -37,11 +36,11 @@ type SpecSubspace struct {
 type SpecBlock struct {
 	ID          int64   `json:"id"`
 	SpecID      int64   `json:"specId"`
-	SubspaceID  int64   `json:"subspaceId"` // may be 0 (belongs to spec)
-	ParentID    int64   `json:"parentId"`   // may be 0 (root level)
+	SubspaceID  *int64  `json:"subspaceId"` // may be null (belongs to spec directly)
+	ParentID    *int64  `json:"parentId"`   // may be null (root level)
 	OrderNumber int     `json:"orderNumber"`
 	Type        string  `json:"type"` //  markdown, plaintext, subspace
-	RefID       *int64  `json:"refId,omitempty"`
+	RefID       *int64  `json:"refId"`
 	Title       *string `json:"title"`
 	Body        *string `json:"body"`
 
@@ -177,9 +176,9 @@ func loadBlocks(db *sql.DB, specID int64, subspaceID *int64) ([]*SpecBlock, erro
 			spec_block.block_title, spec_block.block_body,
 			NULL AS subspace_name, NULL AS subspace_desc, NULL AS subspace_created_at
 			FROM spec_block
-			WHERE spec_block.spec_id=$1 AND spec_block.subspace_id=$2
+			WHERE spec_block.spec_id=$1 AND spec_block.subspace_id IS NULL
 			ORDER BY spec_block.parent_id, spec_block.order_number
-			`, specID, 0)
+			`, specID)
 	}
 	if err != nil {
 		return nil, err
@@ -212,10 +211,10 @@ func loadBlocks(db *sql.DB, specID int64, subspaceID *int64) ([]*SpecBlock, erro
 
 	rootBlocks := []*SpecBlock{}
 	for _, b := range blocks {
-		if b.ParentID == 0 {
+		if b.ParentID == nil {
 			rootBlocks = append(rootBlocks, b)
 		} else {
-			parentBlock, ok := blocksByID[b.ParentID]
+			parentBlock, ok := blocksByID[*b.ParentID]
 			if ok {
 				parentBlock.SubBlocks = append(parentBlock.SubBlocks, b)
 			}
@@ -267,14 +266,14 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 
 	// TODO Verify write access to spec
 
-	subspaceID, err := AtoInt64(r.Form.Get("subspaceId"))
+	subspaceID, err := AtoInt64ne(r.Form.Get("subspaceId"))
 	if err != nil {
 		return nil, http.StatusBadRequest, err
 	}
 
 	// TODO Verify subspace is within spec
 
-	parentID, err := AtoInt64(r.Form.Get("parentId"))
+	parentID, err := AtoInt64ne(r.Form.Get("parentId"))
 	if err != nil {
 		return nil, http.StatusBadRequest, err
 	}
@@ -291,14 +290,12 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 		return nil, http.StatusBadRequest, fmt.Errorf("Invalid refType: %s", refType)
 	}
 
-	refID, err := AtoInt64(r.Form.Get("refId"))
+	refID, err := AtoInt64ne(r.Form.Get("refId"))
 	if err != nil {
-		e := err.(*strconv.NumError)
-		if e.Num != "" {
-			return nil, http.StatusBadRequest, err
-		} else if isReferenceBlockType(refType) {
-			return nil, http.StatusBadRequest, fmt.Errorf("refId is required for reference blocks")
-		}
+		return nil, http.StatusBadRequest, err
+	}
+	if refID == nil && isReferenceBlockType(refType) {
+		return nil, http.StatusBadRequest, fmt.Errorf("refId is required for reference blocks")
 	}
 
 	title := strings.TrimSpace(r.Form.Get("title"))
@@ -357,9 +354,7 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 			ParentID:    parentID,
 			OrderNumber: insertAt,
 			Type:        refType,
-		}
-		if refID != 0 {
-			block.RefID = &refID
+			RefID:       refID,
 		}
 		if title != "" {
 			block.Title = &title

@@ -18,8 +18,8 @@ export function ajaxCreateSpec(name, desc) {
 export function ajaxCreateBlock(specId, subspaceId, parentId, insertAt, refType, refId, title, body) {
 	return $.post('/ajax/spec/create-block', {
 		specId, // must be provided
-		subspaceId: subspaceId ? subspaceId : 0, // send 0 for no subspace
-		parentId: parentId ? parentId : 0, // send 0 for no parent
+		subspaceId, // null if spec-level
+		parentId, // null if no parent
 		insertAt: (insertAt || insertAt === 0) ? insertAt : END_INDEX, // default insert at end
 		refType, // must be valid
 		refId, // may be null or empty string

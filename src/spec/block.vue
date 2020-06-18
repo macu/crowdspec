@@ -34,7 +34,7 @@ export default {
 	},
 	methods: {
 		promptAddSubblock() {
-			this.raisePromptAddSubblock(0, this.block.id, END_INDEX, newBlock => {
+			this.raisePromptAddSubblock(null, this.block.id, END_INDEX, newBlock => {
 				this.subblocks.push(newBlock);
 			});
 		},
@@ -49,6 +49,14 @@ export default {
 .spec-block {
 	padding-top: 10px;
 	padding-bottom: 10px;
+
+	>.title {
+		font-weight: bold;
+	}
+
+	>.body {
+		white-space: pre-wrap;
+	}
 
 	>ul {
 		margin-top: 10px;
