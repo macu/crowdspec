@@ -39,7 +39,9 @@ type SpecBlock struct {
 	SubspaceID  *int64  `json:"subspaceId"` // may be null (belongs to spec directly)
 	ParentID    *int64  `json:"parentId"`   // may be null (root level)
 	OrderNumber int     `json:"orderNumber"`
-	Type        string  `json:"type"` //  markdown, plaintext, subspace
+	StyleType   string  `json:"styleType"`
+	ContentType *string `json:"contentType"`
+	RefType     *string `json:"refType"`
 	RefID       *int64  `json:"refId"`
 	Title       *string `json:"title"`
 	Body        *string `json:"body"`
@@ -50,31 +52,65 @@ type SpecBlock struct {
 }
 
 const (
-	// BlockTypeText indicates a text block with basic html.
-	BlockTypeText = "text"
-	// BlockTypeBullet indicates a bullet point with basic html.
-	BlockTypeBullet = "bullet"
-	// BlockTypeNumbered indicates a numbered list point with basic html.
-	BlockTypeNumbered = "numbered"
-	// BlockTypeImageRef indicates an image block with optional local title and body.
-	BlockTypeImageRef = "image-ref"
-	// BlockTypeVideoRef indicates a video block with optional local title and body.
-	BlockTypeVideoRef = "video-ref"
-	// BlockTypeSubspaceRef indicates a subspace reference block with optional local title and body.
-	BlockTypeSubspaceRef = "subspace-ref"
-	// BlockTypeSpecRef indicates a spec reference block with optional local title and body.
-	BlockTypeSpecRef = "spec-ref"
+	// ListStyleBullet indicates a bullet point style list item.
+	ListStyleBullet = "bullet"
+	// ListStyleNumbered indicates a list item numbered relative to other numbered items in the same list.
+	ListStyleNumbered = "numbered"
+	// ListStyleNone indicates a list item with no bullet.
+	ListStyleNone = "none"
+
+	// TextContentPlain indicates plaintext with potential newlines.
+	TextContentPlain = "plaintext"
+	// TextContentMarkdown indicates markdown processing is required for rendering.
+	TextContentMarkdown = "markdown"
+	// TextContentHTML indicates content should be sanitized and rendered as HTML.
+	TextContentHTML = "html"
+
+	// BlockRefOrg indicates a reference to an organisation.
+	BlockRefOrg = "org"
+	// BlockRefSpec indicates a reference to a spec.
+	BlockRefSpec = "spec"
+	// BlockRefSubspace indicates a reference to a subspace in this or another spec.
+	BlockRefSubspace = "subspace"
+	// BlockRefBlock indicates a reference to a block in this or another spec.
+	BlockRefBlock = "block"
+	// BlockRefImage indicates an image reference owned by the spec owner.
+	BlockRefImage = "image"
+	// BlockRefVideo indicates a reference to an external video.
+	BlockRefVideo = "video"
+	// BlockRefURL indicates a reference to a URL.
+	BlockRefURL = "url"
+	// BlockRefFile indicates a reference to a file owned by the spec owner.
+	BlockRefFile = "file"
 )
 
-func isValidBlockType(t string) bool {
-	return t == BlockTypeText || t == BlockTypeBullet || t == BlockTypeNumbered ||
-		t == BlockTypeImageRef || t == BlockTypeVideoRef ||
-		t == BlockTypeSubspaceRef || t == BlockTypeSpecRef
+func isValidListStyleType(t string) bool {
+	return stringInSlice(t, []string{
+		ListStyleBullet,
+		ListStyleNumbered,
+		ListStyleNone,
+	})
 }
 
-func isReferenceBlockType(t string) bool {
-	return t == BlockTypeImageRef || t == BlockTypeVideoRef ||
-		t == BlockTypeSubspaceRef || t == BlockTypeSpecRef
+func isValidTextContentType(t string) bool {
+	return stringInSlice(t, []string{
+		TextContentPlain,
+		// TextContentMarkdown,
+		// TextContentHTML,
+	})
+}
+
+func isValidBlockRefType(t string) bool {
+	return stringInSlice(t, []string{
+		// BlockRefOrg,
+		// BlockRefSpec,
+		BlockRefSubspace,
+		// BlockRefBlock,
+		// BlockRefImage,
+		// BlockRefVideo,
+		// BlockRefURL,
+		// BlockRefFile,
+	})
 }
 
 // Returns the ID of the newly created spec.
@@ -158,7 +194,7 @@ func loadBlocks(db *sql.DB, specID int64, subspaceID *int64) ([]*SpecBlock, erro
 		rows, err = db.Query(`
 			SELECT spec_block.id, spec_block.spec_id, spec_block.subspace_id, spec_block.parent_id,
 			spec_block.order_number,
-			spec_block.block_type, spec_block.ref_id,
+			spec_block.style_type, spec_block.content_type, spec_block.ref_type, spec_block.ref_id,
 			spec_block.block_title, spec_block.block_body,
 			spec_subspace.subspace_name, spec_subspace.subspace_desc, spec_subspace.created_at AS subspace_created_at
 			FROM spec_block
@@ -172,7 +208,7 @@ func loadBlocks(db *sql.DB, specID int64, subspaceID *int64) ([]*SpecBlock, erro
 		rows, err = db.Query(`
 			SELECT spec_block.id, spec_block.spec_id, spec_block.subspace_id, spec_block.parent_id,
 			spec_block.order_number,
-			spec_block.block_type, spec_block.ref_id,
+			spec_block.style_type, spec_block.content_type, spec_block.ref_type, spec_block.ref_id,
 			spec_block.block_title, spec_block.block_body,
 			NULL AS subspace_name, NULL AS subspace_desc, NULL AS subspace_created_at
 			FROM spec_block
@@ -192,17 +228,21 @@ func loadBlocks(db *sql.DB, specID int64, subspaceID *int64) ([]*SpecBlock, erro
 		var subspaceName, subspaceDesc *string
 		var subspaceCreated *time.Time
 		err = rows.Scan(&b.ID, &b.SpecID, &b.SubspaceID, &b.ParentID, &b.OrderNumber,
-			&b.Type, &b.RefID, &b.Title, &b.Body, &subspaceName, &subspaceDesc, &subspaceCreated)
+			&b.StyleType, &b.ContentType, &b.RefType, &b.RefID, &b.Title, &b.Body,
+			&subspaceName, &subspaceDesc, &subspaceCreated)
 		if err != nil {
 			return nil, err
 		}
-		if b.Type == "subspace-ref" && subspaceName != nil {
-			b.RefItem = &SpecSubspace{
-				ID:      *b.RefID,
-				SpecID:  specID,
-				Created: *subspaceCreated,
-				Name:    *subspaceName,
-				Desc:    subspaceDesc,
+		if b.RefType != nil {
+			switch *b.RefType {
+			case BlockRefSubspace:
+				b.RefItem = &SpecSubspace{
+					ID:      *b.RefID,
+					SpecID:  specID,
+					Created: *subspaceCreated,
+					Name:    *subspaceName,
+					Desc:    subspaceDesc,
+				}
 			}
 		}
 		blocks = append(blocks, b)
@@ -285,17 +325,35 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 		return nil, http.StatusBadRequest, err
 	}
 
-	refType := r.Form.Get("refType")
-	if !isValidBlockType(refType) {
-		return nil, http.StatusBadRequest, fmt.Errorf("Invalid refType: %s", refType)
+	styleType := r.Form.Get("styleType")
+	if !isValidListStyleType(styleType) {
+		return nil, http.StatusBadRequest, fmt.Errorf("Invalid styleType: %s", styleType)
+	}
+
+	contentTypeValue := r.Form.Get("contentType")
+	var contentType *string
+	if contentTypeValue != "" {
+		if !isValidTextContentType(contentTypeValue) {
+			return nil, http.StatusBadRequest, fmt.Errorf("Invalid contentType: %s", contentTypeValue)
+		}
+		contentType = &contentTypeValue
+	}
+
+	refTypeValue := r.Form.Get("refType")
+	var refType *string
+	if refTypeValue != "" {
+		if !isValidBlockRefType(refTypeValue) {
+			return nil, http.StatusBadRequest, fmt.Errorf("Invalid refType: %s", refTypeValue)
+		}
+		refType = &refTypeValue
 	}
 
 	refID, err := AtoInt64ne(r.Form.Get("refId"))
 	if err != nil {
 		return nil, http.StatusBadRequest, err
 	}
-	if refID == nil && isReferenceBlockType(refType) {
-		return nil, http.StatusBadRequest, fmt.Errorf("refId is required for reference blocks")
+	if refID == nil && refType != nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("refId is required when refType is given")
 	}
 
 	title := strings.TrimSpace(r.Form.Get("title"))
@@ -338,10 +396,13 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 		// Create block row
 		var blockID int64
 		err = tx.QueryRow(`
-				INSERT INTO spec_block (spec_id, subspace_id, parent_id, order_number, block_type, ref_id, block_title, block_body)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-				RETURNING id
-				`, specID, subspaceID, parentID, insertAt, refType, refID, title, body).Scan(&blockID)
+			INSERT INTO spec_block
+			(spec_id, subspace_id, parent_id, order_number,
+				style_type, content_type, ref_type, ref_id, block_title, block_body)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+			RETURNING id
+			`, specID, subspaceID, parentID, insertAt,
+			styleType, contentType, refType, refID, title, body).Scan(&blockID)
 		if err != nil {
 			return nil, http.StatusInternalServerError, err
 		}
@@ -353,7 +414,9 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 			SubspaceID:  subspaceID,
 			ParentID:    parentID,
 			OrderNumber: insertAt,
-			Type:        refType,
+			StyleType:   styleType,
+			ContentType: contentType,
+			RefType:     refType,
 			RefID:       refID,
 		}
 		if title != "" {

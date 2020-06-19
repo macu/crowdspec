@@ -5,7 +5,7 @@ DROP TABLE IF EXISTS organisation;
 DROP TABLE IF EXISTS spec_permission;
 DROP TYPE IF EXISTS spec_permission_level;
 DROP TABLE IF EXISTS spec_block;
-DROP TYPE IF EXISTS spec_block_type;
+DROP TYPE IF EXISTS spec_block_ref_type;
 DROP TABLE IF EXISTS spec_subspace;
 DROP TABLE IF EXISTS spec;
 DROP TYPE IF EXISTS spec_owner_type;
@@ -13,6 +13,8 @@ DROP TABLE IF EXISTS user_group_member;
 DROP TABLE IF EXISTS user_group;
 DROP TYPE IF EXISTS grant_type;
 DROP TABLE IF EXISTS text_intern;
+DROP TYPE IF EXISTS text_content_type;
+DROP TYPE IF EXISTS list_style_type;
 DROP TABLE IF EXISTS user_session;
 DROP TABLE IF EXISTS user_account;
 
@@ -98,14 +100,25 @@ CREATE TABLE spec_subspace (
 	subspace_name VARCHAR(255) NOT NULL,
 	subspace_desc TEXT
 );
-CREATE TYPE spec_block_type AS ENUM (
+CREATE TYPE list_style_type AS ENUM (
 	'bullet',
 	'numbered',
-	'text',
-	'image-ref',
-	'video-ref',
-	'subspace-ref',
-	'spec-ref'
+	'none'
+);
+CREATE TYPE text_content_type AS ENUM (
+	'plaintext',
+	'markdown',
+	'html'
+);
+CREATE TYPE spec_block_ref_type AS ENUM (
+	'org',
+	'spec',
+	'subspace',
+	'block',
+	'image',
+	'video',
+	'url',
+	'file'
 );
 CREATE TABLE spec_block (
 	id SERIAL PRIMARY KEY,
@@ -113,7 +126,9 @@ CREATE TABLE spec_block (
 	subspace_id INTEGER REFERENCES spec_subspace (id) ON DELETE CASCADE,
 	parent_id INTEGER REFERENCES spec_block (id) ON DELETE CASCADE,
 	order_number INTEGER NOT NULL,
-	block_type spec_block_type NOT NULL,
+	style_type list_style_type NOT NULL DEFAULT 'none',
+	content_type text_content_type,
+	ref_type spec_block_ref_type,
 	ref_id INTEGER,
 	block_title VARCHAR(255),
 	block_body TEXT

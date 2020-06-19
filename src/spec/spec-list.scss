@@ -1,0 +1,26 @@
+.spec-list {
+	position: relative;
+	padding-left: 2em;
+	list-style-type: none;
+	counter-reset: spec-list-item-number 0;
+
+	>.spec-block.bullet {
+		&:before {
+			content: '\2022';
+			position: absolute;
+			left: .5em;
+		}
+	}
+
+	>.spec-block.numbered {
+		counter-increment: spec-list-item-number;
+		&:before {
+			content: counter(spec-list-item-number) '.';
+			position: absolute;
+			left: .5em;
+		}
+	}
+
+	>.spec-block.none {
+	}
+}

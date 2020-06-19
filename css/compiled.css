@@ -4,10 +4,11 @@
 
 .new-spec-page>label{display:block;margin-bottom:20px}.new-spec-page>label>input{display:block;width:100%}
 
-.spec-block{padding-top:10px;padding-bottom:10px}.spec-block>.title{font-weight:bold}.spec-block>.body{white-space:pre-wrap}.spec-block>ul{margin-top:10px}.spec-block>button{margin-top:10px}
+.spec-block{padding-top:10px;padding-bottom:10px}.spec-block:not(:first-child){border-top:thin solid #eee}.spec-block>.content>.title{font-weight:bold}.spec-block>.content>.body{white-space:pre-wrap}.spec-block>.content>.title+.body{margin-top:10px}.spec-block>ul{margin-top:10px}.spec-block>button{margin-top:10px}
 
-.spec-add-block-modal label{display:block}.spec-add-block-modal label input,.spec-add-block-modal label textarea{display:block;width:100%}.spec-add-block-modal label+label{margin-top:10px}
+.spec-add-block-modal>.el-dialog>.el-dialog__body>*+*{margin-top:20px}.spec-add-block-modal>.el-dialog>.el-dialog__body>label{display:block}.spec-add-block-modal>.el-dialog>.el-dialog__body>label input,.spec-add-block-modal>.el-dialog>.el-dialog__body>label textarea{display:block;width:100%}
 
+.spec-list{position:relative;padding-left:2em;list-style-type:none;counter-reset:spec-list-item-number 0}.spec-list>.spec-block.bullet:before{content:'\2022';position:absolute;left:.5em}.spec-list>.spec-block.numbered{counter-increment:spec-list-item-number}.spec-list>.spec-block.numbered:before{content:counter(spec-list-item-number) ".";position:absolute;left:.5em}
 
 .spec-page>h2{margin-top:0}.spec-page>.desc{white-space:pre-wrap;margin-bottom:10px}
 

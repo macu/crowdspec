@@ -15,15 +15,18 @@ export function ajaxCreateSpec(name, desc) {
 	}).fail(alertError);
 }
 
-export function ajaxCreateBlock(specId, subspaceId, parentId, insertAt, refType, refId, title, body) {
+export function ajaxCreateBlock(specId, subspaceId, parentId, insertAt,
+		styleType, contentType, refType, refId, title, body) {
 	return $.post('/ajax/spec/create-block', {
 		specId, // must be provided
 		subspaceId, // null if spec-level
 		parentId, // null if no parent
 		insertAt: (insertAt || insertAt === 0) ? insertAt : END_INDEX, // default insert at end
-		refType, // must be valid
-		refId, // may be null or empty string
-		title, // must be provided if no refId
+		styleType, // must be provided
+		contentType, // may be null
+		refType, // may be null
+		refId, // required if refType given
+		title, // may be null or empty string
 		body, // may be null or empty string
 	}).fail(alertError);
 }

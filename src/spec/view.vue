@@ -1,7 +1,7 @@
 <template>
 <div class="spec-view">
 
-	<ul>
+	<ul class="spec-list">
 		<spec-block
 			v-for="b in blocks"
 			:key="b.id"
@@ -49,6 +49,9 @@ export default {
 </script>
 
 <style lang="scss">
+// Include styles for ul.spec-list
+@import "./spec-list.scss";
+
 .spec-view {
 }
 </style>

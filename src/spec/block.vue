@@ -1,8 +1,17 @@
 <template>
 <li :class="classes">
-	<div v-if="block.title" class="title">{{block.title}}</div>
-	<div v-if="block.body" class="body">{{block.body}}</div>
-	<ul v-if="subblocks.length">
+
+	<div class="content">
+
+		<div v-if="block.title" class="title">{{block.title}}</div>
+
+		<!-- TODO ref item here -->
+
+		<div v-if="block.body" class="body">{{block.body}}</div>
+
+	</div>
+
+	<ul v-if="subblocks.length" class="spec-list">
 		<spec-block
 			v-for="b in subblocks"
 			:key="b.id"
@@ -10,7 +19,9 @@
 			@prompt-add-subblock="raisePromptAddSubblock"
 			/>
 	</ul>
+
 	<button @click="promptAddSubblock()">Add subblock</button>
+
 </li>
 </template>
 
@@ -29,7 +40,7 @@ export default {
 	},
 	computed: {
 		classes() {
-			return ['spec-block', this.block.type];
+			return ['spec-block', this.block.styleType];
 		},
 	},
 	methods: {
@@ -50,12 +61,20 @@ export default {
 	padding-top: 10px;
 	padding-bottom: 10px;
 
-	>.title {
-		font-weight: bold;
+	&:not(:first-child) {
+		border-top: thin solid #eee;
 	}
 
-	>.body {
-		white-space: pre-wrap;
+	>.content {
+		>.title {
+			font-weight: bold;
+		}
+		>.body {
+			white-space: pre-wrap;
+		}
+		>.title+.body {
+			margin-top: 10px;
+		}
 	}
 
 	>ul {

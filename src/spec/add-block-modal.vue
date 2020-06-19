@@ -7,6 +7,12 @@
 	@closed="closed()"
 	class="spec-add-block-modal">
 
+	<el-radio-group v-model="styleType" >
+		<el-radio label="bullet">Bullet point</el-radio>
+		<el-radio label="numbered">Numbered point</el-radio>
+		<el-radio label="none">Indented block</el-radio>
+	</el-radio-group>
+
 	<label>
 		Title
 		<el-input ref="titleInput" v-model="title" clearable/>
@@ -36,6 +42,7 @@ export default {
 	data() {
 		return {
 			// user inputs
+			styleType: 'bullet',
 			title: '',
 			body: '',
 			// passed in
@@ -75,7 +82,9 @@ export default {
 				this.subspaceId,
 				this.parentId,
 				this.insertAt,
-				'text', // blockType
+				this.styleType,
+				'plaintext', // contentType
+				null, // refType
 				null, // refId
 				this.title,
 				this.body
@@ -98,15 +107,19 @@ export default {
 
 <style lang="scss">
 .spec-add-block-modal {
-	label {
-		display: block;
-		input, textarea {
-			display: block;
-			width: 100%;
+	>.el-dialog {
+		>.el-dialog__body {
+			>*+* {
+				margin-top: 20px;
+			}
+			>label {
+				display: block;
+				input, textarea {
+					display: block;
+					width: 100%;
+				}
+			}
 		}
-	}
-	label+label {
-		margin-top: 10px;
 	}
 }
 </style>
