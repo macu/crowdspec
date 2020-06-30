@@ -10,13 +10,15 @@
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/element-ui/2.13.0/theme-chalk/index.css"
 	integrity="sha256-yVTW9xCJU33Zk7eRRyGSvSDNvinNcd/rit+Nwk9hED0=" crossorigin="anonymous" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dragula/3.7.2/dragula.min.css"
+	integrity="sha256-iVhQxXOykHeL03K08zkxBGxDCLCuzRGGiTYf2FL6mLY=" crossorigin="anonymous" />
 
 <link rel="stylesheet" href="/css/compiled.css"/>
 
 <script>
 // Authenticated user details
 window.user = {
-	id: "{{.UserID}}",
+	id: {{.UserID}},
 	username: "{{.Username}}",
 };
 </script>
@@ -28,16 +30,20 @@ window.user = {
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"
 	integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.11/vue.runtime.min.js"
-	integrity="sha256-vT4XcKWLfaGor0IJgp3nAOzlVh3B29yLJ7paM+bYgao=" crossorigin="anonymous"></script>
+<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.11/vue.runtime.min.js"
+	integrity="sha256-vT4XcKWLfaGor0IJgp3nAOzlVh3B29yLJ7paM+bYgao=" crossorigin="anonymous"></script> -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.11/vue.js"
+	integrity="sha256-NSuqgY2hCZJUN6hDMFfdxvkexI7+iLxXQbL540RQ/c4=" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vuex/3.2.0/vuex.min.js"
-integrity="sha256-umcvo1nNPhewVB3oZdXzuspMoW0H5pyTKCYAeULjRr0=" crossorigin="anonymous"></script>
+	integrity="sha256-umcvo1nNPhewVB3oZdXzuspMoW0H5pyTKCYAeULjRr0=" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vue-router/3.1.3/vue-router.min.js"
 	integrity="sha256-r/vPIUvTobCpYZsMmvU7HM58cNd4D6/vdICqDFapV7Y=" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/element-ui/2.13.0/index.js"
 	integrity="sha256-n2bLFl278BFBjP+KJ3gB/gqoZIS4mAnuaCWuubCjRJk=" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/element-ui/2.13.0/locale/en.min.js"
 	integrity="sha256-mkB9kHKaSVgGvxRYlRTAhA5dPD0Du6f3AGHSZNAKfQg=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dragula/3.7.2/dragula.min.js"
+	integrity="sha256-ug4bHfqHFAj2B5MESRxbLd3R3wdVMQzug2KHZqFEmFI=" crossorigin="anonymous"></script>
 
 <script src="/js/compiled.js"></script>
 

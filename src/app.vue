@@ -3,7 +3,7 @@
 	<div class="header">
 		<h1 @click="gotoIndex()">CrowdSpec</h1>
 		<span>{{username}}</span>
-		<button @click="logout()" size="mini">Log out</button>
+		<el-button @click="logout()" size="mini">Log out</el-button>
 	</div>
 	<div class="content-area">
 		<router-view></router-view>

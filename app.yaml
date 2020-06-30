@@ -1,0 +1,22 @@
+runtime: go114
+
+env_variables:
+  DEV_ENV: "appengine"
+  DB_HOST: "/cloudsql/crowdspec-dev:northamerica-northeast1:crowdspec-dev"
+  DB_NAME: "crowdspec"
+  DB_USER: "postgres"
+  DB_PASS_SECRET: "projects/178253280892/secrets/DB_PASS"
+
+handlers:
+- url: /css
+  static_dir: css
+  secure: always
+- url: /js
+  static_dir: js
+  secure: always
+- url: /img
+  static_dir: img
+  secure: always
+- url: /.*
+  script: auto
+  secure: always

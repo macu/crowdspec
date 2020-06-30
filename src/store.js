@@ -11,6 +11,8 @@ const MEDIUM_MAX_WIDTH = 991;
 export const store = new Vuex.Store({
 	state: {
 		windowWidth: $window.width(),
+		dragging: false,
+		moving: null, // id of node being moved
 	},
 	getters: {
 		userID(state) {
@@ -48,6 +50,18 @@ export const store = new Vuex.Store({
 	mutations: {
 		setWindowWidth(state, width) {
 			state.windowWidth = width;
+		},
+		startDragging(state) {
+			state.dragging = true;
+		},
+		endDragging(state) {
+			state.dragging = false;
+		},
+		startMoving(state, blockId) {
+			state.moving = blockId;
+		},
+		endMoving(state) {
+			state.moving = null;
 		},
 	},
 });

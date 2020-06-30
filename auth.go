@@ -170,7 +170,7 @@ func makeLoginHandler(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 
 func logoutHandler(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) {
 	sessionTokenCookie, _ := r.Cookie(sessionTokenCookieName)
-	_, err := db.Exec("DELETE FROM session WHERE token=$1", sessionTokenCookie.Value)
+	_, err := db.Exec("DELETE FROM user_session WHERE token=$1", sessionTokenCookie.Value)
 	if err != nil {
 		log.Println(err)
 	}

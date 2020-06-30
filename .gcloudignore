@@ -1,0 +1,9 @@
+.gcloudignore
+.git
+.gitignore
+node_modules
+src
+sql
+env.json
+*.sh
+webpack.config.js

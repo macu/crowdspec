@@ -1,7 +1,7 @@
 <template>
 <div class="index-page">
 
-	<el-button @click="gotoNewSpec()">New spec</el-button>
+	<el-button @click="promptCreateSpec()" type="primary">New spec</el-button>
 
 	<div class="user-specs">
 		<h2>Your specs</h2>
@@ -14,14 +14,20 @@
 		<p v-else>You do not have any specs.</p>
 	</div>
 
+	<edit-spec-modal ref="editSpecModal"/>
+
 </div>
 </template>
 
 <script>
 import $ from 'jquery';
+import EditSpecModal from '../spec/edit-spec-modal.vue';
 import {alertError} from '../utils.js';
 
 export default {
+	components: {
+		EditSpecModal,
+	},
 	data() {
 		return {
 			userSpecs: [],
@@ -46,8 +52,10 @@ export default {
 				alertError(jqXHR);
 			});
 		},
-		gotoNewSpec() {
-			this.$router.push({name: 'new-spec'});
+		promptCreateSpec() {
+			this.$refs.editSpecModal.showCreate(newSpecId => {
+				this.$router.push({name: 'spec', params: {specId: newSpecId}});
+			});
 		},
 	},
 };

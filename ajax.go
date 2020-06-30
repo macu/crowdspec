@@ -51,7 +51,7 @@ func ajaxHandler(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request
 					return
 				}
 				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(statusCode)
+				w.WriteHeader(statusCode) // WriteHeader is called after setting headers
 				w.Write(js)
 			} else {
 				w.WriteHeader(statusCode)
