@@ -11,6 +11,9 @@ echo
 username=${username:-test}
 password=${password:-test}
 
+# Record build date
+sh update-build-date.sh
+
 # Build frontend
 npm run prod
 

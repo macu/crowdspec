@@ -42,6 +42,8 @@ func ajaxHandler(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request
 			if err != nil {
 				log.Printf("Error running ajax handler [%s]: %v\n", r.URL.Path, err)
 				w.WriteHeader(statusCode)
+				// Send current version stamp
+				w.Write([]byte("VersionStamp: " + cacheControlVersionStamp))
 				return
 			}
 			if response != nil {

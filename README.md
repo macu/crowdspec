@@ -14,10 +14,36 @@ postgres=# ALTER DEFAULT PRIVILEGES FOR USER dev IN SCHEMA public GRANT ALL ON S
 postgres=# SELECT table_catalog, table_schema, table_name, privilege_type FROM information_schema.table_privileges WHERE grantee = 'dev';
 ```
 
-## Access database from command line
+### Access database from command line
 
 ```
 $ psql crowdspec
+```
+
+## Set up `env.json` for local development
+
+```
+{
+	"dbUser": "testuser",
+	"dbPass": "testpass",
+	"dbName": "crowdspec",
+	"httpPort": "2020",
+	"versionStamp": ""
+}
+```
+
+Version stamp is updated automatically when running `restart.sh`.
+
+## Build and run
+
+On first use, or to re-initialize database:
+```
+$ sh init.sh
+```
+
+To rebuild client and server, and run:
+```
+$ sh restart.sh
 ```
 
 ## Access dev database through GCloud

@@ -1,28 +1,33 @@
 import $ from 'jquery';
 import Vue from 'vue';
 
+const VERSION_STAMP_RESPONSE = /^VersionStamp: (.+)$/m;
+
 export function alertError(error) {
 	console.error(error);
+	let message = null;
 	if (error) {
-		let message = null;
 		if (error.readyState === 0) {
-			message = 'Could not connect to server';
+			message = 'Could not connect to server.';
 		} else if (error.readyState && error.status) {
-			message = 'Request failed with error code ' + error.status;
+			message = 'Request failed with error code ' + error.status + '.';
 		} else if (error.message) {
 			message = error.message;
 		} else if (typeof error === 'string') {
 			message = error;
 		}
-		if (message) {
-			Vue.prototype.$alert(message, 'Error', {
-				confirmButtonText: 'Ok',
-				type: 'error',
-			});
-			return;
+	}
+	if (!message) {
+		message = 'An error occurred.';
+	}
+	if (error && error.responseText &&
+			VERSION_STAMP_RESPONSE.test(error.responseText)) {
+		let match = VERSION_STAMP_RESPONSE.exec(error.responseText);
+		if (match[1] !== window.appVersion) {
+			message += ' (A new version is available. Reload this page to use the latest client code.)'
 		}
 	}
-	Vue.prototype.$alert('An error occurred', {
+	Vue.prototype.$alert(message, 'Error', {
 		confirmButtonText: 'Ok',
 		type: 'error',
 	});

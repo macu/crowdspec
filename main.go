@@ -20,11 +20,15 @@ import (
 )
 
 type config struct {
-	DBUser   string `json:"dbUser"`
-	DBPass   string `json:"dbPass"`
-	DBName   string `json:"dbName"`
-	HTTPPort string `json:"httpPort"`
+	DBUser       string `json:"dbUser"`
+	DBPass       string `json:"dbPass"`
+	DBName       string `json:"dbName"`
+	HTTPPort     string `json:"httpPort"`
+	VersionStamp string `json:"versionStamp"`
 }
+
+// Loaded from env, used to invalidate cache on compiled client resources
+var cacheControlVersionStamp string
 
 func main() {
 
@@ -67,6 +71,9 @@ func main() {
 		// Port number comes from env on App Engine
 		config.HTTPPort = os.Getenv("PORT")
 
+		// Version stamp comes from env
+		cacheControlVersionStamp = os.Getenv("VERSION_STAMP")
+
 	} else {
 		// Running locally
 		local = true
@@ -88,6 +95,9 @@ func main() {
 		if err != nil {
 			log.Fatalln(err)
 		}
+
+		// Version stamp comes from env.json
+		cacheControlVersionStamp = config.VersionStamp
 
 	}
 
@@ -182,7 +192,8 @@ func indexHandler(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 		return
 	}
 	indexTemplate.Execute(w, struct {
-		UserID   uint
-		Username string
-	}{userID, username})
+		UserID       uint
+		Username     string
+		VersionStamp string
+	}{userID, username, cacheControlVersionStamp})
 }
