@@ -75,3 +75,8 @@ export function startAutoscroll() {
 		},
 	};
 }
+
+export function isValidURL(url) {
+	// TODO
+	return true;
+}

@@ -93,30 +93,39 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 
 	styleType := r.Form.Get("styleType")
 	if !isValidListStyleType(styleType) {
-		return nil, http.StatusBadRequest, fmt.Errorf("Invalid styleType: %s", styleType)
+		return nil, http.StatusBadRequest, fmt.Errorf("invalid styleType: %s", styleType)
 	}
 
 	contentType := AtoPointerNilIfEmpty(r.Form.Get("contentType"))
 	if contentType != nil && !isValidTextContentType(*contentType) {
-		return nil, http.StatusBadRequest, fmt.Errorf("Invalid contentType: %s", *contentType)
+		return nil, http.StatusBadRequest, fmt.Errorf("invalid contentType: %s", *contentType)
 	}
 
 	refType := AtoPointerNilIfEmpty(r.Form.Get("refType"))
 	if refType != nil && !isValidBlockRefType(*refType) {
-		return nil, http.StatusBadRequest, fmt.Errorf("Invalid refType: %s", *refType)
+		return nil, http.StatusBadRequest, fmt.Errorf("invalid refType: %s", *refType)
 	}
 
 	refID, err := AtoInt64NilIfEmpty(r.Form.Get("refId"))
 	if err != nil {
 		return nil, http.StatusBadRequest, fmt.Errorf("parsing refId: %w", err)
 	}
-	if refID == nil && refType != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("refId is required when refType is given")
+	if refID == nil && isRefIDRequiredForRefType(refType) {
+		return nil, http.StatusBadRequest, fmt.Errorf("refId is required for refType: %s", *refType)
+	}
+
+	refURL := AtoPointerNilIfEmpty(r.Form.Get("refUrl"))
+	if refURL == nil && isURLRequiredForRefType(refType) {
+		return nil, http.StatusBadRequest, fmt.Errorf("refUrl required for refType: %s", *refType)
 	}
 
 	title := AtoPointerNilIfEmpty(strings.TrimSpace(r.Form.Get("title")))
 
 	body := AtoPointerNilIfEmpty(strings.TrimSpace(r.Form.Get("body")))
+
+	if refType == nil && title == nil && body == nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("empty blocks are not currently allowed")
+	}
 
 	// TODO Html sanitize title and body
 
@@ -132,13 +141,36 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 		err = tx.QueryRow(`
 			INSERT INTO spec_block
 			(spec_id, subspace_id, parent_id, order_number,
-				style_type, content_type, ref_type, ref_id, block_title, block_body)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+				style_type, content_type, block_title, block_body)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 			RETURNING id
 			`, specID, subspaceID, parentID, insertAt,
-			styleType, contentType, refType, refID, title, body).Scan(&blockID)
+			styleType, contentType, title, body).Scan(&blockID)
 		if err != nil {
 			return nil, http.StatusInternalServerError, fmt.Errorf("inserting block: %w", err)
+		}
+
+		// Create ref item
+		var refItem interface{}
+		if refType != nil {
+			if *refType == BlockRefURL && refURL != nil {
+				refURLObject, err := createURLObject(tx, blockID, *refURL)
+				if err != nil {
+					return nil, http.StatusInternalServerError, fmt.Errorf("error creating url object: %w", err)
+				}
+				refID = &refURLObject.ID
+				refItem = refURLObject
+			}
+		}
+
+		if refType != nil && refID != nil {
+			// Update new block
+			_, err = tx.Exec(
+				`UPDATE spec_block SET ref_type=$1, ref_id=$2 WHERE id=$3`,
+				refType, refID, blockID)
+			if err != nil {
+				return nil, http.StatusInternalServerError, fmt.Errorf("setting new block ref: %w", err)
+			}
 		}
 
 		// Return block
@@ -154,7 +186,7 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 			RefID:       refID,
 			Title:       title,
 			Body:        body,
-			RefItem:     nil, // TODO Load preview
+			RefItem:     refItem,
 		}
 
 		return block, http.StatusOK, nil
@@ -178,36 +210,104 @@ func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 
 	styleType := r.Form.Get("styleType")
 	if !isValidListStyleType(styleType) {
-		return nil, http.StatusBadRequest, fmt.Errorf("Invalid styleType: %s", styleType)
+		return nil, http.StatusBadRequest, fmt.Errorf("invalid styleType: %s", styleType)
 	}
 
 	contentType := AtoPointerNilIfEmpty(r.Form.Get("contentType"))
 	if contentType != nil && !isValidTextContentType(*contentType) {
-		return nil, http.StatusBadRequest, fmt.Errorf("Invalid contentType: %s", *contentType)
+		return nil, http.StatusBadRequest, fmt.Errorf("invalid contentType: %s", *contentType)
 	}
 
 	refType := AtoPointerNilIfEmpty(r.Form.Get("refType"))
 	if refType != nil && !isValidBlockRefType(*refType) {
-		return nil, http.StatusBadRequest, fmt.Errorf("Invalid refType: %s", *refType)
+		return nil, http.StatusBadRequest, fmt.Errorf("invalid refType: %s", *refType)
 	}
 
 	refID, err := AtoInt64NilIfEmpty(r.Form.Get("refId"))
 	if err != nil {
 		return nil, http.StatusBadRequest, fmt.Errorf("parsing refId: %w", err)
 	}
-	if refID == nil && refType != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("refId is required when refType is given")
+	if refID == nil && isRefIDRequiredForRefType(refType) {
+		return nil, http.StatusBadRequest, fmt.Errorf("refId is required for refType: %s", *refType)
 	}
+
+	// TODO Ref updating needs to be refactored significantly
+
+	// URL passed in if updating or creating URL reference
+	refURL := AtoPointerNilIfEmpty(r.Form.Get("refUrl"))
+	if refURL == nil && refID == nil && isURLRequiredForRefType(refType) {
+		return nil, http.StatusBadRequest, fmt.Errorf("refUrl required for refType: %s", *refType)
+	}
+
+	// Whether to refresh the preview of the existing URL
+	refreshURL := AtoBool(r.Form.Get("refRefreshUrl"))
 
 	title := AtoPointerNilIfEmpty(strings.TrimSpace(r.Form.Get("title")))
 
 	body := AtoPointerNilIfEmpty(strings.TrimSpace(r.Form.Get("body")))
 
+	if refType == nil && title == nil && body == nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("empty blocks are not currently allowed")
+	}
+
 	// TODO Html sanitize title and body
 
 	return inTransaction(r.Context(), db, func(tx *sql.Tx) (interface{}, int, error) {
+
+		var existingRefType *string
+		var existingRefID *int64
+
+		err := tx.QueryRow(
+			`SELECT ref_type, ref_id FROM spec_block WHERE id=$1`,
+			blockID).Scan(&existingRefType, &existingRefID)
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("error fetching current block ref: %w", err)
+		}
+
+		// Delete old ref if refType or refID changed
+		if existingRefType != nil && existingRefID != nil {
+			// Check if ref changed
+			if refType == nil || refID == nil || *existingRefType != *refType || *existingRefID != *refID {
+				// Delete old ref
+				switch *existingRefType {
+				case BlockRefURL:
+					err = deleteURLObject(tx, *existingRefID)
+					if err != nil {
+						return nil, http.StatusInternalServerError, fmt.Errorf("error deleting old url object: %w", err)
+					}
+				}
+				refID = nil
+			}
+		}
+
+		// Create or update ref item
+		var refItem interface{}
+		if refType != nil {
+			switch *refType {
+			case BlockRefURL:
+				if refID == nil {
+					refURLObject, err := createURLObject(tx, blockID, *refURL)
+					if err != nil {
+						return nil, http.StatusInternalServerError, fmt.Errorf("error creating url object: %w", err)
+					}
+					refID = &refURLObject.ID
+					refItem = refURLObject
+				} else if refreshURL {
+					refItem, err = updateURLObject(tx, *refID, *refURL)
+					if err != nil {
+						return nil, http.StatusInternalServerError, fmt.Errorf("error updating url object: %w", err)
+					}
+				} else {
+					refItem, err = loadURLObject(tx, *refID)
+					if err != nil {
+						return nil, http.StatusInternalServerError, fmt.Errorf("error loading url object: %w", err)
+					}
+				}
+			}
+		}
+
 		// Update block row
-		_, err := tx.Exec(`
+		_, err = tx.Exec(`
 				UPDATE spec_block
 				SET style_type=$2, content_type=$3, ref_type=$4, ref_id=$5, block_title=$6, block_body=$7
 				WHERE id=$1
@@ -225,7 +325,7 @@ func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 			RefID:       refID,
 			Title:       title,
 			Body:        body,
-			RefItem:     nil, // TODO Load preview
+			RefItem:     refItem,
 		}
 
 		return block, http.StatusOK, nil

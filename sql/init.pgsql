@@ -4,6 +4,7 @@ DROP TYPE IF EXISTS org_permission_level;
 DROP TABLE IF EXISTS organisation;
 DROP TABLE IF EXISTS spec_permission;
 DROP TYPE IF EXISTS spec_permission_level;
+DROP TABLE IF EXISTS spec_block_url;
 DROP TABLE IF EXISTS spec_block;
 DROP TYPE IF EXISTS spec_block_ref_type;
 DROP TABLE IF EXISTS spec_subspace;
@@ -132,6 +133,14 @@ CREATE TABLE spec_block (
 	ref_id INTEGER,
 	block_title VARCHAR(255),
 	block_body TEXT
+);
+CREATE TABLE spec_block_url (
+	id SERIAL PRIMARY KEY,
+	block_id INTEGER NOT NULL REFERENCES spec_block (id) ON DELETE CASCADE,
+	url VARCHAR(1024) NOT NULL,
+	url_title VARCHAR(255),
+	url_desc VARCHAR(255),
+	url_image_data TEXT
 );
 
 CREATE TABLE text_intern (

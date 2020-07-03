@@ -34,6 +34,8 @@
 
 		<!-- TODO ref item here -->
 
+		<ref-url v-if="refType === 'url' && refItem" :item="refItem" class="ref-item"/>
+
 		<div v-if="body" class="body">{{body}}</div>
 
 	</div>
@@ -47,9 +49,13 @@
 
 <script>
 import $ from 'jquery';
+import RefUrl from './ref-url.vue';
 import {ajaxMoveBlock} from './ajax.js';
 
 export default {
+	components: {
+		RefUrl,
+	},
 	props: {
 		block: Object,
 	},
@@ -99,6 +105,7 @@ export default {
 				contentType: this.contentType,
 				refType: this.refType,
 				refId: this.refId,
+				refItem: this.refItem,
 				title: this.title,
 				body: this.body,
 			}, updatedBlock => {
@@ -106,6 +113,7 @@ export default {
 				this.contentType = updatedBlock.contentType;
 				this.refType = updatedBlock.refType;
 				this.refId = updatedBlock.refId;
+				this.refItem = updatedBlock.refItem;
 				this.title = updatedBlock.title;
 				this.body = updatedBlock.body;
 				this.refItem = updatedBlock.refItem;
@@ -239,7 +247,7 @@ export default {
 		>.body {
 			white-space: pre-wrap;
 		}
-		>.title+.body {
+		>.title+.body, >.title+.ref-item, >.ref-item+.body {
 			margin-top: 10px;
 		}
 	}

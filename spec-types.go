@@ -98,11 +98,33 @@ func isValidBlockRefType(t string) bool {
 	return stringInSlice(t, []string{
 		// BlockRefOrg,
 		// BlockRefSpec,
-		BlockRefSubspace,
+		// BlockRefSubspace,
 		// BlockRefBlock,
 		// BlockRefImage,
 		// BlockRefVideo,
-		// BlockRefURL,
+		BlockRefURL,
 		// BlockRefFile,
+	})
+}
+
+func isRefIDRequiredForRefType(t *string) bool {
+	if t == nil {
+		return false
+	}
+	return stringInSlice(*t, []string{
+		BlockRefOrg,
+		BlockRefSpec,
+		BlockRefSubspace,
+		BlockRefBlock,
+		BlockRefFile,
+	})
+}
+
+func isURLRequiredForRefType(t *string) bool {
+	if t == nil {
+		return false
+	}
+	return stringInSlice(*t, []string{
+		BlockRefURL,
 	})
 }

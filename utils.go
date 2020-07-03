@@ -54,3 +54,8 @@ func stringInSlice(a string, list []string) bool {
 	}
 	return false
 }
+
+// AtoBool converts the given string to boolean.
+func AtoBool(a string) bool {
+	return a == "1" || a == "true"
+}

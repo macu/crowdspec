@@ -7,7 +7,7 @@
 	@closed="closed()"
 	class="spec-edit-block-modal">
 
-	<el-radio-group v-model="styleType" >
+	<el-radio-group v-model="styleType">
 		<el-radio label="bullet">Bullet point</el-radio>
 		<el-radio label="numbered">Numbered point</el-radio>
 		<el-radio label="none">Indented block</el-radio>
@@ -23,9 +23,29 @@
 		<el-input type="textarea" v-model="body" :autosize="{minRows: 2}"/>
 	</label>
 
-	<span slot="footer" class="dialog-footer" v-loading="sending">
+	<el-radio-group v-model="refType">
+		<el-radio :label="null">No media</el-radio>
+		<el-radio label="url">URL</el-radio>
+	</el-radio-group>
+
+	<div v-if="refType === 'url'" class="ref-url-area">
+		<el-input v-model="url">
+			<template slot="prepend">URL</template>
+		</el-input>
+		<template v-if="existingUrlRefItem">
+			<ref-url v-if="existingUrlRefItem.url === url" :item="existingUrlRefItem"/>
+			<el-checkbox v-if="showRefreshUrl" v-model="refreshUrl">
+				Refresh URL preview
+			</el-checkbox>
+			<p v-else-if="refreshUrl">URL preview will be updated.</p>
+		</template>
+	</div>
+
+	<span slot="footer" class="dialog-footer">
 		<el-button @click="showing = false">Cancel</el-button>
-		<el-button @click="submit()" type="primary" :disabled="disableSubmit">{{block ? 'Save' : 'Add'}}</el-button>
+		<el-button @click="submit()" type="primary" :disabled="disableSubmit">
+			{{block ? 'Save' : 'Add'}}
+		</el-button>
 	</span>
 
 </el-dialog>
@@ -33,9 +53,14 @@
 
 <script>
 import $ from 'jquery';
+import RefUrl from './ref-url.vue';
 import {ajaxCreateBlock, ajaxSaveBlock} from './ajax.js';
+import {isValidURL} from '../utils.js';
 
 export default {
+	components: {
+		RefUrl,
+	},
 	props: {
 		specId: Number,
 	},
@@ -45,6 +70,9 @@ export default {
 			styleType: 'bullet',
 			title: '',
 			body: '',
+			refType: null,
+			url: '',
+			refreshUrl: false,
 			// passed in
 			block: null,
 			subspaceId: null,
@@ -53,12 +81,37 @@ export default {
 			callback: null,
 			// state
 			showing: false,
-			sending: false,
 		};
 	},
 	computed: {
 		disableSubmit() {
-			return !this.title.trim();
+			if (this.refType) {
+				switch (this.refType) {
+					case 'url':
+						return !isValidURL(this.url);
+						break;
+					default:
+						// Unrecognized; don't allow submit
+						return true;
+				}
+			} else {
+				return !(this.title.trim() || this.body.trim());
+			}
+		},
+		existingUrlRefItem() {
+			return this.block && this.block.refType === 'url' && this.block.refItem;
+		},
+		showRefreshUrl() {
+			// Show the refresh option if not changing the URL; otherwise refresh is automatic
+			return this.existingUrlRefItem && this.existingUrlRefItem.url === this.url;
+		},
+	},
+	watch: {
+		url(url) {
+			if (this.existingUrlRefItem) {
+				// Set refresh to whether the URL has been changed
+				this.refreshUrl = this.existingUrlRefItem.url !== this.url;
+			}
 		},
 	},
 	methods: {
@@ -77,7 +130,14 @@ export default {
 			this.styleType = block.styleType;
 			this.title = block.title;
 			this.body = block.body;
+			this.refType = block.refType;
 			this.callback = callback;
+
+			// Extract refItem data
+			if (block.refType === 'url' && block.refItem) {
+				this.url = block.refItem.url;
+			}
+
 			this.showing = true;
 			this.$nextTick(() => {
 				$('input', this.$refs.titleInput.$el).focus();
@@ -94,8 +154,15 @@ export default {
 			}
 		},
 		submitAdd() {
-			this.sending = true;
+			let sending = this.createSendingSpinner();
 			let callback = this.callback; // in case modal is closed before complete
+			let refFields = null;
+			if (this.refType === 'url' && isValidURL(this.url)) {
+				refFields = {
+					refType: 'url',
+					refUrl: this.url,
+				};
+			}
 			ajaxCreateBlock(
 				this.specId,
 				this.subspaceId,
@@ -103,36 +170,49 @@ export default {
 				this.insertBeforeId,
 				this.styleType,
 				'plaintext', // contentType
-				null, // refType
-				null, // refId
 				this.title,
-				this.body
+				this.body,
+				refFields,
 			).then(newBlock => {
 				callback(newBlock);
 				this.showing = false;
-				this.sending = false;
+				sending.close();
 			}).fail(() => {
-				this.sending = false;
+				sending.close();
 			});
 		},
 		submitSave() {
-			this.sending = true;
+			let sending = this.createSendingSpinner();
 			let callback = this.callback; // in case modal is closed before complete
+			let refFields = null;
+			if (this.refType === 'url') {
+				refFields = {
+					refType: 'url',
+					refId: this.existingUrlRefItem ? this.existingUrlRefItem.id : null,
+					refUrl: this.url,
+					refRefreshUrl: this.refreshUrl,
+				};
+			}
 			ajaxSaveBlock(
 				this.specId,
 				this.block.id,
 				this.styleType,
 				'plaintext', // contentType
-				null, // refType
-				null, // refId
 				this.title,
-				this.body
+				this.body,
+				refFields,
 			).then(updatedBlock => {
 				callback(updatedBlock);
 				this.showing = false;
-				this.sending = false;
+				sending.close();
 			}).fail(() => {
-				this.sending = false;
+				sending.close();
+			});
+		},
+		createSendingSpinner() {
+			return this.$loading({
+				lock: true,
+				background: 'rgba(0, 0, 0, 0.7)',
 			});
 		},
 		closed() {
@@ -143,6 +223,9 @@ export default {
 			this.callback = null;
 			this.title = '';
 			this.body = '';
+			this.refType = null;
+			this.url = '';
+			this.refreshUrl = false;
 		},
 	},
 };
@@ -160,6 +243,12 @@ export default {
 				input, textarea {
 					display: block;
 					width: 100%;
+				}
+			}
+			>.ref-url-area {
+				margin-top: 20px;
+				>* + * {
+					margin-top: 10px;
 				}
 			}
 		}

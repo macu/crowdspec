@@ -175,11 +175,15 @@ func loadBlocks(db *sql.DB, specID int64, subspaceID *int64) ([]*SpecBlock, erro
 		spec_block.order_number,
 		spec_block.style_type, spec_block.content_type, spec_block.ref_type, spec_block.ref_id,
 		spec_block.block_title, spec_block.block_body,
-		spec_subspace.subspace_name, spec_subspace.subspace_desc, spec_subspace.created_at AS subspace_created_at
+		spec_subspace.subspace_name, spec_subspace.subspace_desc, spec_subspace.created_at AS subspace_created_at,
+		spec_block_url.url AS url_url, spec_block_url.url_title, spec_block_url.url_desc, spec_block_url.url_image_data
 		FROM spec_block
 		LEFT JOIN spec_subspace
 		ON spec_block.ref_type='subspace'
 		AND spec_subspace.id=spec_block.ref_id
+		LEFT JOIN spec_block_url
+		ON spec_block.ref_type='url'
+		AND spec_block_url.id=spec_block.ref_id
 		WHERE spec_block.spec_id=$1
 		AND spec_block.` + subspaceCond(subspaceID, &args) + `
 		ORDER BY spec_block.parent_id, spec_block.order_number`
@@ -196,9 +200,11 @@ func loadBlocks(db *sql.DB, specID int64, subspaceID *int64) ([]*SpecBlock, erro
 		b := &SpecBlock{}
 		var subspaceName, subspaceDesc *string
 		var subspaceCreated *time.Time
+		var urlURL, urlTitle, urlDesc, urlImageData *string
 		err = rows.Scan(&b.ID, &b.SpecID, &b.SubspaceID, &b.ParentID, &b.OrderNumber,
 			&b.StyleType, &b.ContentType, &b.RefType, &b.RefID, &b.Title, &b.Body,
-			&subspaceName, &subspaceDesc, &subspaceCreated)
+			&subspaceName, &subspaceDesc, &subspaceCreated,
+			&urlURL, &urlTitle, &urlDesc, &urlImageData)
 		if err != nil {
 			if err2 := rows.Close(); err2 != nil { // TODO Add everywhere
 				return nil, fmt.Errorf("error closing rows: %s; on scan error: %w", err2, err)
@@ -207,6 +213,16 @@ func loadBlocks(db *sql.DB, specID int64, subspaceID *int64) ([]*SpecBlock, erro
 		}
 		if b.RefType != nil {
 			switch *b.RefType {
+			case BlockRefURL:
+				if urlURL != nil {
+					b.RefItem = &URLObject{
+						ID:        *b.RefID,
+						URL:       *urlURL,
+						Title:     urlTitle,
+						Desc:      urlDesc,
+						ImageData: urlImageData,
+					}
+				}
 			case BlockRefSubspace:
 				b.RefItem = &SpecSubspace{
 					ID:      *b.RefID,

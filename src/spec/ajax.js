@@ -30,7 +30,8 @@ export function ajaxDeleteSpec(specId) {
 }
 
 export function ajaxCreateBlock(specId, subspaceId, parentId, insertBeforeId,
-		styleType, contentType, refType, refId, title, body) {
+		styleType, contentType, title, body, refFields) {
+	refFields = refFields || {};
 	return $.post('/ajax/spec/create-block', {
 		specId, // must be provided
 		subspaceId, // null if spec-level
@@ -38,24 +39,23 @@ export function ajaxCreateBlock(specId, subspaceId, parentId, insertBeforeId,
 		insertBeforeId, // null for append
 		styleType, // must be provided
 		contentType, // may be null
-		refType, // may be null
-		refId, // required if refType given
 		title, // may be null or empty string
 		body, // may be null or empty string
+		...refFields,
 	}).fail(alertError);
 }
 
 export function ajaxSaveBlock(specId, blockId,
-		styleType, contentType, refType, refId, title, body) {
+		styleType, contentType, title, body, refFields) {
+	refFields = refFields || {};
 	return $.post('/ajax/spec/save-block', {
 		specId, // must be provided
 		blockId, // must be provided
 		styleType, // must be provided
 		contentType, // may be null
-		refType, // may be null
-		refId, // required if refType given
 		title, // may be null or empty string
 		body, // may be null or empty string
+		...refFields,
 	}).fail(alertError);
 }
 
@@ -72,4 +72,8 @@ export function ajaxMoveBlock(blockId, subspaceId, parentId, insertBeforeId) {
 		parentId, // null if no parent
 		insertBeforeId, // null to insert at end
 	}).fail(alertError);
+}
+
+export function fetchUrl(url) {
+	return $.get('/ajax/fetch-url', {url}); // No alert on error
 }

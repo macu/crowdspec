@@ -17,6 +17,7 @@ var ajaxHandlers = map[string]map[string]AjaxRoute{
 		"/ajax/test":       ajaxTest,
 		"/ajax/user-specs": ajaxUserSpecs,
 		"/ajax/spec":       ajaxSpec,
+		// "/ajax/fetch-url":  ajaxFetchURLObject,
 	},
 	http.MethodPost: map[string]AjaxRoute{
 		"/ajax/spec/create-spec":     ajaxCreateSpec,

@@ -12,7 +12,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/gorilla/mux"
+	"github.com/gorilla/mux" // (BSD-3-Clause) https://github.com/gorilla/mux/blob/master/LICENSE
 
 	"database/sql"
 
