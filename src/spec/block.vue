@@ -5,32 +5,31 @@
 
 		<div class="bg"></div>
 
-		<div v-if="title" class="title">
-			<div class="layover" @mouseleave="cancelChooseAddPosition()">
-				<template v-if="choosingAddPosition">
-					<el-button @click="cancelChooseAddPosition()" type="warning" size="mini" icon="el-icon-close" circle/>
-					<el-button @click="addBeforeThis()" type="primary" size="mini" icon="el-icon-top" circle/>
-					<el-button @click="addIntoThis()" type="primary" size="mini" icon="el-icon-bottom-right" circle/>
-					<el-button @click="addAfterThis()" type="primary" size="mini" icon="el-icon-bottom" circle/>
-				</template>
-				<template v-else-if="movingThis">
-					<el-button @click="cancelMoving()" type="warning" size="mini" icon="el-icon-close">Cancel move</el-button>
-				</template>
-				<template v-else-if="movingAnother">
-					<el-button @click="cancelMoving()" type="warning" size="mini" icon="el-icon-close" circle/>
-					<el-button @click="moveBeforeThis()" type="primary" size="mini" icon="el-icon-top" circle/>
-					<el-button @click="moveIntoThis()" type="primary" size="mini" icon="el-icon-bottom-right" circle/>
-					<el-button @click="moveAfterThis()" type="primary" size="mini" icon="el-icon-bottom" circle/>
-				</template>
-				<template v-else>
-					<el-button @click="editBlock()" type="default" size="mini" icon="el-icon-edit" circle/>
-					<el-button @click="promptDeleteBlock()" type="warning" size="mini" icon="el-icon-delete" circle/>
-					<el-button @click="enterChooseAddPosition()" type="primary" size="mini" icon="el-icon-plus" circle/>
-					<i @click="startMoving()" class="el-icon-d-caret drag-handle"></i>
-				</template>
-			</div>
-			{{title}}
+		<div class="layover" @mouseleave="cancelChooseAddPosition()">
+			<template v-if="choosingAddPosition">
+				<el-button @click="cancelChooseAddPosition()" type="warning" size="mini" icon="el-icon-close" circle/>
+				<el-button @click="addBeforeThis()" type="primary" size="mini" icon="el-icon-top" circle/>
+				<el-button @click="addIntoThis()" type="primary" size="mini" icon="el-icon-bottom-right" circle/>
+				<el-button @click="addAfterThis()" type="primary" size="mini" icon="el-icon-bottom" circle/>
+			</template>
+			<template v-else-if="movingThis">
+				<el-button @click="cancelMoving()" type="warning" size="mini" icon="el-icon-close">Cancel move</el-button>
+			</template>
+			<template v-else-if="movingAnother">
+				<el-button @click="cancelMoving()" type="warning" size="mini" icon="el-icon-close" circle/>
+				<el-button @click="moveBeforeThis()" type="primary" size="mini" icon="el-icon-top" circle/>
+				<el-button @click="moveIntoThis()" type="primary" size="mini" icon="el-icon-bottom-right" circle/>
+				<el-button @click="moveAfterThis()" type="primary" size="mini" icon="el-icon-bottom" circle/>
+			</template>
+			<template v-else>
+				<el-button @click="editBlock()" type="default" size="mini" icon="el-icon-edit" circle/>
+				<el-button @click="promptDeleteBlock()" type="warning" size="mini" icon="el-icon-delete" circle/>
+				<el-button @click="enterChooseAddPosition()" type="primary" size="mini" icon="el-icon-plus" circle/>
+				<i @click="startMoving()" class="el-icon-d-caret drag-handle"></i>
+			</template>
 		</div>
+
+		<div v-if="title" class="title">{{title}}</div>
 
 		<!-- TODO ref item here -->
 
@@ -220,29 +219,29 @@ export default {
 				display: block;
 			}
 		}
+		>.layover {
+			float: right;
+			margin-left: 10px;
+			// user-select: none; // Don't include in text selection
+			.el-button {
+				padding: 3px;
+				font-size: 12px;
+			}
+			.el-button+.el-button {
+				margin-left: 5px;
+			}
+			.drag-handle {
+				display: inline-block;
+				padding: 3px;
+				font-size: 12px;
+				border: 1px solid transparent;
+				margin-left: 5px;
+				vertical-align: middle;
+				cursor: ns-resize;
+			}
+		}
 		>.title {
 			font-weight: bold;
-			>.layover {
-				float: right;
-				margin-left: 10px;
-				// user-select: none; // Don't include in text selection
-				.el-button {
-					padding: 3px;
-					font-size: 12px;
-				}
-				.el-button+.el-button {
-					margin-left: 5px;
-				}
-				.drag-handle {
-					display: inline-block;
-					padding: 3px;
-					font-size: 12px;
-					border: 1px solid transparent;
-					margin-left: 5px;
-					vertical-align: middle;
-					cursor: ns-resize;
-				}
-			}
 		}
 		>.body {
 			white-space: pre-wrap;
