@@ -4,10 +4,10 @@ DROP TYPE IF EXISTS org_permission_level;
 DROP TABLE IF EXISTS organisation;
 DROP TABLE IF EXISTS spec_permission;
 DROP TYPE IF EXISTS spec_permission_level;
-DROP TABLE IF EXISTS spec_block_url;
+DROP TABLE IF EXISTS spec_url;
 DROP TABLE IF EXISTS spec_block;
 DROP TYPE IF EXISTS spec_block_ref_type;
-DROP TABLE IF EXISTS spec_subspace;
+DROP TABLE IF EXISTS spec_subspec;
 DROP TABLE IF EXISTS spec;
 DROP TYPE IF EXISTS spec_owner_type;
 DROP TABLE IF EXISTS user_group_member;
@@ -18,6 +18,17 @@ DROP TYPE IF EXISTS text_content_type;
 DROP TYPE IF EXISTS list_style_type;
 DROP TABLE IF EXISTS user_session;
 DROP TABLE IF EXISTS user_account;
+DROP COLLATION IF EXISTS case_insensitive;
+
+CREATE COLLATION case_insensitive (
+	provider = icu, -- "International Components for Unicode"
+	-- und stands for undefined (ICU root collation - language agnostic)
+	-- colStrength=primary ignores case and accents
+	-- colNumeric=yes sorts strings with numeric parts by numeric value
+	-- colAlternate=shifted would recognize equality of equivalent punctuation sequences
+	locale = 'und@colStrength=primary;colNumeric=yes',
+	deterministic = false
+);
 
 -- Create minimal tables for user authentication and session management
 CREATE TABLE user_account (
@@ -94,12 +105,13 @@ CREATE TABLE spec_permission (
 	grant_id INTEGER NOT NULL,
 	permission_level spec_permission_level NOT NULL
 );
-CREATE TABLE spec_subspace (
+CREATE TABLE spec_subspec (
 	id SERIAL PRIMARY KEY,
 	spec_id INTEGER NOT NULL REFERENCES spec (id) ON DELETE CASCADE,
 	created_at TIMESTAMP NOT NULL,
-	subspace_name VARCHAR(255) NOT NULL,
-	subspace_desc TEXT
+	subspec_name VARCHAR(255) NOT NULL COLLATE case_insensitive,
+	subspec_desc TEXT,
+	INDEX spec_subspec_name (spec_id, subspec_name)
 );
 CREATE TYPE list_style_type AS ENUM (
 	'bullet',
@@ -114,7 +126,7 @@ CREATE TYPE text_content_type AS ENUM (
 CREATE TYPE spec_block_ref_type AS ENUM (
 	'org',
 	'spec',
-	'subspace',
+	'subspec',
 	'block',
 	'image',
 	'video',
@@ -124,7 +136,7 @@ CREATE TYPE spec_block_ref_type AS ENUM (
 CREATE TABLE spec_block (
 	id SERIAL PRIMARY KEY,
 	spec_id INTEGER NOT NULL REFERENCES spec (id) ON DELETE CASCADE,
-	subspace_id INTEGER REFERENCES spec_subspace (id) ON DELETE CASCADE,
+	subspec_id INTEGER REFERENCES spec_subspec (id) ON DELETE CASCADE,
 	parent_id INTEGER REFERENCES spec_block (id) ON DELETE CASCADE,
 	order_number INTEGER NOT NULL,
 	style_type list_style_type NOT NULL DEFAULT 'none',
@@ -134,13 +146,16 @@ CREATE TABLE spec_block (
 	block_title VARCHAR(255),
 	block_body TEXT
 );
-CREATE TABLE spec_block_url (
+CREATE TABLE spec_url (
 	id SERIAL PRIMARY KEY,
-	block_id INTEGER NOT NULL REFERENCES spec_block (id) ON DELETE CASCADE,
+	spec_id INTEGER NOT NULL REFERENCES spec (id) ON DELETE CASCADE,
 	url VARCHAR(1024) NOT NULL,
-	url_title VARCHAR(255),
+	url_title VARCHAR(255) COLLATE case_insensitive,
 	url_desc VARCHAR(255),
-	url_image_data TEXT
+	url_image_data TEXT,
+	updated_at TIMESTAMP NOT NULL,
+	INDEX spec_url_url (spec_id, url),
+	INDEX spec_url_title (spec_id, url_title)
 );
 
 CREATE TABLE text_intern (

@@ -15,7 +15,7 @@ password=${password:-test}
 sh update-build-date.sh
 
 # Build frontend
-npm run prod
+npm run prod || { echo 'Client code compilation failed.' ; exit 1; }
 
 # Run backend and init db and user
 go run *.go -initDB -createUser -username="$username" -password="$password" -email=test@test.com

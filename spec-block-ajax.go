@@ -20,22 +20,22 @@ func argPlaceholder(arg interface{}, args *[]interface{}) string {
 	return "$" + strconv.Itoa(len(*args))
 }
 
-// Returns a condition matching the given subspaceID,
-// adding the given subspaceID to args if not already present.
-func subspaceCond(subspaceID *int64, args *[]interface{}) string {
-	if subspaceID == nil {
-		return "subspace_id IS NULL"
+// Returns a condition matching the given subspecID,
+// adding the given subspecID to args if not already present.
+func subspecCond(subspecID *int64, args *[]interface{}) string {
+	if subspecID == nil {
+		return "subspec_id IS NULL"
 	}
-	return "subspace_id = " + argPlaceholder(*subspaceID, args)
+	return "subspec_id = " + argPlaceholder(*subspecID, args)
 }
 
-// Returns a condition matching the given subspaceID,
+// Returns a condition matching the given subspecID,
 // using a fixed placeholder index when pointer is non-nil.
-func subspaceCondIndexed(subspaceID *int64, index int) string {
-	if subspaceID == nil {
-		return "subspace_id IS NULL"
+func subspecCondIndexed(subspecID *int64, index int) string {
+	if subspecID == nil {
+		return "subspec_id IS NULL"
 	}
-	return "subspace_id = $" + strconv.Itoa(index)
+	return "subspec_id = $" + strconv.Itoa(index)
 }
 
 // Returns a condition matching the given parentID,
@@ -72,19 +72,19 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 
 	// TODO Verify write access to spec
 
-	subspaceID, err := AtoInt64NilIfEmpty(r.Form.Get("subspaceId"))
+	subspecID, err := AtoInt64NilIfEmpty(r.Form.Get("subspecId"))
 	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("parsing subspaceId: %w", err)
+		return nil, http.StatusBadRequest, fmt.Errorf("parsing subspecId: %w", err)
 	}
 
-	// TODO Verify subspace is within spec
+	// TODO Verify subspec is within spec
 
 	parentID, err := AtoInt64NilIfEmpty(r.Form.Get("parentId"))
 	if err != nil {
 		return nil, http.StatusBadRequest, fmt.Errorf("parsing parentId: %w", err)
 	}
 
-	// TODO Verify parent block is within spec/subspace
+	// TODO Verify parent block is within spec/subspec
 
 	insertBeforeID, err := AtoInt64NilIfEmpty(r.Form.Get("insertBeforeId"))
 	if err != nil {
@@ -101,22 +101,9 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 		return nil, http.StatusBadRequest, fmt.Errorf("invalid contentType: %s", *contentType)
 	}
 
-	refType := AtoPointerNilIfEmpty(r.Form.Get("refType"))
-	if refType != nil && !isValidBlockRefType(*refType) {
-		return nil, http.StatusBadRequest, fmt.Errorf("invalid refType: %s", *refType)
-	}
-
-	refID, err := AtoInt64NilIfEmpty(r.Form.Get("refId"))
+	refType, refID, err := validateCreateRefItemFields(r.Form)
 	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("parsing refId: %w", err)
-	}
-	if refID == nil && isRefIDRequiredForRefType(refType) {
-		return nil, http.StatusBadRequest, fmt.Errorf("refId is required for refType: %s", *refType)
-	}
-
-	refURL := AtoPointerNilIfEmpty(r.Form.Get("refUrl"))
-	if refURL == nil && isURLRequiredForRefType(refType) {
-		return nil, http.StatusBadRequest, fmt.Errorf("refUrl required for refType: %s", *refType)
+		return nil, http.StatusBadRequest, fmt.Errorf("invalid ref fields: %w", err)
 	}
 
 	title := AtoPointerNilIfEmpty(strings.TrimSpace(r.Form.Get("title")))
@@ -131,7 +118,26 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 
 	return inTransaction(r.Context(), db, func(tx *sql.Tx) (interface{}, int, error) {
 
-		insertAt, code, err := makeInsertAt(tx, specID, subspaceID, parentID, insertBeforeID)
+		var err error
+
+		// Create or load ref item
+		var refItem interface{}
+		if refType != nil {
+			if refID == nil {
+				refID, refItem, err = handleCreateRefItem(tx, specID, r.Form)
+				if err != nil {
+					return nil, http.StatusInternalServerError, fmt.Errorf("error creating ref item: %w", err)
+				}
+			} else {
+				refItem, err = loadRefItem(tx, *refType, *refID)
+				if err != nil {
+					return nil, http.StatusInternalServerError, fmt.Errorf("error loading ref item: %w", err)
+				}
+			}
+		}
+
+		// Prepare insert position
+		insertAt, code, err := makeInsertAt(tx, specID, subspecID, parentID, insertBeforeID)
 		if err != nil {
 			return nil, code, err
 		}
@@ -140,44 +146,21 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 		var blockID int64
 		err = tx.QueryRow(`
 			INSERT INTO spec_block
-			(spec_id, subspace_id, parent_id, order_number,
-				style_type, content_type, block_title, block_body)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			(spec_id, subspec_id, parent_id, order_number,
+				style_type, content_type, ref_type, ref_id, block_title, block_body)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 			RETURNING id
-			`, specID, subspaceID, parentID, insertAt,
-			styleType, contentType, title, body).Scan(&blockID)
+			`, specID, subspecID, parentID, insertAt,
+			styleType, contentType, refType, refID, title, body).Scan(&blockID)
 		if err != nil {
 			return nil, http.StatusInternalServerError, fmt.Errorf("inserting block: %w", err)
-		}
-
-		// Create ref item
-		var refItem interface{}
-		if refType != nil {
-			if *refType == BlockRefURL && refURL != nil {
-				refURLObject, err := createURLObject(tx, blockID, *refURL)
-				if err != nil {
-					return nil, http.StatusInternalServerError, fmt.Errorf("error creating url object: %w", err)
-				}
-				refID = &refURLObject.ID
-				refItem = refURLObject
-			}
-		}
-
-		if refType != nil && refID != nil {
-			// Update new block
-			_, err = tx.Exec(
-				`UPDATE spec_block SET ref_type=$1, ref_id=$2 WHERE id=$3`,
-				refType, refID, blockID)
-			if err != nil {
-				return nil, http.StatusInternalServerError, fmt.Errorf("setting new block ref: %w", err)
-			}
 		}
 
 		// Return block
 		block := &SpecBlock{
 			ID:          blockID,
 			SpecID:      specID,
-			SubspaceID:  subspaceID,
+			SubspecID:   subspecID,
 			ParentID:    parentID,
 			OrderNumber: insertAt,
 			StyleType:   styleType,
@@ -201,12 +184,17 @@ func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 		return nil, http.StatusInternalServerError, err
 	}
 
+	specID, err := AtoInt64(r.Form.Get("specId"))
+	if err != nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("parsing specId: %w", err)
+	}
+
+	// TODO Verify access
+
 	blockID, err := AtoInt64(r.Form.Get("blockId"))
 	if err != nil {
 		return nil, http.StatusBadRequest, fmt.Errorf("parsing blockId: %w", err)
 	}
-
-	// TODO Verify access
 
 	styleType := r.Form.Get("styleType")
 	if !isValidListStyleType(styleType) {
@@ -218,29 +206,10 @@ func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 		return nil, http.StatusBadRequest, fmt.Errorf("invalid contentType: %s", *contentType)
 	}
 
-	refType := AtoPointerNilIfEmpty(r.Form.Get("refType"))
-	if refType != nil && !isValidBlockRefType(*refType) {
-		return nil, http.StatusBadRequest, fmt.Errorf("invalid refType: %s", *refType)
-	}
-
-	refID, err := AtoInt64NilIfEmpty(r.Form.Get("refId"))
+	refType, refID, err := validateCreateRefItemFields(r.Form)
 	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("parsing refId: %w", err)
+		return nil, http.StatusBadRequest, fmt.Errorf("invalid ref fields: %w", err)
 	}
-	if refID == nil && isRefIDRequiredForRefType(refType) {
-		return nil, http.StatusBadRequest, fmt.Errorf("refId is required for refType: %s", *refType)
-	}
-
-	// TODO Ref updating needs to be refactored significantly
-
-	// URL passed in if updating or creating URL reference
-	refURL := AtoPointerNilIfEmpty(r.Form.Get("refUrl"))
-	if refURL == nil && refID == nil && isURLRequiredForRefType(refType) {
-		return nil, http.StatusBadRequest, fmt.Errorf("refUrl required for refType: %s", *refType)
-	}
-
-	// Whether to refresh the preview of the existing URL
-	refreshURL := AtoBool(r.Form.Get("refRefreshUrl"))
 
 	title := AtoPointerNilIfEmpty(strings.TrimSpace(r.Form.Get("title")))
 
@@ -254,54 +223,20 @@ func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 
 	return inTransaction(r.Context(), db, func(tx *sql.Tx) (interface{}, int, error) {
 
-		var existingRefType *string
-		var existingRefID *int64
+		var err error
 
-		err := tx.QueryRow(
-			`SELECT ref_type, ref_id FROM spec_block WHERE id=$1`,
-			blockID).Scan(&existingRefType, &existingRefID)
-		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("error fetching current block ref: %w", err)
-		}
-
-		// Delete old ref if refType or refID changed
-		if existingRefType != nil && existingRefID != nil {
-			// Check if ref changed
-			if refType == nil || refID == nil || *existingRefType != *refType || *existingRefID != *refID {
-				// Delete old ref
-				switch *existingRefType {
-				case BlockRefURL:
-					err = deleteURLObject(tx, *existingRefID)
-					if err != nil {
-						return nil, http.StatusInternalServerError, fmt.Errorf("error deleting old url object: %w", err)
-					}
-				}
-				refID = nil
-			}
-		}
-
-		// Create or update ref item
+		// Create or load ref item
 		var refItem interface{}
 		if refType != nil {
-			switch *refType {
-			case BlockRefURL:
-				if refID == nil {
-					refURLObject, err := createURLObject(tx, blockID, *refURL)
-					if err != nil {
-						return nil, http.StatusInternalServerError, fmt.Errorf("error creating url object: %w", err)
-					}
-					refID = &refURLObject.ID
-					refItem = refURLObject
-				} else if refreshURL {
-					refItem, err = updateURLObject(tx, *refID, *refURL)
-					if err != nil {
-						return nil, http.StatusInternalServerError, fmt.Errorf("error updating url object: %w", err)
-					}
-				} else {
-					refItem, err = loadURLObject(tx, *refID)
-					if err != nil {
-						return nil, http.StatusInternalServerError, fmt.Errorf("error loading url object: %w", err)
-					}
+			if refID == nil {
+				refID, refItem, err = handleCreateRefItem(tx, specID, r.Form)
+				if err != nil {
+					return nil, http.StatusInternalServerError, fmt.Errorf("error creating ref item: %w", err)
+				}
+			} else {
+				refItem, err = loadRefItem(tx, *refType, *refID)
+				if err != nil {
+					return nil, http.StatusInternalServerError, fmt.Errorf("error loading ref item: %w", err)
 				}
 			}
 		}
@@ -309,9 +244,9 @@ func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 		// Update block row
 		_, err = tx.Exec(`
 				UPDATE spec_block
-				SET style_type=$2, content_type=$3, ref_type=$4, ref_id=$5, block_title=$6, block_body=$7
-				WHERE id=$1
-				`, blockID, styleType, contentType, refType, refID, title, body)
+				SET style_type=$3, content_type=$4, ref_type=$5, ref_id=$6, block_title=$7, block_body=$8
+				WHERE id=$1 AND spec_id=$2
+				`, blockID, specID, styleType, contentType, refType, refID, title, body)
 		if err != nil {
 			return nil, http.StatusInternalServerError, fmt.Errorf("updating block: %w", err)
 		}
@@ -359,19 +294,19 @@ func ajaxSpecMoveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 
 	// TODO Verify block is within spec
 
-	subspaceID, err := AtoInt64NilIfEmpty(r.Form.Get("subspaceId"))
+	subspecID, err := AtoInt64NilIfEmpty(r.Form.Get("subspecId"))
 	if err != nil {
 		return nil, http.StatusBadRequest, fmt.Errorf("parsing subsapceId: %w", err)
 	}
 
-	// TODO Verify subspace is within spec
+	// TODO Verify subspec is within spec
 
 	parentID, err := AtoInt64NilIfEmpty(r.Form.Get("parentId"))
 	if err != nil {
 		return nil, http.StatusBadRequest, fmt.Errorf("parsing parentId: %w", err)
 	}
 
-	// TODO Verify parent block is within spec/subspace
+	// TODO Verify parent block is within spec/subspec
 
 	insertBeforeID, err := AtoInt64NilIfEmpty(r.Form.Get("insertBeforeId"))
 	if err != nil {
@@ -380,19 +315,22 @@ func ajaxSpecMoveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 
 	return inTransaction(r.Context(), db, func(tx *sql.Tx) (interface{}, int, error) {
 
-		insertAt, code, err := makeInsertAt(tx, specID, subspaceID, parentID, insertBeforeID)
+		insertAt, code, err := makeInsertAt(tx, specID, subspecID, parentID, insertBeforeID)
 		if err != nil {
 			return 0, code, err
 		}
 
 		query := `UPDATE spec_block
-			SET subspace_id = $1, parent_id = $2, order_number = $3
+			SET subspec_id = $1, parent_id = $2, order_number = $3
 			WHERE id = $4`
 
-		_, err = tx.Exec(query, subspaceID, parentID, insertAt, blockID)
+		_, err = tx.Exec(query, subspecID, parentID, insertAt, blockID)
 		if err != nil {
 			return nil, http.StatusInternalServerError, fmt.Errorf("inserting at end: %w", err)
 		}
+
+		// TODO move sub blocks recursively to target subspec if changed
+		// See https://stackoverflow.com/a/30274296/1597274
 
 		return nil, http.StatusOK, nil
 	})
@@ -401,7 +339,7 @@ func ajaxSpecMoveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 // Increments order numbers of blocks starting at the specified block,
 // and returns the order number preceeding that block.
 // If insertBeforeID is nil, returns the order number at the end of the list.
-func makeInsertAt(tx *sql.Tx, specID int64, subspaceID *int64, parentID *int64, insertBeforeID *int64) (int, int, error) {
+func makeInsertAt(tx *sql.Tx, specID int64, subspecID *int64, parentID *int64, insertBeforeID *int64) (int, int, error) {
 	var insertAt int
 
 	if insertBeforeID == nil {
@@ -412,7 +350,7 @@ func makeInsertAt(tx *sql.Tx, specID int64, subspaceID *int64, parentID *int64, 
 		query := `
 					SELECT COALESCE(MAX(order_number), -1) + 1 AS insert_at FROM spec_block
 					WHERE spec_id = $1
-					AND ` + subspaceCond(subspaceID, &args) + `
+					AND ` + subspecCond(subspecID, &args) + `
 					AND ` + parentCond(parentID, &args)
 
 		err := tx.QueryRow(query, args...).Scan(&insertAt)
@@ -430,7 +368,7 @@ func makeInsertAt(tx *sql.Tx, specID int64, subspaceID *int64, parentID *int64, 
 	query := `UPDATE spec_block
 		SET order_number = order_number + 1
 		WHERE spec_id = $1
-		AND ` + subspaceCond(subspaceID, &args) + `
+		AND ` + subspecCond(subspecID, &args) + `
 		AND ` + parentCond(parentID, &args) + `
 		AND order_number >= (
 			SELECT insert_before_block.order_number
@@ -449,7 +387,7 @@ func makeInsertAt(tx *sql.Tx, specID int64, subspaceID *int64, parentID *int64, 
 
 	query = `SELECT COALESCE(MAX(order_number), -1) + 1 FROM spec_block
 		WHERE spec_id = $1
-		AND ` + subspaceCond(subspaceID, &args) + `
+		AND ` + subspecCond(subspecID, &args) + `
 		AND ` + parentCond(parentID, &args) + `
 		AND order_number < (
 			SELECT insert_before_block.order_number

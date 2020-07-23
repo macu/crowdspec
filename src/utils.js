@@ -3,6 +3,10 @@ import Vue from 'vue';
 
 const VERSION_STAMP_RESPONSE = /^VersionStamp: (.+)$/m;
 
+export function setWindowSubtitle(subtitle = null) {
+	window.title = 'CrowdSpec' + (subtitle ? ' | ' : '') + subtitle;
+}
+
 export function alertError(error) {
 	console.error(error);
 	let message = null;
@@ -64,7 +68,6 @@ export function startAutoscroll() {
 				$window.scrollTop($window.scrollTop() + delta);
 			}
 		}
-		console.log('requesting');
 		requestId = window.requestAnimationFrame(handleScroll);
 	}
 
@@ -82,6 +85,20 @@ export function startAutoscroll() {
 }
 
 export function isValidURL(url) {
-	// TODO
-	return true;
+	if (window.URL) {
+		try {
+			new URL(url);
+			return true;
+		} catch {
+			return false;
+		}
+	}
+	// No URL in IE
+	// TODO fallback on regex
+	return !!(url && url.trim());
+}
+
+// Use in scenarios where comparing IDs of mixed type (string / int).
+export function idsEq(id1, id2) {
+	return parseInt(id1, 10) === parseInt(id2, 10);
 }

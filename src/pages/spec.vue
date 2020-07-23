@@ -1,5 +1,6 @@
 <template>
 <section v-if="spec" class="spec-page">
+
 	<header>
 		<h2>
 			<div class="right">
@@ -16,7 +17,7 @@
 		<div v-if="desc" class="desc">{{desc}}</div>
 	</header>
 
-	<spec-view :spec="spec"/>
+	<spec-view :key="spec.id" :spec="spec"/>
 
 	<edit-spec-modal ref="editSpecModal"/>
 
@@ -28,6 +29,7 @@ import $ from 'jquery';
 import SpecView from '../spec/view.vue';
 import EditSpecModal from '../spec/edit-spec-modal.vue';
 import {ajaxLoadSpec} from '../spec/ajax.js';
+import {setWindowSubtitle} from '../utils.js';
 
 export default {
 	components: {
@@ -64,11 +66,19 @@ export default {
 			next({name: 'ajax-error', params: {code: jqXHR.status}, replace: true});
 		});
 	},
+	beforeRouteLeave(to, from, next) {
+		setWindowSubtitle(); // clear
+		next();
+	},
 	methods: {
 		setSpec(spec) {
 			this.spec = spec;
 			this.name = spec.name;
 			this.desc = spec.desc;
+			setWindowSubtitle(spec.name);
+			// vue-router scrollBehavior is applied before spec-view has a chance to populate,
+			// so restore the scroll position again after fully rendering.
+			this.$nextTick(this.restoreScroll);
 		},
 		openManageSpec() {
 			this.$refs.editSpecModal.showEdit({
@@ -79,13 +89,22 @@ export default {
 			}, updatedSpec => {
 				this.name = updatedSpec.name;
 				this.desc = updatedSpec.desc;
+				setWindowSubtitle(updatedSpec.name);
 			});
+		},
+		restoreScroll() {
+			let position = this.$store.state.savedScrollPosition;
+			if (position) {
+				$(window).scrollTop(position.y).scrollLeft(position.x);
+			}
 		},
 	},
 };
 </script>
 
 <style lang="scss">
+@import '../styles/_colours.scss';
+
 .spec-page {
 	>header {
 		margin-top: -1cm;
@@ -93,7 +112,7 @@ export default {
 		margin-right: -1cm;
 		margin-bottom: 1cm;
 		padding: 0.5cm 1cm;
-		background-color: darkblue;
+		background-color: $spec;
 		color: white;
 		>h2 {
 			margin: 0;
@@ -109,6 +128,7 @@ export default {
 		>.desc {
 			white-space: pre-wrap;
 			margin-top: 10px;
+			color: white;
 		}
 	}
 }

@@ -18,6 +18,8 @@ postgres=# SELECT table_catalog, table_schema, table_name, privilege_type FROM i
 
 ```
 $ psql crowdspec
+postgres=# \dt
+postgres=# \d spec
 ```
 
 ## Set up `env.json` for local development
@@ -46,11 +48,18 @@ To rebuild client and server, and run:
 $ sh restart.sh
 ```
 
+## Publish
+
+```
+$ gcloud app deploy
+```
+
 ## Access dev database through GCloud
 
 ```
 gcloud sql connect crowdspec-dev --user=postgres --quiet
 postgres=# \c crowdspec
+postgres=# \i <migration>.pgsql
 ```
 
 ## Vacuum

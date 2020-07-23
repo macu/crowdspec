@@ -31,9 +31,10 @@
 
 		<div v-if="title" class="title">{{title}}</div>
 
-		<!-- TODO ref item here -->
-
-		<ref-url v-if="refType === 'url' && refItem" :item="refItem" class="ref-item"/>
+		<template v-if="refType && refItem">
+			<ref-url v-if="refType === 'url'" :item="refItem" class="ref-item"/>
+			<ref-subspec v-else-if="refType === 'subspec'" :item="refItem" class="ref-item"/>
+		</template>
 
 		<div v-if="body" class="body">{{body}}</div>
 
@@ -49,14 +50,18 @@
 <script>
 import $ from 'jquery';
 import RefUrl from './ref-url.vue';
+import RefSubspec from './ref-subspec.vue';
 import {ajaxMoveBlock} from './ajax.js';
+import {REF_TYPE_URL} from './const.js';
 
 export default {
 	components: {
 		RefUrl,
+		RefSubspec,
 	},
 	props: {
 		block: Object,
+		eventBus: Object,
 	},
 	data() {
 		return {
@@ -84,6 +89,14 @@ export default {
 		movingAnother() {
 			return this.$store.state.moving && !this.movingThis;
 		},
+	},
+	mounted() {
+		this.eventBus.$on('url-updated', this.urlUpdated);
+		this.eventBus.$on('url-deleted', this.urlDeleted);
+	},
+	beforeDestroy() {
+		this.eventBus.$off('url-updated', this.urlUpdated);
+		this.eventBus.$off('url-deleted', this.urlDeleted);
 	},
 	methods: {
 		getBlockId() {
@@ -115,7 +128,6 @@ export default {
 				this.refItem = updatedBlock.refItem;
 				this.title = updatedBlock.title;
 				this.body = updatedBlock.body;
-				this.refItem = updatedBlock.refItem;
 			});
 		},
 		raiseOpenEdit(block, callback) {
@@ -138,20 +150,20 @@ export default {
 		addBeforeThis() {
 			let parentId = this.getParentId();
 			let insertBeforeId = this.block.id;
-			this.raisePromptAddSubblock(null, parentId, insertBeforeId);
+			this.raisePromptAddSubblock(parentId, insertBeforeId);
 		},
 		addIntoThis() {
 			let parentId = this.block.id;
 			let insertBeforeId = null;
-			this.raisePromptAddSubblock(null, parentId, insertBeforeId);
+			this.raisePromptAddSubblock(parentId, insertBeforeId);
 		},
 		addAfterThis() {
 			let parentId = this.getParentId();
 			let insertBeforeId = this.getFollowingBlockId();
-			this.raisePromptAddSubblock(null, parentId, insertBeforeId);
+			this.raisePromptAddSubblock(parentId, insertBeforeId);
 		},
-		raisePromptAddSubblock(subspaceId, parentId, insertBeforeId) {
-			this.$emit('prompt-add-subblock', subspaceId, parentId, insertBeforeId);
+		raisePromptAddSubblock(parentId, insertBeforeId) {
+			this.$emit('prompt-add-subblock', parentId, insertBeforeId);
 		},
 		startMoving() {
 			this.$store.commit('startMoving', this.block.id);
@@ -186,6 +198,18 @@ export default {
 				this.$store.commit('endMoving');
 			});
 		},
+		urlUpdated(updatedURLObject) {
+			if (this.refType === REF_TYPE_URL && updatedURLObject.id === this.refId) {
+				this.refItem = updatedURLObject;
+			}
+		},
+		urlDeleted(refId) {
+			if (this.refType === REF_TYPE_URL && refId === this.refId) {
+				this.refType = null;
+				this.refId = null;
+				this.refItem = null;
+			}
+		},
 	},
 };
 </script>
@@ -204,14 +228,15 @@ export default {
 
 	>.content {
 		position: relative;
+		min-height: 20px;
 		>.bg {
 			display: none;
 			z-index: -1;
 			position: absolute;
 			left: -3em;
-			right: -5px;
-			top: -5px;
-			bottom: -5px;
+			right: -7px;
+			top: -7px;
+			bottom: -7px;
 			background-color: #ececec;
 		}
 		&:hover {

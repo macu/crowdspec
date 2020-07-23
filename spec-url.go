@@ -18,17 +18,15 @@ import (
 	"github.com/nfnt/resize"         // (ISC license) https://github.com/nfnt/resize/blob/master/LICENSE
 )
 
-// URLMetadataTimeout is the max connection time when loading URL metadata.
-const URLMetadataTimeout = 5 * time.Second
-
 // URLObject contains display information about a URL.
 type URLObject struct {
-	ID        int64   `json:"id"`
-	BlockID   int64   `json:"blockId"`
-	URL       string  `json:"url"`
-	Title     *string `json:"title,omitempty"`
-	Desc      *string `json:"desc,omitempty"`
-	ImageData *string `json:"imageData,omitempty"`
+	ID        int64     `json:"id"`
+	SpecID    int64     `json:"specId"`
+	URL       string    `json:"url"`
+	Title     *string   `json:"title,omitempty"`
+	Desc      *string   `json:"desc,omitempty"`
+	ImageData *string   `json:"imageData,omitempty"`
+	UpdatedAt time.Time `json:"updated"`
 }
 
 // URLMetadata represents metadata extracted from a request to a URL.
@@ -39,6 +37,9 @@ type URLMetadata struct {
 	ImageURL     url.URL `meta:"og:image,twitter:image"`
 	SiteName     string  `meta:"og:site_name"`
 }
+
+// URLMetadataTimeout is the max connection time when loading URL metadata.
+const URLMetadataTimeout = 5 * time.Second
 
 func fetchMetadata(url string) (*URLMetadata, error) {
 	client := http.Client{
@@ -91,13 +92,58 @@ func loadImageThumbData(imageURL string) (string, error) {
 	return "data:image/png;base64," + stringBuilder.String(), nil
 }
 
-func createURLObject(tx *sql.Tx, blockID int64, url string) (*URLObject, error) {
+func createURLObject(tx *sql.Tx, specID int64, url string) (*URLObject, error) {
 	data, err := fetchMetadata(url)
 	if err != nil {
 		return nil, fmt.Errorf("error loading url metadata: %w", err)
 	}
 
 	urlObject := &URLObject{
+		SpecID: specID,
+		URL:    url,
+	}
+
+	if strings.TrimSpace(data.Title) != "" {
+		title := strings.TrimSpace(data.Title)
+		urlObject.Title = &title
+	}
+
+	if strings.TrimSpace(data.Description) != "" {
+		desc := strings.TrimSpace(data.Description)
+		urlObject.Desc = &desc
+	}
+
+	if data.ImageURL.Host != "" {
+		imageData, err := loadImageThumbData(data.ImageURL.String())
+		if err != nil {
+			// Continue but log
+			log.Println(fmt.Errorf("error loading url image thumbnail: %w", err))
+		} else {
+			urlObject.ImageData = &imageData
+		}
+	}
+
+	// Save URLObject
+	err = tx.QueryRow(
+		`INSERT INTO spec_url (spec_id, url, url_title, url_desc, url_image_data, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, url_title, url_desc, updated_at`,
+		specID, url, urlObject.Title, urlObject.Desc, urlObject.ImageData, time.Now(),
+	).Scan(&urlObject.ID, &urlObject.Title, &urlObject.Desc, &urlObject.UpdatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("error inserting new spec_url: %w", err)
+	}
+
+	return urlObject, nil
+}
+
+func updateURLObject(tx *sql.Tx, id int64, url string) (*URLObject, error) {
+	data, err := fetchMetadata(url)
+	if err != nil {
+		return nil, fmt.Errorf("error loading url metadata: %w", err)
+	}
+
+	urlObject := &URLObject{
+		ID:  id,
 		URL: url,
 	}
 
@@ -123,70 +169,26 @@ func createURLObject(tx *sql.Tx, blockID int64, url string) (*URLObject, error) 
 
 	// Save URLObject
 	err = tx.QueryRow(
-		`INSERT INTO spec_block_url (block_id, url, url_title, url_desc, url_image_data)
-		VALUES ($1, $2, $3, $4, $5) RETURNING id, url_title, url_desc`,
-		blockID, url, urlObject.Title, urlObject.Desc, urlObject.ImageData,
-	).Scan(&urlObject.ID, &urlObject.Title, &urlObject.Desc)
+		`UPDATE spec_url SET url=$2, url_title=$3, url_desc=$4, url_image_data=$5, updated_at=$6
+		WHERE id=$1 RETURNING url_title, url_desc, updated_at`,
+		id, url, urlObject.Title, urlObject.Desc, urlObject.ImageData, time.Now(),
+	).Scan(&urlObject.Title, &urlObject.Desc, &urlObject.UpdatedAt)
 	if err != nil {
-		return nil, fmt.Errorf("error inserting new spec_block_url: %w", err)
+		return nil, fmt.Errorf("error updating spec_url: %w", err)
 	}
 
 	return urlObject, nil
 }
 
-func updateURLObject(tx *sql.Tx, refID int64, url string) (interface{}, error) {
-	data, err := fetchMetadata(url)
-	if err != nil {
-		return nil, fmt.Errorf("error loading url metadata: %w", err)
-	}
-
-	urlObject := &URLObject{
-		ID:  refID,
-		URL: url,
-	}
-
-	if strings.TrimSpace(data.Title) != "" {
-		title := strings.TrimSpace(data.Title)
-		urlObject.Title = &title
-	}
-
-	if strings.TrimSpace(data.Description) != "" {
-		desc := strings.TrimSpace(data.Description)
-		urlObject.Desc = &desc
-	}
-
-	if data.ImageURL.Host != "" {
-		imageData, err := loadImageThumbData(data.ImageURL.String())
-		if err != nil {
-			// Continue but log
-			log.Println(fmt.Errorf("error loading url image thumbnail: %w", err))
-		} else {
-			urlObject.ImageData = &imageData
-		}
-	}
-
-	// Save URLObject
-	err = tx.QueryRow(
-		`UPDATE spec_block_url SET url=$1, url_title=$2, url_desc=$3, url_image_data=$4
-		WHERE id=$5 RETURNING url_title, url_desc`,
-		url, urlObject.Title, urlObject.Desc, urlObject.ImageData, refID,
-	).Scan(&urlObject.Title, &urlObject.Desc)
-	if err != nil {
-		return nil, fmt.Errorf("error updating spec_block_url: %w", err)
-	}
-
-	return urlObject, nil
-}
-
-func loadURLObject(tx *sql.Tx, refID int64) (*URLObject, error) {
+func loadURLObject(db DBConn, id int64) (*URLObject, error) {
 	var urlObject = &URLObject{
-		ID: refID,
+		ID: id,
 	}
 
-	err := tx.QueryRow(
-		`SELECT url, url_title, url_desc, url_image_data
-		FROM spec_block_url WHERE id=$1`, refID).Scan(&urlObject.URL,
-		&urlObject.Title, &urlObject.Desc, &urlObject.ImageData)
+	err := db.QueryRow(
+		`SELECT spec_id, url, url_title, url_desc, url_image_data, updated_at
+		FROM spec_url WHERE id=$1`, id).Scan(&urlObject.SpecID, &urlObject.URL,
+		&urlObject.Title, &urlObject.Desc, &urlObject.ImageData, &urlObject.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -194,56 +196,7 @@ func loadURLObject(tx *sql.Tx, refID int64) (*URLObject, error) {
 	return urlObject, nil
 }
 
-func deleteURLObject(tx *sql.Tx, refID int64) error {
-	_, err := tx.Exec(`DELETE FROM spec_block_url WHERE id=$1`, refID)
+func deleteURLObject(tx *sql.Tx, id int64) error {
+	_, err := tx.Exec(`DELETE FROM spec_url WHERE id=$1`, id)
 	return err
-}
-
-// Returns a URL preview.
-func ajaxFetchURLObject(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
-	// GET
-
-	err := r.ParseForm()
-	if err != nil {
-		return nil, http.StatusInternalServerError, err
-	}
-
-	url := r.Form.Get("url")
-
-	if url == "" {
-		return nil, http.StatusBadRequest, fmt.Errorf("url required")
-	}
-
-	data, err := fetchMetadata(url)
-	if err != nil {
-		return nil, http.StatusInternalServerError, fmt.Errorf("error loading url metadata: %w", err)
-	}
-
-	urlObject := &URLObject{}
-
-	if data.Title != "" {
-		urlObject.Title = &data.Title
-	}
-
-	if data.Description != "" {
-		urlObject.Desc = &data.Description
-	}
-
-	if data.CanonicalURL != "" {
-		urlObject.URL = data.CanonicalURL
-	} else {
-		urlObject.URL = url
-	}
-
-	if data.ImageURL.Host != "" {
-		imageData, err := loadImageThumbData(data.ImageURL.String())
-		if err != nil {
-			// Continue but log
-			log.Println(fmt.Errorf("error loading url image thumbnail: %w", err))
-		} else {
-			urlObject.ImageData = &imageData
-		}
-	}
-
-	return urlObject, http.StatusOK, nil
 }

@@ -38,13 +38,16 @@ export default {
 </script>
 
 <style lang="scss">
+@import './styles/_colours.scss';
+
 .app {
 	height: 100%;
 	>.header {
 		display: flex;
-		background-color: lightblue;
 		padding: 20px 1cm;
 		align-items: center;
+		background-color: $app;
+		color: white;
 		>h1 {
 			flex: 1;
 			margin: 0;

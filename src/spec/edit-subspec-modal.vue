@@ -1,11 +1,11 @@
 <template>
 <el-dialog
-	:title="spec ? 'Manage spec' : 'Create spec'"
+	:title="subspec ? 'Manage subspec' : 'Create subspec'"
 	:visible.sync="showing"
 	:width="$store.getters.dialogSmallWidth"
 	:close-on-click-modal="false"
 	@closed="closed()"
-	class="spec-edit-spec-modal">
+	class="spec-edit-subspec-modal">
 
 	<label>
 		Name
@@ -17,12 +17,12 @@
 		<el-input type="textarea" v-model="desc" :autosize="{minRows: 2}"/>
 	</label>
 
-	<p v-if="spec">Created {{spec.created}}</p>
+	<p v-if="subspec">Created {{subspec.created}}</p>
 
 	<span slot="footer" class="dialog-footer">
 		<el-button @click="showing = false">Cancel</el-button>
-		<el-button v-if="spec" @click="promptDeleteSpec()" type="danger">Delete</el-button>
-		<el-button @click="submit()" type="primary" :disabled="disableSubmit">{{spec ? 'Save' : 'Create'}}</el-button>
+		<el-button v-if="subspec" @click="promptDeleteSubspec()" type="danger">Delete</el-button>
+		<el-button @click="submit()" type="primary" :disabled="disableSubmit">{{subspec ? 'Save' : 'Create'}}</el-button>
 	</span>
 
 </el-dialog>
@@ -30,16 +30,22 @@
 
 <script>
 import $ from 'jquery';
-import {ajaxCreateSpec, ajaxSaveSpec, ajaxDeleteSpec} from './ajax.js';
+import {ajaxCreateSubspec, ajaxSaveSubspec, ajaxDeleteSubspec} from './ajax.js';
 
 export default {
+	props: {
+		specId: {
+			type: Number,
+			required: true,
+		},
+	},
 	data() {
 		return {
 			// user inputs
 			name: '',
 			desc: '',
 			// passed in
-			spec: null,
+			subspec: null,
 			callback: null,
 			// state
 			showing: false,
@@ -72,10 +78,10 @@ export default {
 				$('input', this.$refs.nameInput.$el).focus();
 			});
 		},
-		showEdit(spec, callback) {
-			this.spec = spec;
-			this.name = spec.name;
-			this.desc = spec.desc;
+		showEdit(subspec, callback) {
+			this.subspec = subspec;
+			this.name = subspec.name;
+			this.desc = subspec.desc;
 			this.callback = callback;
 			this.showing = true;
 			this.$nextTick(() => {
@@ -86,7 +92,7 @@ export default {
 			if (this.disableSubmit) {
 				return;
 			}
-			if (this.spec) {
+			if (this.subspec) {
 				this.submitSave();
 			} else {
 				this.submitCreate();
@@ -98,11 +104,12 @@ export default {
 			}
 			this.sending = true;
 			let callback = this.callback; // in case modal is closed before complete
-			ajaxCreateSpec(
+			ajaxCreateSubspec(
+				this.specId,
 				this.name,
 				this.desc
-			).then(newSpecId => {
-				callback(newSpecId);
+			).then(newSubspecId => {
+				callback(newSubspecId);
 				this.showing = false;
 				this.sending = false;
 			}).fail(() => {
@@ -112,29 +119,29 @@ export default {
 		submitSave() {
 			this.sending = true;
 			let callback = this.callback; // in case modal is closed before complete
-			ajaxSaveSpec(
-				this.spec.id,
+			ajaxSaveSubspec(
+				this.subspec.id,
 				this.name,
 				this.desc
-			).then(updatedSpec => {
-				callback(updatedSpec);
+			).then(updatedSubspec => {
+				callback(updatedSubspec);
 				this.showing = false;
 				this.sending = false;
 			}).fail(() => {
 				this.sending = false;
 			});
 		},
-		promptDeleteSpec() {
-			this.$confirm('Permanently delete this spec?', {
+		promptDeleteSubspec() {
+			this.$confirm('Permanently delete this subspec?', {
 				confirmButtonText: 'Delete',
 				cancelButtonText: 'Cancel',
 				type: 'warning',
 			}).then(() => {
 				this.sending = true;
-				ajaxDeleteSpec(this.spec.id).then(() => {
+				ajaxDeleteSubspec(this.subspec.id).then(() => {
 					this.sending = false;
 					this.showing = false;
-					this.$router.push({name: 'index'});
+					this.$router.push({name: 'spec', params: {specId: this.specId}});
 				}).fail(() => {
 					this.sending = false;
 				});
@@ -143,7 +150,7 @@ export default {
 			});
 		},
 		closed() {
-			this.spec = null;
+			this.subspec = null;
 			this.name = '';
 			this.desc = '';
 		},
@@ -152,7 +159,7 @@ export default {
 </script>
 
 <style lang="scss">
-.spec-edit-spec-modal {
+.spec-edit-subspec-modal {
 	>.el-dialog {
 		>.el-dialog__body {
 			>*+* {
@@ -160,7 +167,7 @@ export default {
 			}
 			>label {
 				display: block;
-				input, textarea {
+				>.el-input {
 					display: block;
 					width: 100%;
 				}

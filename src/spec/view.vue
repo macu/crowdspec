@@ -1,5 +1,5 @@
 <template>
-<div class="spec-view">
+<div v-if="spec || subspec" class="spec-view">
 
 	<ul ref="list" class="spec-block-list" :class="{dragging}">
 		<!-- managed programatically -->
@@ -11,7 +11,17 @@
 		<!-- holds mirror element when dragging block -->
 	</ul>
 
-	<edit-block-modal ref="editBlockModal" :spec-id="spec.id"/>
+	<edit-block-modal
+		ref="editBlockModal"
+		:spec-id="specId"
+		:subspec-id="subspecId"
+		@open-edit-url="openEditUrl"
+		/>
+
+	<edit-url-modal
+		ref="editUrlModal"
+		:spec-id="specId"
+		/>
 
 </div>
 </template>
@@ -22,8 +32,10 @@ import Vue from 'vue';
 import Dragula from 'dragula';
 import SpecBlock from './block.vue';
 import EditBlockModal from './edit-block-modal.vue';
+import EditUrlModal from './edit-url-modal.vue';
 import {ajaxDeleteBlock, ajaxMoveBlock} from './ajax.js';
 import store from '../store.js';
+import router from '../router.js';
 import {startAutoscroll} from '../utils.js';
 
 const SpecBlockClass = Vue.extend(SpecBlock);
@@ -31,18 +43,28 @@ const SpecBlockClass = Vue.extend(SpecBlock);
 export default {
 	components: {
 		EditBlockModal,
+		EditUrlModal,
 	},
 	props: {
 		spec: Object,
+		subspec: Object,
 	},
 	data() {
 		return {
 			autoscroller: null,
+			eventBus: new Vue(),
 		};
 	},
 	computed: {
 		dragging() {
 			return this.$store.state.dragging;
+		},
+		specId() {
+			return this.spec ? this.spec.id
+				: (this.subspec ? this.subspec.specId : null);
+		},
+		subspecId() {
+			return this.subspec ? this.subspec.id : null;
 		},
 	},
 	watch: {
@@ -55,7 +77,22 @@ export default {
 		},
 	},
 	mounted() {
-		if (this.spec.blocks) {
+		if (!(this.spec || this.subspec)) {
+			throw 'spec or subspec param required';
+		} else if (this.spec && this.subspec) {
+			throw 'both spec and subspec provided; exactly one required';
+		}
+
+		let blocks;
+		if (this.spec) {
+			blocks = this.spec.blocks;
+		} else if (this.subspec) {
+			blocks = this.subspec.blocks;
+		} else {
+			return;
+		}
+
+		if (blocks) {
 			const insertSubblocks = ($parentBlock, subblocks) => {
 				for (var i = 0; i < subblocks.length; i++) {
 					let subblock = subblocks[i];
@@ -66,8 +103,9 @@ export default {
 					}
 				}
 			};
-			for (var i = 0; i < this.spec.blocks.length; i++) {
-				let block = this.spec.blocks[i];
+
+			for (var i = 0; i < blocks.length; i++) {
+				let block = blocks[i];
 				let $block = this.insertBlock(block);
 				if (block.subblocks) {
 					insertSubblocks($block, block.subblocks);
@@ -89,11 +127,11 @@ export default {
 			// revertOnSpill: true,
 			mirrorContainer: this.$refs.mirrorList,
 		}).on('drag', (el, source) => {
-			// TODO Scroll to maintain offset of dragged element
 			this.$store.commit('startDragging');
+			this.dragTransitionScrollFix();
 		}).on('dragend', (el) => {
-			// TODO Scroll to maintain offset of top visible element
 			this.$store.commit('endDragging');
+			this.dragTransitionScrollFix();
 		}).on('drop', (el, target, source, sibling) => {
 			let $parentBlock = $(target).closest('[data-spec-block]');
 			let parentId = $parentBlock.length ? $parentBlock.data('vc').getBlockId() : null;
@@ -102,12 +140,42 @@ export default {
 			ajaxMoveBlock($(el).data('vc').getBlockId(), null, parentId, insertBeforeId);
 		});
 	},
+	beforeDestroy() {
+		if (this.drake) {
+			this.drake.destroy();
+			this.drake = null;
+		}
+		// Destroy bus
+		this.eventBus.$destroy();
+		this.eventBus = null;
+		// Clean up all independent block component VMs
+		$('[data-spec-block]', this.$refs.list).each((i, e) => {
+			$(e).data('vc').$destroy();
+		});
+	},
 	methods: {
+		dragTransitionScrollFix() {
+			// Retain scroll position relative to first visible block
+			let windowTop = $(window).scrollTop();
+			$('[data-spec-block]', this.$refs.list).each((i, e) => {
+				let offset = $(e).offset();
+				if (offset.top > windowTop) {
+					let diff = offset.top - windowTop;
+					this.$nextTick(() => {
+						// Restore relative scroll position after empty drop zones appear or disappear
+						$(window).scrollTop($(e).offset().top - diff);
+					});
+					return false; // exit loop
+				}
+			});
+		},
 		insertBlock(block, append = true) {
 			let vc = new SpecBlockClass({
 				store,
+				router,
 				propsData: {
 					block,
+					eventBus: this.eventBus,
 				},
 			}).$mount();
 
@@ -122,13 +190,13 @@ export default {
 			return $vc;
 		},
 		promptAddBlock() {
-			this.$refs.editBlockModal.showAdd(null, null, null, this.insertBlock);
+			this.$refs.editBlockModal.showAdd(null, null, this.insertBlock);
 		},
 		openEdit(block, callback) {
 			this.$refs.editBlockModal.showEdit(block, callback);
 		},
-		promptAddSubblock(subspaceId, parentId, insertBeforeId) {
-			this.$refs.editBlockModal.showAdd(subspaceId, parentId, insertBeforeId, newBlock => {
+		promptAddSubblock(parentId, insertBeforeId) {
+			this.$refs.editBlockModal.showAdd(parentId, insertBeforeId, newBlock => {
 				let $vc = this.insertBlock(newBlock, false);
 				// Add to sublist
 				if (insertBeforeId) {
@@ -148,6 +216,19 @@ export default {
 			}).then(() => {
 				ajaxDeleteBlock(blockId).then(callback);
 			}).catch(() => { /* Cancelled */ });
+		},
+		openEditUrl(urlObject, updated, deleted) {
+			this.$refs.editUrlModal.showEdit(urlObject, updatedUrlObject => {
+				this.eventBus.$emit('url-updated', updatedUrlObject);
+				if (updated) {
+					updated(updatedUrlObject);
+				}
+			}, deletedId => {
+				this.eventBus.$emit('url-deleted', deletedId);
+				if (deleted) {
+					deleted(deletedId);
+				}
+			});
 		},
 	},
 };

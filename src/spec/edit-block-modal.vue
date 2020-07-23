@@ -25,21 +25,26 @@
 
 	<el-radio-group v-model="refType">
 		<el-radio :label="null">No media</el-radio>
+		<el-radio label="subspec">Subspec</el-radio>
 		<el-radio label="url">URL</el-radio>
 	</el-radio-group>
 
-	<div v-if="refType === 'url'" class="ref-url-area">
-		<el-input v-model="url">
-			<template slot="prepend">URL</template>
-		</el-input>
-		<template v-if="existingUrlRefItem">
-			<ref-url v-if="existingUrlRefItem.url === url" :item="existingUrlRefItem"/>
-			<el-checkbox v-if="showRefreshUrl" v-model="refreshUrl">
-				Refresh URL preview
-			</el-checkbox>
-			<p v-else-if="refreshUrl">URL preview will be updated.</p>
-		</template>
-	</div>
+	<ref-url-form
+		v-if="refType === REF_TYPE_URL"
+		:spec-id="specId"
+		:initial-url-object="existingUrlRefItem"
+		:valid.sync="refFieldsValid"
+		:fields.sync="refFields"
+		@open-edit-url="openEditUrl"
+		/>
+
+	<ref-subspec-form
+		v-else-if="refType === REF_TYPE_SUBSPEC"
+		:spec-id="specId"
+		:initial-subspec="existingSubspecRefItem"
+		:valid.sync="refFieldsValid"
+		:fields.sync="refFields"
+		/>
 
 	<span slot="footer" class="dialog-footer">
 		<el-button @click="showing = false">Cancel</el-button>
@@ -53,16 +58,27 @@
 
 <script>
 import $ from 'jquery';
-import RefUrl from './ref-url.vue';
-import {ajaxCreateBlock, ajaxSaveBlock} from './ajax.js';
-import {isValidURL} from '../utils.js';
+import RefUrlForm from './ref-url-form.vue';
+import RefSubspecForm from './ref-subspec-form.vue';
+import {
+	ajaxCreateBlock, ajaxSaveBlock,
+	ajaxLoadSubspecs, ajaxCreateSubspec,
+} from './ajax.js';
+import {
+	REF_TYPE_URL, REF_TYPE_SUBSPEC,
+} from './const.js';
 
 export default {
 	components: {
-		RefUrl,
+		RefUrlForm,
+		RefSubspecForm,
 	},
 	props: {
-		specId: Number,
+		specId: {
+			type: Number,
+			required: true,
+		},
+		subspecId: Number,
 	},
 	data() {
 		return {
@@ -71,143 +87,133 @@ export default {
 			title: '',
 			body: '',
 			refType: null,
-			url: '',
-			refreshUrl: false,
+			refFields: null,
+			refFieldsValid: false,
 			// passed in
 			block: null,
-			subspaceId: null,
 			parentId: null,
 			insertBeforeId: null,
 			callback: null,
 			// state
 			showing: false,
+			initialRefItem: null,
 		};
 	},
 	computed: {
+		REF_TYPE_URL() {
+			return REF_TYPE_URL;
+		},
+		REF_TYPE_SUBSPEC() {
+			return REF_TYPE_SUBSPEC;
+		},
 		disableSubmit() {
 			if (this.refType) {
-				switch (this.refType) {
-					case 'url':
-						return !isValidURL(this.url);
-						break;
-					default:
-						// Unrecognized; don't allow submit
-						return true;
-				}
+				return !(this.refFieldsValid && this.refFields);
 			} else {
 				return !(this.title.trim() || this.body.trim());
 			}
 		},
 		existingUrlRefItem() {
-			return this.block && this.block.refType === 'url' && this.block.refItem;
+			return this.block && this.block.refType === REF_TYPE_URL && this.block.refItem || null;
 		},
-		showRefreshUrl() {
-			// Show the refresh option if not changing the URL; otherwise refresh is automatic
-			return this.existingUrlRefItem && this.existingUrlRefItem.url === this.url;
+		existingSubspecRefItem() {
+			return this.block && this.block.refType === REF_TYPE_SUBSPEC && this.block.refItem || null;
 		},
 	},
 	watch: {
-		url(url) {
-			if (this.existingUrlRefItem) {
-				// Set refresh to whether the URL has been changed
-				this.refreshUrl = this.existingUrlRefItem.url !== this.url;
-			}
+		refType(type) {
+			this.refFields = null;
 		},
 	},
 	methods: {
-		showAdd(subspaceId, parentId, insertBeforeId, callback) {
-			this.subspaceId = subspaceId;
+		showAdd(parentId, insertBeforeId, callback) {
 			this.parentId = parentId;
 			this.insertBeforeId = insertBeforeId;
 			this.callback = callback;
 			this.showing = true;
+			this.focusTitleInput();
+		},
+		showEdit(block, callback) {
+			this.block = block; // existing state
+			this.styleType = block.styleType;
+			this.title = block.title || '';
+			this.body = block.body || '';
+			this.refType = block.refType;
+			this.callback = callback;
+			this.showing = true;
+			this.focusTitleInput();
+		},
+		focusTitleInput() {
 			this.$nextTick(() => {
 				$('input', this.$refs.titleInput.$el).focus();
 			});
 		},
-		showEdit(block, callback) {
-			this.block = block;
-			this.styleType = block.styleType;
-			this.title = block.title;
-			this.body = block.body;
-			this.refType = block.refType;
-			this.callback = callback;
-
-			// Extract refItem data
-			if (block.refType === 'url' && block.refItem) {
-				this.url = block.refItem.url;
-			}
-
-			this.showing = true;
-			this.$nextTick(() => {
-				$('input', this.$refs.titleInput.$el).focus();
+		openEditUrl(urlObject, updated = null, deleted = null) {
+			this.$emit('open-edit-url', urlObject, updatedUrlObject => {
+				// Updated
+				if (this.existingUrlRefItem && updatedUrlObject.id === this.existingUrlRefItem.id) {
+					// Update existing ref
+					this.block.refItem = updatedUrlObject;
+				}
+				if (updated) {
+					updated(updatedUrlObject);
+				}
+			}, deletedId => {
+				// Deleted
+				if (this.existingUrlRefItem && deletedId === this.existingUrlRefItem.id) {
+					// Clear existing ref
+					this.block.refType = null;
+					this.block.refId = null;
+					this.block.refItem = null;
+				}
+				if (deleted) {
+					deleted(deletedId);
+				}
 			});
 		},
 		submit() {
 			if (this.disableSubmit) {
 				return;
 			}
+			let sending = this.createSendingSpinner();
+			let callback = this.callback; // in case modal is closed before complete
 			if (this.block) {
-				this.submitSave();
+				ajaxSaveBlock(
+					this.specId,
+					this.block.id,
+					this.styleType,
+					'plaintext', // contentType
+					this.title,
+					this.body,
+					this.refType,
+					this.refFields,
+				).then(updatedBlock => {
+					callback(updatedBlock);
+					this.showing = false;
+					sending.close();
+				}).fail(() => {
+					sending.close();
+				});
 			} else {
-				this.submitAdd();
+				ajaxCreateBlock(
+					this.specId,
+					this.subspecId,
+					this.parentId,
+					this.insertBeforeId,
+					this.styleType,
+					'plaintext', // contentType
+					this.title,
+					this.body,
+					this.refType,
+					this.refFields,
+				).then(newBlock => {
+					callback(newBlock);
+					this.showing = false;
+					sending.close();
+				}).fail(() => {
+					sending.close();
+				});
 			}
-		},
-		submitAdd() {
-			let sending = this.createSendingSpinner();
-			let callback = this.callback; // in case modal is closed before complete
-			let refFields = null;
-			if (this.refType === 'url' && isValidURL(this.url)) {
-				refFields = {
-					refType: 'url',
-					refUrl: this.url,
-				};
-			}
-			ajaxCreateBlock(
-				this.specId,
-				this.subspaceId,
-				this.parentId,
-				this.insertBeforeId,
-				this.styleType,
-				'plaintext', // contentType
-				this.title,
-				this.body,
-				refFields,
-			).then(newBlock => {
-				callback(newBlock);
-				this.showing = false;
-				sending.close();
-			}).fail(() => {
-				sending.close();
-			});
-		},
-		submitSave() {
-			let sending = this.createSendingSpinner();
-			let callback = this.callback; // in case modal is closed before complete
-			let refFields = null;
-			if (this.refType === 'url') {
-				refFields = {
-					refType: 'url',
-					refId: this.existingUrlRefItem ? this.existingUrlRefItem.id : null,
-					refUrl: this.url,
-					refRefreshUrl: this.refreshUrl,
-				};
-			}
-			ajaxSaveBlock(
-				this.specId,
-				this.block.id,
-				this.styleType,
-				'plaintext', // contentType
-				this.title,
-				this.body,
-				refFields,
-			).then(updatedBlock => {
-				callback(updatedBlock);
-				this.showing = false;
-				sending.close();
-			}).fail(() => {
-				sending.close();
-			});
 		},
 		createSendingSpinner() {
 			return this.$loading({
@@ -217,15 +223,14 @@ export default {
 		},
 		closed() {
 			this.block = null;
-			this.subspaceId = null;
 			this.parentId = null;
 			this.insertBeforeId = null;
 			this.callback = null;
 			this.title = '';
 			this.body = '';
 			this.refType = null;
-			this.url = '';
-			this.refreshUrl = false;
+			this.refFields = null;
+			this.refFieldsValid = false;
 		},
 	},
 };
@@ -240,15 +245,9 @@ export default {
 			}
 			>label {
 				display: block;
-				input, textarea {
+				>.el-input {
 					display: block;
 					width: 100%;
-				}
-			}
-			>.ref-url-area {
-				margin-top: 20px;
-				>* + * {
-					margin-top: 10px;
 				}
 			}
 		}

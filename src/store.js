@@ -13,6 +13,7 @@ export const store = new Vuex.Store({
 		windowWidth: $window.width(),
 		dragging: false,
 		moving: null, // id of node being moved
+		savedScrollPosition: null, // set when returning to routes in history
 	},
 	getters: {
 		userID(state) {
@@ -62,6 +63,12 @@ export const store = new Vuex.Store({
 		},
 		endMoving(state) {
 			state.moving = null;
+		},
+		setSavedScrollPosition(state, position) {
+			state.savedScrollPosition = position;
+		},
+		clearSavedScrollPosition(state) {
+			state.savedScrollPosition = null;
 		},
 	},
 });

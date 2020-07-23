@@ -8,10 +8,12 @@
 
 <link rel="shortcut icon" href="/img/favicon.png"/>
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/element-ui/2.13.0/theme-chalk/index.css"
-	integrity="sha256-yVTW9xCJU33Zk7eRRyGSvSDNvinNcd/rit+Nwk9hED0=" crossorigin="anonymous" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/element-ui/2.13.2/theme-chalk/index.css"
+	integrity="sha512-VlhqjPbpqx8fc5LrtBpKJuYMuqrNzFq9oOPV5IVDEirfWaaR4avnmOnLOCGzO1NmVkmVlJ/Xzr+gf+XBd6WfXQ=="
+	crossorigin="anonymous" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dragula/3.7.2/dragula.min.css"
-	integrity="sha256-iVhQxXOykHeL03K08zkxBGxDCLCuzRGGiTYf2FL6mLY=" crossorigin="anonymous" />
+	integrity="sha512-49xW99xceMN8dDoWaoCaXvuVMjnUctHv/jOlZxzFSMJYhqDZmSF/UnM6pLJjQu0YEBLSdO1DP0er6rUdm8/VqA=="
+	crossorigin="anonymous"/>
 
 <link rel="stylesheet" href="/css/compiled.css?v={{.VersionStamp}}"/>
 
@@ -33,22 +35,34 @@ window.appVersion = "{{.VersionStamp}}";
 
 <div id="app"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"
-	integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
-<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.11/vue.runtime.min.js"
-	integrity="sha256-vT4XcKWLfaGor0IJgp3nAOzlVh3B29yLJ7paM+bYgao=" crossorigin="anonymous"></script> -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"
+	integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg=="
+	crossorigin="anonymous"></script>
+
+<!-- Enable Vue DevTools -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.11/vue.js"
-	integrity="sha256-NSuqgY2hCZJUN6hDMFfdxvkexI7+iLxXQbL540RQ/c4=" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vuex/3.2.0/vuex.min.js"
-	integrity="sha256-umcvo1nNPhewVB3oZdXzuspMoW0H5pyTKCYAeULjRr0=" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vue-router/3.1.3/vue-router.min.js"
-	integrity="sha256-r/vPIUvTobCpYZsMmvU7HM58cNd4D6/vdICqDFapV7Y=" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/element-ui/2.13.0/index.js"
-	integrity="sha256-n2bLFl278BFBjP+KJ3gB/gqoZIS4mAnuaCWuubCjRJk=" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/element-ui/2.13.0/locale/en.min.js"
-	integrity="sha256-mkB9kHKaSVgGvxRYlRTAhA5dPD0Du6f3AGHSZNAKfQg=" crossorigin="anonymous"></script>
+	integrity="sha512-PyKhbAWS+VlTWXjk/36s5hJmUJBxcGY/1hlxg6woHD/EONP2fawZRKmvHdTGOWPKTqk3CPSUPh7+2boIBklbvw=="
+	crossorigin="anonymous"></script>
+<!-- Production Vue -->
+<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.11/vue.runtime.min.js"
+	integrity="sha512-Vzh7nxnYk0GXQx1BNmbBkqmxWIf/kjw+UoddU38COFVvtIeOaz+d+Wk02F8Kt8brFNCavJdTxxL0iWpU1IfF0w=="
+	crossorigin="anonymous"></script> -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vuex/3.5.1/vuex.min.js"
+	integrity="sha512-n/iV5SyKXzLRbRczKU75fMgHO0A1DWJSWbK5llLNAqdcoxtUK3NfgfszYpjhvcEqS6nEXwu7gQ5bIkx6z8/lrA=="
+	crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue-router/3.2.0/vue-router.min.js"
+	integrity="sha512-Y1hQd9iqAxeMSJOqHpbFD1AljkJ9w0Igux1GYZhYH36oNFyLYtdwpNHTq17V5spP1jM8a7zimyvyHpR/4WcVDQ=="
+	crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/element-ui/2.13.2/index.js"
+	integrity="sha512-5ISWXWibAAxzJ+/xjZh0r6yM+fVNH2RpMWSN1DrPlonE4Ll7pHIM79Wv2aNt+6+RgKp6OIpVeFakPRON1XRXqg=="
+	crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/element-ui/2.13.2/locale/en.min.js"
+	integrity="sha512-9YlFduKcSZaG5GRHYP70T8iXg6m/6EW2i+OIBg5VRK6fwwBtAaeSzL2XWSWcGKCsdx0phmQ5+JGcvbK4q4hMrA=="
+	crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dragula/3.7.2/dragula.min.js"
-	integrity="sha256-ug4bHfqHFAj2B5MESRxbLd3R3wdVMQzug2KHZqFEmFI=" crossorigin="anonymous"></script>
+	integrity="sha512-T1BAtwCRE7TI7k5m9Pd8El1ARLK06yBaFEHsiIX8JXTtS8wQ5fBknAeLsDrYD3I0UJEwhUgIlugLUOc1nRXUVA=="
+	crossorigin="anonymous"></script>
 
 <script src="/js/compiled.js?v={{.VersionStamp}}"></script>
 
