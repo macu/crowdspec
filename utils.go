@@ -36,6 +36,11 @@ func AtoUint(s string) (uint, error) {
 	return uint(r), err
 }
 
+// UintToA converts a uint to a base 10 string.
+func UintToA(i uint) string {
+	return strconv.FormatUint(uint64(i), 10)
+}
+
 // AtoInt64 converts base 10 string to int64.
 func AtoInt64(s string) (int64, error) {
 	r, err := strconv.ParseInt(s, 10, 64)

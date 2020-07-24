@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"log"
+	"fmt"
 	"net/http"
 )
 
@@ -46,7 +46,7 @@ func ajaxHandler(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request
 		if fouundPath {
 			response, statusCode, err := handler(db, userID, w, r)
 			if err != nil {
-				log.Printf("Error running ajax handler [%s]: %v\n", r.URL.Path, err)
+				logError(r, userID, fmt.Errorf("[%s]: %w", r.URL.Path, err))
 				w.WriteHeader(statusCode)
 				// Send current version stamp
 				w.Write([]byte("VersionStamp: " + cacheControlVersionStamp))
@@ -55,7 +55,7 @@ func ajaxHandler(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request
 			if response != nil {
 				js, err := json.Marshal(response)
 				if err != nil {
-					log.Printf("Error marshalling response: %v\n", err)
+					logError(r, userID, fmt.Errorf("[%s] marshalling response: %w", r.URL.Path, err))
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
@@ -72,6 +72,7 @@ func ajaxHandler(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request
 }
 
 func ajaxTest(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
+	// return nil, http.StatusNotImplemented, fmt.Errorf("test error")
 	return struct {
 		Message string `json:"message"`
 	}{"Message retrieved using AJAX"}, http.StatusOK, nil
@@ -82,27 +83,27 @@ func inTransaction(c context.Context, db *sql.DB, f func(tx *sql.Tx) (interface{
 	if err != nil {
 		rbErr := tx.Rollback()
 		if rbErr != nil {
-			log.Println(rbErr)
+			return nil, http.StatusInternalServerError, fmt.Errorf("rollback: %v; on begin transaction: %w", rbErr, err)
 		}
-		return nil, http.StatusInternalServerError, err
+		return nil, http.StatusInternalServerError, fmt.Errorf("begin transaction: %w", err)
 	}
 
 	response, statusCode, err := f(tx)
 	if err != nil {
 		rbErr := tx.Rollback()
 		if rbErr != nil {
-			log.Println(rbErr)
+			return nil, http.StatusInternalServerError, fmt.Errorf("rollback: %v; on run function: %w", rbErr, err)
 		}
-		return nil, statusCode, err
+		return nil, statusCode, fmt.Errorf("run function: %w", err)
 	}
 
 	err = tx.Commit()
 	if err != nil {
 		rbErr := tx.Rollback()
 		if rbErr != nil {
-			log.Println(rbErr)
+			return nil, http.StatusInternalServerError, fmt.Errorf("rollback: %v; on commit: %w", rbErr, err)
 		}
-		return nil, http.StatusInternalServerError, err
+		return nil, http.StatusInternalServerError, fmt.Errorf("commit: %w", err)
 	}
 
 	return response, statusCode, nil

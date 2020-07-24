@@ -29,6 +29,7 @@ type config struct {
 
 // Loaded from env, used to invalidate cache on compiled client resources
 var cacheControlVersionStamp string
+var appengine bool
 
 func main() {
 
@@ -40,9 +41,6 @@ func main() {
 	exitAfterExec := flag.Bool("exit", false, "Whether to exit after init or create user")
 	flag.Parse()
 
-	// Include file and line in log output
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-
 	var config = &config{}
 	var db *sql.DB
 	var err error
@@ -52,12 +50,13 @@ func main() {
 	if os.Getenv("DEV_ENV") == "appengine" {
 		// Running on App Engine
 		local = false
+		appengine = true
 
 		// Load DB password from Secret Manager
 		secretName := os.Getenv("DB_PASS_SECRET")
 		dbPass, err := loadSecret(secretName)
 		if err != nil {
-			log.Fatalln(err)
+			logErrorFatal(err)
 		}
 
 		dataSourceName := fmt.Sprintf("user=%s password=%s host=%s dbname=%s",
@@ -65,7 +64,7 @@ func main() {
 
 		db, err = sql.Open("postgres", dataSourceName)
 		if err != nil {
-			log.Fatalln(err)
+			logErrorFatal(err)
 		}
 
 		// Port number comes from env on App Engine
@@ -77,15 +76,16 @@ func main() {
 	} else {
 		// Running locally
 		local = true
+		appengine = false
 
 		configContents, err := ioutil.ReadFile("env.json")
 		if err != nil {
-			log.Fatalln(err)
+			logErrorFatal(err)
 		}
 
 		err = json.Unmarshal(configContents, config)
 		if err != nil {
-			log.Fatalln(err)
+			logErrorFatal(err)
 		}
 
 		dataSourceName := "postgres://" + config.DBUser + ":" + config.DBPass +
@@ -93,7 +93,7 @@ func main() {
 
 		db, err = sql.Open("postgres", dataSourceName)
 		if err != nil {
-			log.Fatalln(err)
+			logErrorFatal(err)
 		}
 
 		// Version stamp comes from env.json
@@ -104,14 +104,14 @@ func main() {
 	// Confirm connection
 	err = db.Ping()
 	if err != nil {
-		log.Fatalln(err)
+		logErrorFatal(err)
 	}
 
 	if local && *initDB {
 		// Load initializing SQL
 		initFileContents, err := ioutil.ReadFile("sql/init.pgsql")
 		if err != nil {
-			log.Fatalln(err)
+			logErrorFatal(err)
 		}
 
 		// Remove comments
@@ -130,7 +130,7 @@ func main() {
 			line := strings.TrimSpace(lines[i])
 			_, err = db.Exec(line)
 			if err != nil {
-				log.Fatalln(err)
+				logErrorFatal(err)
 			}
 		}
 		log.Println("Database initialized")
@@ -138,7 +138,7 @@ func main() {
 
 	if local && *createNewUser {
 		if _, err := createUser(db, *newUserUsername, *newUserPassword, *newUserEmail); err != nil {
-			log.Fatalln(err)
+			logErrorFatal(err)
 		}
 		log.Println("New user created")
 	}
@@ -175,8 +175,13 @@ func main() {
 
 	log.Printf("Listening on port %s", config.HTTPPort)
 
-	if err := s.ListenAndServe(); err != nil {
-		log.Fatalln(err)
+	if err = s.ListenAndServe(); err != http.ErrServerClosed {
+		logErrorFatal(err)
+	}
+
+	if appEngineErrorClient != nil {
+		// Flush pending logs
+		appEngineErrorClient.Close()
 	}
 }
 
@@ -187,7 +192,7 @@ func indexHandler(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 	var username string
 	err := row.Scan(&username)
 	if err != nil {
-		log.Println(err)
+		logError(r, userID, fmt.Errorf("selecting username: %w", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

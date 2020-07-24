@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 )
@@ -183,10 +182,8 @@ func ajaxFetchURLPreview(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 
 	if data.ImageURL.Host != "" {
 		imageData, err := loadImageThumbData(data.ImageURL.String())
-		if err != nil {
-			// Continue but log
-			log.Println(fmt.Errorf("error loading url image thumbnail: %w", err))
-		} else {
+		if err == nil {
+			// Silently ignore errors
 			urlObject.ImageData = &imageData
 		}
 	}

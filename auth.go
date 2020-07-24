@@ -75,7 +75,7 @@ func makeAuthenticator(db *sql.DB) func(handler AuthenticatedRoute) func(http.Re
 				}
 				return
 			} else if err != nil {
-				log.Println(err)
+				logError(r, 0, fmt.Errorf("loading user from session token: %w", err))
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
@@ -87,7 +87,7 @@ func makeAuthenticator(db *sql.DB) func(handler AuthenticatedRoute) func(http.Re
 				expires := now.Add(sessionTokenCookieExpiry)
 				_, err = updateSessionStmt.Exec(expires, sessionTokenCookie.Value)
 				if err != nil {
-					log.Println(err)
+					logError(r, userID, fmt.Errorf("updating session expiry: %w", err))
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
@@ -127,19 +127,21 @@ func makeLoginHandler(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 			var authHash string
 			err := selectUserStmt.QueryRow(username).Scan(&userID, &authHash)
 			if err == sql.ErrNoRows {
-				log.Println("No user found for username: " + username)
+				// TODO Limit failed attempts
+				log.Printf("invalid username: %s", username) // no error report
 				w.WriteHeader(http.StatusForbidden)
 				loginPageTemplate.Execute(w, struct{ Error int }{http.StatusForbidden})
 				return
 			} else if err != nil {
-				log.Println(err)
+				logError(r, 0, fmt.Errorf("looking up user: %w", err))
 				w.WriteHeader(http.StatusInternalServerError)
 				loginPageTemplate.Execute(w, struct{ Error int }{http.StatusInternalServerError})
 				return
 			}
 			err = bcrypt.CompareHashAndPassword([]byte(authHash), []byte(password))
 			if err != nil {
-				log.Println("Password login failed for username: " + username)
+				// TODO Limit failed attempts
+				log.Printf("invalid password for user: %d", userID) // no error report
 				w.WriteHeader(http.StatusUnauthorized)
 				loginPageTemplate.Execute(w, struct{ Error int }{http.StatusForbidden})
 				return
@@ -148,7 +150,7 @@ func makeLoginHandler(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 			expires := time.Now().Add(sessionTokenCookieExpiry)
 			_, err = insertSessionStmt.Exec(token, userID, expires)
 			if err != nil {
-				log.Println(err)
+				logError(r, userID, fmt.Errorf("inserting session: %w", err))
 				w.WriteHeader(http.StatusInternalServerError)
 				loginPageTemplate.Execute(w, struct{ Error int }{http.StatusInternalServerError})
 				return
@@ -172,7 +174,7 @@ func logoutHandler(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reque
 	sessionTokenCookie, _ := r.Cookie(sessionTokenCookieName)
 	_, err := db.Exec("DELETE FROM user_session WHERE token=$1", sessionTokenCookie.Value)
 	if err != nil {
-		log.Println(err)
+		logError(r, userID, fmt.Errorf("deleting session: %w", err))
 	}
 	http.SetCookie(w, &http.Cookie{
 		Name:     sessionTokenCookieName,
@@ -192,13 +194,13 @@ func makeSessionID() string {
 	var b [8]byte
 	_, err := crypto_rand.Read(b[:])
 	if err != nil {
-		log.Printf("Failed to read session ID random generator seed bytes with crypto/rand: %v", err)
+		logError(nil, 0, fmt.Errorf("reading session ID random generator seed bytes with crypto/rand: %w", err))
 		seed = time.Now().UnixNano()
 	} else {
 		buf := bytes.NewBuffer(b[:])
 		err = binary.Read(buf, binary.LittleEndian, &seed)
 		if err != nil {
-			log.Printf("Failed to read session ID random generator seed with binary.Read: %v", err)
+			logError(nil, 0, fmt.Errorf("reading session ID random generator seed with binary.Read: %w", err))
 			seed = time.Now().UnixNano()
 		}
 	}

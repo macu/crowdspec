@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"image"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -115,10 +114,8 @@ func createURLObject(tx *sql.Tx, specID int64, url string) (*URLObject, error) {
 
 	if data.ImageURL.Host != "" {
 		imageData, err := loadImageThumbData(data.ImageURL.String())
-		if err != nil {
-			// Continue but log
-			log.Println(fmt.Errorf("error loading url image thumbnail: %w", err))
-		} else {
+		if err == nil {
+			// Silently ignore errors
 			urlObject.ImageData = &imageData
 		}
 	}
@@ -159,10 +156,8 @@ func updateURLObject(tx *sql.Tx, id int64, url string) (*URLObject, error) {
 
 	if data.ImageURL.Host != "" {
 		imageData, err := loadImageThumbData(data.ImageURL.String())
-		if err != nil {
-			// Continue but log
-			log.Println(fmt.Errorf("error loading url image thumbnail: %w", err))
-		} else {
+		if err == nil {
+			// Silently ignore errors
 			urlObject.ImageData = &imageData
 		}
 	}
