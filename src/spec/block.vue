@@ -5,28 +5,34 @@
 
 		<div class="bg"></div>
 
-		<div class="layover" @mouseleave="cancelChooseAddPosition()">
-			<template v-if="choosingAddPosition">
-				<el-button @click="cancelChooseAddPosition()" type="warning" size="mini" icon="el-icon-close" circle/>
-				<el-button @click="addBeforeThis()" type="primary" size="mini" icon="el-icon-top" circle/>
-				<el-button @click="addIntoThis()" type="primary" size="mini" icon="el-icon-bottom-right" circle/>
-				<el-button @click="addAfterThis()" type="primary" size="mini" icon="el-icon-bottom" circle/>
-			</template>
-			<template v-else-if="movingThis">
-				<el-button @click="cancelMoving()" type="warning" size="mini" icon="el-icon-close">Cancel move</el-button>
-			</template>
-			<template v-else-if="movingAnother">
-				<el-button @click="cancelMoving()" type="warning" size="mini" icon="el-icon-close" circle/>
-				<el-button @click="moveBeforeThis()" type="primary" size="mini" icon="el-icon-top" circle/>
-				<el-button @click="moveIntoThis()" type="primary" size="mini" icon="el-icon-bottom-right" circle/>
-				<el-button @click="moveAfterThis()" type="primary" size="mini" icon="el-icon-bottom" circle/>
-			</template>
-			<template v-else>
-				<el-button @click="editBlock()" type="default" size="mini" icon="el-icon-edit" circle/>
-				<el-button @click="promptDeleteBlock()" type="warning" size="mini" icon="el-icon-delete" circle/>
-				<el-button @click="enterChooseAddPosition()" type="primary" size="mini" icon="el-icon-plus" circle/>
-				<i @click="startMoving()" class="el-icon-d-caret drag-handle"></i>
-			</template>
+		<div class="layover" @mouseleave="mouseLeaveLayover()">
+			<div class="expand-control" :class="{hide: showActions}">
+				<el-button @click="focusActions = true" type="default" size="mini" icon="el-icon-more" circle/>
+			</div>
+			<div class="actions" :class="{show: showActions}">
+				<template v-if="choosingAddPosition">
+					<el-button @click="cancelChooseAddPosition()" type="warning" size="mini" icon="el-icon-close" circle/>
+					<el-button @click="addBeforeThis()" type="primary" size="mini" icon="el-icon-top" circle/>
+					<el-button @click="addIntoThis()" type="primary" size="mini" icon="el-icon-bottom-right" circle/>
+					<el-button @click="addAfterThis()" type="primary" size="mini" icon="el-icon-bottom" circle/>
+				</template>
+				<template v-else-if="movingThis">
+					<el-button @click="cancelMoving()" type="warning" size="mini" icon="el-icon-close">Cancel move</el-button>
+				</template>
+				<template v-else-if="movingAnother">
+					<el-button @click="cancelMoving()" type="warning" size="mini" icon="el-icon-close" circle/>
+					<el-button @click="moveBeforeThis()" type="primary" size="mini" icon="el-icon-top" circle/>
+					<el-button @click="moveIntoThis()" type="primary" size="mini" icon="el-icon-bottom-right" circle/>
+					<el-button @click="moveAfterThis()" type="primary" size="mini" icon="el-icon-bottom" circle/>
+				</template>
+				<template v-else>
+					<el-button @click="editBlock()" type="default" size="mini" icon="el-icon-edit" circle/>
+					<el-button @click="promptDeleteBlock()" type="warning" size="mini" icon="el-icon-delete" circle/>
+					<el-button @click="enterChooseAddPosition()" type="primary" size="mini" icon="el-icon-plus" circle/>
+					<el-button @click="startMoving()" class="move-action" type="default" size="mini" icon="el-icon-d-caret" circle/>
+					<i @click="startMoving()" class="el-icon-d-caret drag-handle"></i>
+				</template>
+			</div>
 		</div>
 
 		<div v-if="title" class="title">{{title}}</div>
@@ -77,6 +83,7 @@ export default {
 
 			// Dynamic
 			choosingAddPosition: false,
+			focusActions: false,
 		};
 	},
 	computed: {
@@ -88,6 +95,9 @@ export default {
 		},
 		movingAnother() {
 			return this.$store.state.moving && !this.movingThis;
+		},
+		showActions() {
+			return this.focusActions || this.movingThis || this.movingAnother;
 		},
 	},
 	mounted() {
@@ -166,10 +176,12 @@ export default {
 			this.$emit('prompt-add-subblock', parentId, insertBeforeId);
 		},
 		startMoving() {
-			this.$store.commit('startMoving', this.block.id);
+			this.$emit('start-moving', this.block.id);
+			// Mouseover state is lost without triggering mouseleave
+			this.focusActions = false;
 		},
 		cancelMoving() {
-			this.$store.commit('endMoving');
+			this.$emit('end-moving', this.block.id);
 		},
 		moveBeforeThis() {
 			let movingId = this.$store.state.moving;
@@ -198,6 +210,10 @@ export default {
 				this.$store.commit('endMoving');
 			});
 		},
+		mouseLeaveLayover() {
+			this.choosingAddPosition = false;
+			this.focusActions = false;
+		},
 		urlUpdated(updatedURLObject) {
 			if (this.refType === REF_TYPE_URL && updatedURLObject.id === this.refId) {
 				this.refItem = updatedURLObject;
@@ -215,12 +231,11 @@ export default {
 </script>
 
 <style lang="scss">
+@import '../styles/_breakpoints.scss';
+
 .spec-block {
 	padding-top: 10px;
 	padding-bottom: 10px;
-
-	// scroll horizontally to view nested items on small screens for now
-	min-width: 300px;
 
 	&:not(:first-child) {
 		border-top: thin solid #eee;
@@ -248,21 +263,52 @@ export default {
 			float: right;
 			margin-left: 10px;
 			// user-select: none; // Don't include in text selection
-			.el-button {
-				padding: 3px;
-				font-size: 12px;
-			}
-			.el-button+.el-button {
-				margin-left: 5px;
-			}
-			.drag-handle {
-				display: inline-block;
-				padding: 3px;
-				font-size: 12px;
-				border: 1px solid transparent;
-				margin-left: 5px;
-				vertical-align: middle;
-				cursor: ns-resize;
+			>div {
+				&.expand-control {
+					display: none;
+					@media screen and (max-width: $max-sm) {
+						display: block;
+						&.hide {
+							display: none;
+						}
+					}
+				}
+				&.actions {
+					>.move-action {
+						// Move button hidden by default
+						display: none;
+					}
+					@media screen and (max-width: $max-sm) {
+						display: none;
+						&.show {
+							display: block;
+						}
+						>.move-action {
+							// Show move button in small viewport
+							display: inline-block;
+						}
+						>.drag-handle {
+							// Don't show drag handle in small viewport
+							display: none;
+						}
+					}
+				}
+				>.el-button {
+					padding: 3px;
+					font-size: 12px;
+				}
+				>.el-button+.el-button {
+					margin-left: 5px;
+				}
+				>.drag-handle {
+					display: inline-block;
+					padding: 3px;
+					font-size: 12px;
+					border: 1px solid transparent;
+					margin-left: 5px;
+					vertical-align: middle;
+					cursor: ns-resize;
+				}
 			}
 		}
 		>.title {

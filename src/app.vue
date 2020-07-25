@@ -44,7 +44,7 @@ export default {
 	height: 100%;
 	>.header {
 		display: flex;
-		padding: 20px 1cm;
+		padding: 20px 8mm;
 		align-items: center;
 		background-color: $app;
 		color: white;

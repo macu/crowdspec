@@ -128,10 +128,10 @@ export default {
 			mirrorContainer: this.$refs.mirrorList,
 		}).on('drag', (el, source) => {
 			this.$store.commit('startDragging');
-			this.dragTransitionScrollFix();
+			this.transitionScrollFix($(el).attr('data-spec-block'));
 		}).on('dragend', (el) => {
 			this.$store.commit('endDragging');
-			this.dragTransitionScrollFix();
+			this.transitionScrollFix($(el).attr('data-spec-block'));
 		}).on('drop', (el, target, source, sibling) => {
 			let $parentBlock = $(target).closest('[data-spec-block]');
 			let parentId = $parentBlock.length ? $parentBlock.data('vc').getBlockId() : null;
@@ -154,7 +154,7 @@ export default {
 		});
 	},
 	methods: {
-		dragTransitionScrollFix() {
+		transitionScrollFixFirst() {
 			// Retain scroll position relative to first visible block
 			let windowTop = $(window).scrollTop();
 			$('[data-spec-block]', this.$refs.list).each((i, e) => {
@@ -162,15 +162,27 @@ export default {
 				if (offset.top > windowTop) {
 					let diff = offset.top - windowTop;
 					this.$nextTick(() => {
-						// Restore relative scroll position after empty drop zones appear or disappear
+						// Restore relative scroll position after interface transition
 						$(window).scrollTop($(e).offset().top - diff);
 					});
 					return false; // exit loop
 				}
 			});
 		},
+		transitionScrollFix(blockId) {
+			// Retain scroll position relative to specified block
+			let windowTop = $(window).scrollTop();
+			let $block = $('[data-spec-block="' + blockId + '"]', this.$refs.list);
+			let offset = $block.offset();
+			let diff = offset.top - windowTop;
+			this.$nextTick(() => {
+				// Restore relative scroll position after interface transition
+				$(window).scrollTop($block.offset().top - diff);
+			});
+		},
 		insertBlock(block, append = true) {
 			let vc = new SpecBlockClass({
+				parent: this, // allows Vue devtools to detect instances
 				store,
 				router,
 				propsData: {
@@ -182,6 +194,8 @@ export default {
 			vc.$on('open-edit', this.openEdit);
 			vc.$on('prompt-add-subblock', this.promptAddSubblock);
 			vc.$on('prompt-delete-block', this.promptDeleteBlock);
+			vc.$on('start-moving', this.startMovingBlock);
+			vc.$on('end-moving', this.endMovingBlock);
 
 			let $vc = $(vc.$el).data('vc', vc);
 			if (append) {
@@ -217,6 +231,14 @@ export default {
 				ajaxDeleteBlock(blockId).then(callback);
 			}).catch(() => { /* Cancelled */ });
 		},
+		startMovingBlock(blockId) {
+			this.$store.commit('startMoving', blockId);
+			this.transitionScrollFix(blockId);
+		},
+		endMovingBlock(endFromBlockId) {
+			this.$store.commit('endMoving');
+			this.transitionScrollFix(endFromBlockId);
+		},
 		openEditUrl(urlObject, updated, deleted) {
 			this.$refs.editUrlModal.showEdit(urlObject, updatedUrlObject => {
 				this.eventBus.$emit('url-updated', updatedUrlObject);
@@ -235,8 +257,12 @@ export default {
 </script>
 
 <style lang="scss">
+@import '../styles/_breakpoints.scss';
+
 $spec-block-list-indent: 3em;
 $spec-block-point-offset: 1em;
+$spec-block-list-margin-left-sm: -2em;
+$spec-block-point-offset-sm: .7em;
 
 .spec-view {
 
@@ -246,6 +272,13 @@ $spec-block-point-offset: 1em;
 		padding-left: $spec-block-list-indent;
 		list-style-type: none;
 		counter-reset: spec-block-list-item-number 0;
+
+		@media screen and (max-width: $max-sm) {
+			margin-left: $spec-block-list-margin-left-sm;
+			ul.spec-block-list {
+				border-left: thin solid lightgray;
+			}
+		}
 
 		&:empty {
 			display: none;
@@ -276,6 +309,10 @@ $spec-block-point-offset: 1em;
 				left: 0;
 				width: $spec-block-list-indent - $spec-block-point-offset;
 				text-align: right;
+
+				@media screen and (max-width: $max-sm) {
+					width: $spec-block-list-indent - $spec-block-point-offset-sm;
+				}
 			}
 		}
 
