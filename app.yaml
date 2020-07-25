@@ -6,7 +6,7 @@ env_variables:
   DB_NAME: "crowdspec"
   DB_USER: "postgres"
   DB_PASS_SECRET: "projects/178253280892/secrets/DB_PASS"
-  VERSION_STAMP: "202007250127"
+  VERSION_STAMP: "202007250151"
 
 handlers:
 - url: /css

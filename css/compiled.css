@@ -4,7 +4,7 @@
 
 .index-page .user-specs,.index-page .public-specs{margin-top:20px}
 
-.ref-url{border:thin solid lightgray;border-radius:5px;padding:10px;display:flex;align-items:flex-start;flex-direction:row}.ref-url>img{width:50px;margin-right:10px}.ref-url>div{flex:1}.ref-url>div>.right{float:right;margin-left:10px}.ref-url>div>.right>.el-button{padding:3px;font-size:12px}.ref-url>div>.title{font-weight:bold}.ref-url>div>.title>span{font-weight:normal;color:gray}.ref-url>div>.desc{margin-top:5px}
+.ref-url{border:thin solid lightgray;border-radius:5px;padding:10px;display:flex;align-items:flex-start;flex-direction:row}.ref-url>img{width:50px;margin-right:10px}.ref-url>div{flex:1}.ref-url>div>.right{float:right;margin-left:10px}.ref-url>div>.right>.el-button{padding:3px;font-size:12px}.ref-url>div>.title{font-weight:bold;overflow-wrap:break-word;overflow-wrap:anywhere}.ref-url>div>.title>span{font-weight:normal;color:gray}.ref-url>div>.desc{margin-top:5px}
 
 .ref-subspec{border:thin solid lightgray;border-radius:5px;padding:10px;display:flex}.ref-subspec>div>.title{font-weight:bold}.ref-subspec>div>.title>span{font-weight:normal;color:gray}.ref-subspec>div>.desc{margin-top:5px}
 

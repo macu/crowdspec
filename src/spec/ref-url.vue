@@ -47,6 +47,8 @@ export default {
 		}
 		>.title {
 			font-weight: bold;
+			overflow-wrap: break-word; // IE
+			overflow-wrap: anywhere;
 			>span {
 				font-weight: normal;
 				color: gray;
