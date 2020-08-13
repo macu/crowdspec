@@ -9,6 +9,7 @@ import (
 	"html/template"
 	"log"
 	"math/rand"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -121,6 +122,7 @@ func makeLoginHandler(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 		if r.Method == http.MethodGet {
 			loginPageTemplate.Execute(w, struct{ Error int }{})
 		} else if r.Method == http.MethodPost {
+			ip, _, _ := net.SplitHostPort(r.RemoteAddr)
 			username := r.FormValue("username")
 			password := r.FormValue("password")
 			var userID uint
@@ -128,7 +130,7 @@ func makeLoginHandler(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 			err := selectUserStmt.QueryRow(username).Scan(&userID, &authHash)
 			if err == sql.ErrNoRows {
 				// TODO Limit failed attempts
-				log.Printf("invalid username: %s", username) // no error report
+				log.Printf("invalid username: %s [%s]", username, ip) // no error report
 				w.WriteHeader(http.StatusForbidden)
 				loginPageTemplate.Execute(w, struct{ Error int }{http.StatusForbidden})
 				return
@@ -141,7 +143,7 @@ func makeLoginHandler(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 			err = bcrypt.CompareHashAndPassword([]byte(authHash), []byte(password))
 			if err != nil {
 				// TODO Limit failed attempts
-				log.Printf("invalid password for user: %d", userID) // no error report
+				log.Printf("invalid password for user: %s [%s]", username, ip) // no error report
 				w.WriteHeader(http.StatusUnauthorized)
 				loginPageTemplate.Execute(w, struct{ Error int }{http.StatusForbidden})
 				return
@@ -163,6 +165,7 @@ func makeLoginHandler(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 				HttpOnly: true,
 			})
 			http.Redirect(w, r, "/", http.StatusSeeOther)
+			log.Printf("user login: %s [%s]", username, ip)
 		} else {
 			w.WriteHeader(http.StatusBadRequest)
 			loginPageTemplate.Execute(w, struct{ Error int }{http.StatusBadRequest})
