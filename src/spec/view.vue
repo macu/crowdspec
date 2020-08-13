@@ -16,11 +16,16 @@
 		:spec-id="specId"
 		:subspec-id="subspecId"
 		@open-edit-url="openEditUrl"
+		@play-video="playVideo"
 		/>
 
 	<edit-url-modal
 		ref="editUrlModal"
 		:spec-id="specId"
+		/>
+
+	<play-video-modal
+		ref="playVideoModal"
 		/>
 
 </div>
@@ -33,6 +38,7 @@ import Dragula from 'dragula';
 import SpecBlock from './block.vue';
 import EditBlockModal from './edit-block-modal.vue';
 import EditUrlModal from './edit-url-modal.vue';
+import PlayVideoModal from './play-video-modal.vue';
 import {ajaxDeleteBlock, ajaxMoveBlock} from './ajax.js';
 import store from '../store.js';
 import router from '../router.js';
@@ -40,10 +46,17 @@ import {startAutoscroll} from '../utils.js';
 
 const SpecBlockClass = Vue.extend(SpecBlock);
 
+/*
+transitRelativeScroll
+transit - carry across a transition "in transit"
+apply same relative condition from present to next state
+*/
+
 export default {
 	components: {
 		EditBlockModal,
 		EditUrlModal,
+		PlayVideoModal,
 	},
 	props: {
 		spec: Object,
@@ -128,10 +141,10 @@ export default {
 			mirrorContainer: this.$refs.mirrorList,
 		}).on('drag', (el, source) => {
 			this.$store.commit('startDragging');
-			this.transitionScrollFix($(el).attr('data-spec-block'));
+			this.transitRelativeScroll($(el).attr('data-spec-block'));
 		}).on('dragend', (el) => {
 			this.$store.commit('endDragging');
-			this.transitionScrollFix($(el).attr('data-spec-block'));
+			this.transitRelativeScroll($(el).attr('data-spec-block'));
 		}).on('drop', (el, target, source, sibling) => {
 			let $parentBlock = $(target).closest('[data-spec-block]');
 			let parentId = $parentBlock.length ? $parentBlock.data('vc').getBlockId() : null;
@@ -154,7 +167,7 @@ export default {
 		});
 	},
 	methods: {
-		transitionScrollFixFirst() {
+		transitRelativeScrollFirst() {
 			// Retain scroll position relative to first visible block
 			let windowTop = $(window).scrollTop();
 			$('[data-spec-block]', this.$refs.list).each((i, e) => {
@@ -169,7 +182,7 @@ export default {
 				}
 			});
 		},
-		transitionScrollFix(blockId) {
+		transitRelativeScroll(blockId) {
 			// Retain scroll position relative to specified block
 			let windowTop = $(window).scrollTop();
 			let $block = $('[data-spec-block="' + blockId + '"]', this.$refs.list);
@@ -196,6 +209,7 @@ export default {
 			vc.$on('prompt-delete-block', this.promptDeleteBlock);
 			vc.$on('start-moving', this.startMovingBlock);
 			vc.$on('end-moving', this.endMovingBlock);
+			vc.$on('play-video', this.playVideo);
 
 			let $vc = $(vc.$el).data('vc', vc);
 			if (append) {
@@ -233,11 +247,11 @@ export default {
 		},
 		startMovingBlock(blockId) {
 			this.$store.commit('startMoving', blockId);
-			this.transitionScrollFix(blockId);
+			this.transitRelativeScroll(blockId);
 		},
 		endMovingBlock(endFromBlockId) {
 			this.$store.commit('endMoving');
-			this.transitionScrollFix(endFromBlockId);
+			this.transitRelativeScroll(endFromBlockId);
 		},
 		openEditUrl(urlObject, updated, deleted) {
 			this.$refs.editUrlModal.showEdit(urlObject, updatedUrlObject => {
@@ -251,6 +265,9 @@ export default {
 					deleted(deletedId);
 				}
 			});
+		},
+		playVideo(urlObject) {
+			this.$refs.playVideoModal.show(urlObject);
 		},
 	},
 };

@@ -4,6 +4,9 @@
 		<label>
 			New link URL
 			<el-input v-model="newUrl" clearable/>
+			<el-alert v-if="newUrl && !isValid" title="Invalid URL" type="error" :closable="false"/>
+			<el-alert v-else-if="newUrlIsVideo" title="Embeddable video detected" type="info" :closable="false"/>
+	  </el-alert>
 		</label>
 		<el-button v-if="selectModeAvailable" @click="creating=false" size="small">
 			Cancel
@@ -12,14 +15,15 @@
 	<template v-else-if="selecting">
 		<p v-if="loading">Loading links...</p>
 		<template v-else-if="urlObjects && urlObjects.length">
-			<el-select v-model="refId" filterable placeholder="Select link">
-				<el-option v-for="o in urlObjects" :key="o.id" :value="o.id" :label="o.title || o.url"/>
+			<el-select v-model="refId" filterable :filter-method="filterUrls" placeholder="Select link">
+				<el-option v-for="o in filteredUrlObjects" :key="o.id" :value="o.id" :label="o.title || o.url"/>
 			</el-select>
 			<ref-url
 				v-if="selectedUrlObject"
 				:item="selectedUrlObject"
 				show-edit
 				@edit="openEditUrl(selectedUrlObject)"
+				@play="raisePlayVideo(selectedUrlObject)"
 				/>
 		</template>
 		<el-button @click="creating=true" size="small">
@@ -32,6 +36,7 @@
 			:item="initialUrlObject"
 			show-edit
 			@edit="openEditUrl(initialUrlObject)"
+			@play="raisePlayVideo(initialUrlObject)"
 			/>
 		<div>
 			<el-button @click="creating=true" size="small">
@@ -48,7 +53,7 @@
 <script>
 import RefUrl from './ref-url.vue';
 import {ajaxLoadUrls} from './ajax.js';
-import {isValidURL} from '../utils.js';
+import {isValidURL, isVideoURL, debounce} from '../utils.js';
 
 export default {
 	components: {
@@ -65,6 +70,7 @@ export default {
 			// user inputs
 			newUrl: '',
 			refId: this.initialUrlObject ? this.initialUrlObject.id : null,
+			filter: '',
 			// state
 			creating: false,
 			selecting: !this.initialUrlObject, // don't start in select mode if initial
@@ -73,6 +79,21 @@ export default {
 		};
 	},
 	computed: {
+		filteredUrlObjects() {
+			if (this.filter && this.urlObjects) {
+				let filter = this.filter.toLowerCase();
+				let filtered = [];
+				for (var i = 0; i < this.urlObjects.length; i++) {
+					let o = this.urlObjects[i];
+					if (o.url.toLowerCase().indexOf(filter) >= 0 ||
+						(o.title && o.title.toLowerCase().indexOf(filter) >= 0)) {
+						filtered.push(o);
+					}
+				}
+				return filtered;
+			}
+			return this.urlObjects;
+		},
 		selectModeAvailable() {
 			// Allow cancelling if haven't yet loaded spec links or there are some
 			return this.urlObjects === null || this.urlObjects.length;
@@ -86,6 +107,9 @@ export default {
 				}
 			}
 			return null;
+		},
+		newUrlIsVideo() {
+			return isValidURL(this.newUrl) && isVideoURL(this.newUrl);
 		},
 		isValid() {
 			return this.creating ? isValidURL(this.newUrl) : !!this.refId;
@@ -142,6 +166,18 @@ export default {
 				this.loading = false;
 			});
 		},
+		filterUrls(filter) {
+			if (!filter) {
+				this.filter = '';
+			} else {
+				if (!this.debouncedUpdateFilter) {
+					this.debouncedUpdateFilter = debounce(filter => {
+						this.filter = filter;
+					});
+				}
+				this.debouncedUpdateFilter(filter);
+			}
+		},
 		openEditUrl(urlObject) {
 			this.$emit('open-edit-url', urlObject, updatedUrlObject => {
 				// Updated
@@ -168,6 +204,9 @@ export default {
 				}
 			});
 		},
+		raisePlayVideo(urlObject) {
+			this.$emit('play-video', urlObject);
+		},
 	},
 };
 </script>
@@ -187,6 +226,9 @@ export default {
 				>.el-input {
 					display: block;
 					width: 100%;
+				}
+				>.el-alert {
+					margin-top: 10px;
 				}
 			}
 		}

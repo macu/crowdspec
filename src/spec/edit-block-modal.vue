@@ -25,8 +25,8 @@
 
 	<el-radio-group v-model="refType">
 		<el-radio :label="null">No media</el-radio>
-		<el-radio label="subspec">Subspec</el-radio>
-		<el-radio label="url">URL</el-radio>
+		<el-radio :label="REF_TYPE_SUBSPEC">Subspec</el-radio>
+		<el-radio :label="REF_TYPE_URL">URL</el-radio>
 	</el-radio-group>
 
 	<ref-url-form
@@ -36,6 +36,7 @@
 		:valid.sync="refFieldsValid"
 		:fields.sync="refFields"
 		@open-edit-url="openEditUrl"
+		@play-video="raisePlayVideo"
 		/>
 
 	<ref-subspec-form
@@ -170,6 +171,9 @@ export default {
 					deleted(deletedId);
 				}
 			});
+		},
+		raisePlayVideo(urlObject) {
+			this.$emit('play-video', urlObject);
 		},
 		submit() {
 			if (this.disableSubmit) {

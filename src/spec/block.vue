@@ -38,8 +38,8 @@
 		<div v-if="title" class="title">{{title}}</div>
 
 		<template v-if="refType && refItem">
-			<ref-url v-if="refType === 'url'" :item="refItem" class="ref-item"/>
-			<ref-subspec v-else-if="refType === 'subspec'" :item="refItem" class="ref-item"/>
+			<ref-url v-if="refType === REF_TYPE_URL" :item="refItem" class="ref-item" @play="raisePlayVideo(refItem)"/>
+			<ref-subspec v-else-if="refType === REF_TYPE_SUBSPEC" :item="refItem" class="ref-item"/>
 		</template>
 
 		<div v-if="body" class="body">{{body}}</div>
@@ -58,7 +58,7 @@ import $ from 'jquery';
 import RefUrl from './ref-url.vue';
 import RefSubspec from './ref-subspec.vue';
 import {ajaxMoveBlock} from './ajax.js';
-import {REF_TYPE_URL} from './const.js';
+import {REF_TYPE_URL, REF_TYPE_SUBSPEC} from './const.js';
 
 export default {
 	components: {
@@ -87,6 +87,12 @@ export default {
 		};
 	},
 	computed: {
+		REF_TYPE_URL() {
+			return REF_TYPE_URL;
+		},
+		REF_TYPE_SUBSPEC() {
+			return REF_TYPE_SUBSPEC;
+		},
 		classes() {
 			return [this.styleType];
 		},
@@ -225,6 +231,9 @@ export default {
 				this.refId = null;
 				this.refItem = null;
 			}
+		},
+		raisePlayVideo(urlObject) {
+			this.$emit('play-video', urlObject);
 		},
 	},
 };

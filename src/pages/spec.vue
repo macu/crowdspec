@@ -2,18 +2,22 @@
 <section v-if="spec" class="spec-page">
 
 	<header>
-		<h2>
-			<div class="right">
-				<span v-if="currentUserOwns">You own this</span>
-				<span v-else>Owned by {{spec.ownerType}} {{spec.ownerId}}</span>
+		<div class="right">
+			<span v-if="currentUserOwns">You own this</span>
+			<span v-else>Owned by {{spec.ownerType}} {{spec.ownerId}}</span>
 
-				<span v-if="spec.public">Public</span>
-				<span v-else>Not public</span>
+			<span v-if="spec.public">
+				Public
+			</span>
+			<span v-else>
+				<el-tooltip content="Unpublished" placement="left">
+					<i class="el-icon-lock"></i>
+				</el-tooltip>
+			</span>
 
-				<el-button @click="openManageSpec()" size="mini" icon="el-icon-setting"/>
-			</div>
-			{{name}}
-		</h2>
+			<el-button @click="openManageSpec()" size="mini" icon="el-icon-setting"/>
+		</div>
+		<h2>{{name}}</h2>
 		<div v-if="desc" class="desc">{{desc}}</div>
 	</header>
 
@@ -114,16 +118,16 @@ export default {
 		padding: 0.5cm 1cm;
 		background-color: $spec;
 		color: white;
+		>.right {
+			float: right;
+			font-size: small;
+			margin-left: 20px;
+			>*+* {
+				margin-left: 15px;
+			}
+		}
 		>h2 {
 			margin: 0;
-			>.right {
-				float: right;
-				font-size: small;
-				margin-left: 20px;
-				>*+* {
-					margin-left: 10px;
-				}
-			}
 		}
 		>.desc {
 			white-space: pre-wrap;

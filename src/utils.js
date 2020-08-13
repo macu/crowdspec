@@ -3,10 +3,6 @@ import Vue from 'vue';
 
 const VERSION_STAMP_RESPONSE = /^VersionStamp: (.+)$/m;
 
-export function setWindowSubtitle(subtitle = null) {
-	window.title = 'CrowdSpec' + (subtitle ? ' | ' : '') + subtitle;
-}
-
 export function alertError(error) {
 	console.error(error);
 	let message = null;
@@ -35,6 +31,34 @@ export function alertError(error) {
 		confirmButtonText: 'Ok',
 		type: 'error',
 	});
+}
+
+// Use in scenarios where comparing numeric IDs of mixed type (string / int).
+export function idsEq(id1, id2) {
+	return parseInt(id1, 10) === parseInt(id2, 10);
+}
+
+// Returns a function that invokes the given callback after the specified delay,
+// unless the returned function is called again during the delay and then the delay is extended.
+export function debounce(callback, timeoutMs = 500) {
+	var timeout;
+	function invoker() {
+		timeout = null;
+		callback.apply(this, arguments);
+	}
+	return function() {
+		if (timeout) {
+			clearTimeout(timeout);
+		}
+		return timeout = setTimeout(
+			invoker.bind(this, ...arguments),
+			timeoutMs
+		);
+	};
+}
+
+export function setWindowSubtitle(subtitle = null) {
+	window.title = 'CrowdSpec' + (subtitle ? ' | ' : '') + subtitle;
 }
 
 // Call when dragging starts, returns handler.
@@ -98,7 +122,28 @@ export function isValidURL(url) {
 	return !!(url && url.trim());
 }
 
-// Use in scenarios where comparing IDs of mixed type (string / int).
-export function idsEq(id1, id2) {
-	return parseInt(id1, 10) === parseInt(id2, 10);
+// Recognized video URL formats:
+// http://www.youtube.com/watch?v=My2FRPA3Gf8
+// http://www.youtube.com/embed/My2FRPA3Gf8
+// http://youtu.be/My2FRPA3Gf8
+// https://youtube.googleapis.com/v/My2FRPA3Gf8
+// http://vimeo.com/25451551
+// http://player.vimeo.com/video/25451551
+export const VID_URL_REGEX = /^https?:\/\/(?:www\.|m\.)?(?:youtube\.com\/watch\?v=|youtube\.com\/embed\/|youtu\.be\/|youtube\.googleapis\.com\/v\/|vimeo\.com\/|player\.vimeo\.com\/video\/)([a-zA-Z0-9_-]+)/;
+
+export function isVideoURL(url) {
+	return VID_URL_REGEX.test(url);
+}
+
+export function extractVid(url) {
+	let match = VID_URL_REGEX.exec(url);
+	if (!match) {
+		return null;
+	}
+	if (url.indexOf('youtube.com') || url.indexOf('youtu.be')) {
+		return {type: 'youtube', id: match[1]};
+	} else if (url.indexOf('vimeo.com')) {
+		return {type: 'vimeo', id: match[1]};
+	}
+	return null;
 }
