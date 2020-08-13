@@ -1,7 +1,7 @@
 <template>
 <li :data-spec-block="block.id" class="spec-block" :class="classes">
 
-	<div class="content">
+	<div class="content" :class="{'mobile-adjust': showActions}">
 
 		<div class="bg"></div>
 
@@ -266,6 +266,16 @@ export default {
 		&:hover {
 			>.bg {
 				display: block;
+			}
+		}
+		@media screen and (max-width: $max-sm) {
+			&.mobile-adjust {
+				>.layover {
+					margin-bottom: 5px;
+				}
+				>.ref-item {
+					clear: both;
+				}
 			}
 		}
 		>.layover {
