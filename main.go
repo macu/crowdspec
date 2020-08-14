@@ -155,6 +155,9 @@ func main() {
 		r.PathPrefix("/css/").Handler(http.StripPrefix("/css/", http.FileServer(http.Dir("css"))))
 		r.PathPrefix("/img/").Handler(http.StripPrefix("/img/", http.FileServer(http.Dir("img"))))
 		r.PathPrefix("/js/").Handler(http.StripPrefix("/js/", http.FileServer(http.Dir("js"))))
+	} else if appengine {
+		// Set up AppEngine cron handlers
+		r.HandleFunc("/cron/cleanup", makeCronHandler(db, cleanupHandler))
 	}
 
 	// set up authenticated routes

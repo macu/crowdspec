@@ -1,0 +1,4 @@
+cron:
+- description: "delete expired user sessions"
+  url: /cron/cleanup
+  schedule: every 24 hours

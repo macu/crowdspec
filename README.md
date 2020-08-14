@@ -54,6 +54,12 @@ $ sh restart.sh
 $ gcloud app deploy
 ```
 
+Update cron jobs:
+
+```
+$ gcloud app deploy cron.yaml
+```
+
 ## Access dev database through GCloud
 
 ```

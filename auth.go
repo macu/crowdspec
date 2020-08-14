@@ -189,6 +189,14 @@ func logoutHandler(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reque
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
+func deleteExpiredSessions(db *sql.DB) error {
+	_, err := db.Exec("DELETE FROM user_session WHERE expires <= $1", time.Now())
+	if err != nil {
+		return fmt.Errorf("deleting expired sessions: %w", err)
+	}
+	return nil
+}
+
 const sessionRandLetters = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 // Returns a random session ID that includes current Unix time in nanoseconds.
