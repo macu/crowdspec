@@ -7,3 +7,8 @@ html, body {
 	margin: 0;
 	padding: 0;
 }
+
+.el-select-dropdown__item {
+	// Fix viewport overflow on long option labels
+	max-width: 100vw;
+}
