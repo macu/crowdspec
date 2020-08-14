@@ -134,7 +134,9 @@ export default {
 				ajaxDeleteSpec(this.spec.id).then(() => {
 					this.sending = false;
 					this.showing = false;
-					this.$router.push({name: 'index'});
+					this.$nextTick(() => {
+						this.$router.push({name: 'index'});
+					});
 				}).fail(() => {
 					this.sending = false;
 				});

@@ -141,7 +141,9 @@ export default {
 				ajaxDeleteSubspec(this.subspec.id).then(() => {
 					this.sending = false;
 					this.showing = false;
-					this.$router.push({name: 'spec', params: {specId: this.specId}});
+					this.$nextTick(() => {
+						this.$router.push({name: 'spec', params: {specId: this.specId}});
+					});
 				}).fail(() => {
 					this.sending = false;
 				});

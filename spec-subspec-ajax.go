@@ -17,9 +17,16 @@ func ajaxSubspecs(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 		return nil, http.StatusBadRequest, fmt.Errorf("invalid specId: %w", err)
 	}
 
-	// TODO Verify read access
+	if access, err := verifyReadSpec(db, userID, specID); !access || err != nil {
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("verifying read spec: %w", err)
+		}
+		return nil, http.StatusForbidden,
+			fmt.Errorf("read spec access denied to user %d in spec %d", userID, specID)
+	}
 
-	rows, err := db.Query(`SELECT id, created_at, subspec_name, subspec_desc
+	rows, err := db.Query(`
+		SELECT id, created_at, subspec_name, subspec_desc
 		FROM spec_subspec
 		WHERE spec_id = $1
 		ORDER BY subspec_name`, specID)
@@ -59,7 +66,13 @@ func ajaxSpecCreateSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *ht
 		return nil, http.StatusBadRequest, fmt.Errorf("parsing specId: %w", err)
 	}
 
-	// TODO Verify write access
+	if access, err := verifyWriteSpec(db, userID, specID); !access || err != nil {
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("verifying write spec: %w", err)
+		}
+		return nil, http.StatusForbidden,
+			fmt.Errorf("write spec access denied to user %d in spec %d", userID, specID)
+	}
 
 	name := strings.TrimSpace(r.Form.Get("name"))
 	if name == "" {
@@ -93,7 +106,13 @@ func ajaxSpecSaveSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 		return nil, http.StatusBadRequest, fmt.Errorf("parsing subspecId: %w", err)
 	}
 
-	// TODO Verify write access
+	if access, err := verifyWriteSubspec(db, userID, subspecID); !access || err != nil {
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("verifying write subspec: %w", err)
+		}
+		return nil, http.StatusForbidden,
+			fmt.Errorf("write subspec access denied to user %d in subspec %d", userID, subspecID)
+	}
 
 	name := strings.TrimSpace(r.Form.Get("name"))
 	if name == "" {
@@ -132,11 +151,17 @@ func ajaxSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request
 		return nil, http.StatusBadRequest, fmt.Errorf("invalid specId: %w", err)
 	}
 
-	// TODO Verify read access
-
 	subspecID, err := AtoInt64(query.Get("subspecId"))
 	if err != nil {
 		return nil, http.StatusBadRequest, fmt.Errorf("invalid subspecId: %w", err)
+	}
+
+	if access, err := verifyReadSubspec(db, userID, subspecID); !access || err != nil {
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("verifying read subspec: %w", err)
+		}
+		return nil, http.StatusForbidden,
+			fmt.Errorf("read subspec access denied to user %d in subspec %d", userID, subspecID)
 	}
 
 	s := &SpecSubspec{
@@ -176,7 +201,13 @@ func ajaxSpecDeleteSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *ht
 		return nil, http.StatusBadRequest, fmt.Errorf("parsing subspecId: %w", err)
 	}
 
-	// TODO Verify write access
+	if access, err := verifyWriteSubspec(db, userID, subspecID); !access || err != nil {
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("verifying write subspec: %w", err)
+		}
+		return nil, http.StatusForbidden,
+			fmt.Errorf("write subspec access denied to user %d in subspec %d", userID, subspecID)
+	}
 
 	return inTransaction(r.Context(), db, func(tx *sql.Tx) (interface{}, int, error) {
 		_, err := tx.Exec(`UPDATE spec_block SET ref_type = NULL, ref_id = NULL

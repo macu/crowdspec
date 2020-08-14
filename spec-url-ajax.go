@@ -4,8 +4,20 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 )
+
+func validateURL(s string) error {
+	u, err := url.ParseRequestURI(s)
+	if err != nil {
+		return fmt.Errorf("parsing URL: %w", err)
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf("invalid scheme: %s", u.Scheme)
+	}
+	return nil
+}
 
 func ajaxSpecURLs(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
 	// GET
@@ -16,9 +28,16 @@ func ajaxSpecURLs(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 		return nil, http.StatusBadRequest, fmt.Errorf("invalid specId: %w", err)
 	}
 
-	// TODO Verify read access
+	if access, err := verifyReadSpec(db, userID, specID); !access || err != nil {
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("verifying read spec: %w", err)
+		}
+		return nil, http.StatusForbidden,
+			fmt.Errorf("read spec access denied to user %d in spec %d", userID, specID)
+	}
 
-	rows, err := db.Query(`SELECT id, url, url_title, url_desc, url_image_data, updated_at
+	rows, err := db.Query(`
+		SELECT id, url, url_title, url_desc, url_image_data, updated_at
 		FROM spec_url
 		WHERE spec_id = $1
 		ORDER BY url_title, url`, specID)
@@ -58,6 +77,14 @@ func ajaxSpecCreateURL(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 		return nil, http.StatusBadRequest, fmt.Errorf("parsing specId: %w", err)
 	}
 
+	if access, err := verifyWriteSpec(db, userID, specID); !access || err != nil {
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("verifying write spec: %w", err)
+		}
+		return nil, http.StatusForbidden,
+			fmt.Errorf("write spec access denied to user %d in spec %d", userID, specID)
+	}
+
 	url := strings.TrimSpace(r.Form.Get("url"))
 	if url == "" {
 		return nil, http.StatusBadRequest, fmt.Errorf("url required")
@@ -86,6 +113,14 @@ func ajaxSpecRefreshURL(db *sql.DB, userID uint, w http.ResponseWriter, r *http.
 	id, err := AtoInt64(r.Form.Get("id"))
 	if err != nil {
 		return nil, http.StatusBadRequest, fmt.Errorf("parsing id: %w", err)
+	}
+
+	if access, err := verifyWriteURL(db, userID, id); !access || err != nil {
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("verifying write url: %w", err)
+		}
+		return nil, http.StatusForbidden,
+			fmt.Errorf("write url access denied to user %d for url %d", userID, id)
 	}
 
 	url := strings.TrimSpace(r.Form.Get("url"))
@@ -118,7 +153,13 @@ func ajaxSpecDeleteURL(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 		return nil, http.StatusBadRequest, fmt.Errorf("parsing id: %w", err)
 	}
 
-	// TODO Verify access
+	if access, err := verifyWriteURL(db, userID, id); !access || err != nil {
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("verifying write url: %w", err)
+		}
+		return nil, http.StatusForbidden,
+			fmt.Errorf("write url access denied to user %d for url %d", userID, id)
+	}
 
 	return inTransaction(r.Context(), db, func(tx *sql.Tx) (interface{}, int, error) {
 		_, err := tx.Exec(`

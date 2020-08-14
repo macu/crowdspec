@@ -67,6 +67,7 @@ export default {
 	},
 	props: {
 		block: Object,
+		subspecId: Number,
 		eventBus: Object,
 	},
 	data() {
@@ -193,7 +194,7 @@ export default {
 			let movingId = this.$store.state.moving;
 			let parentId = this.getParentId();
 			let insertBeforeId = this.block.id; // Add before this
-			ajaxMoveBlock(movingId, null, parentId, insertBeforeId).then(() => {
+			ajaxMoveBlock(movingId, this.subspecId, parentId, insertBeforeId).then(() => {
 				$('[data-spec-block="'+movingId+'"]').insertBefore(this.$el);
 				this.$store.commit('endMoving');
 			});
@@ -202,7 +203,7 @@ export default {
 			let movingId = this.$store.state.moving;
 			let parentId = this.block.id; // Add under this
 			let insertBeforeId = null; // Add at end
-			ajaxMoveBlock(movingId, null, parentId, insertBeforeId).then(() => {
+			ajaxMoveBlock(movingId, this.subspecId, parentId, insertBeforeId).then(() => {
 				$('[data-spec-block="'+movingId+'"]').appendTo(this.$refs.sublist);
 				this.$store.commit('endMoving');
 			});
@@ -211,7 +212,7 @@ export default {
 			let movingId = this.$store.state.moving;
 			let parentId = this.getParentId();
 			let insertBeforeId = this.getFollowingBlockId();
-			ajaxMoveBlock(movingId, null, parentId, insertBeforeId).then(() => {
+			ajaxMoveBlock(movingId, this.subspecId, parentId, insertBeforeId).then(() => {
 				$('[data-spec-block="'+movingId+'"]').insertAfter(this.$el);
 				this.$store.commit('endMoving');
 			});

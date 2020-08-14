@@ -79,7 +79,13 @@ func ajaxSaveSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 		return nil, http.StatusBadRequest, fmt.Errorf("parsing specId: %w", err)
 	}
 
-	// TODO Verify access
+	if access, err := verifyWriteSpec(db, userID, specID); !access || err != nil {
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("verifying write spec: %w", err)
+		}
+		return nil, http.StatusForbidden,
+			fmt.Errorf("write spec access denied to user %d in spec %d", userID, specID)
+	}
 
 	name := strings.TrimSpace(r.Form.Get("name"))
 	if name == "" {
@@ -119,7 +125,13 @@ func ajaxDeleteSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Requ
 		return nil, http.StatusBadRequest, fmt.Errorf("parsing specId: %w", err)
 	}
 
-	// TODO Verify access
+	if access, err := verifyWriteSpec(db, userID, specID); !access || err != nil {
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("verifying write spec: %w", err)
+		}
+		return nil, http.StatusForbidden,
+			fmt.Errorf("write spec access denied to user %d in spec %d", userID, specID)
+	}
 
 	return inTransaction(r.Context(), db, func(tx *sql.Tx) (interface{}, int, error) {
 
@@ -143,18 +155,23 @@ func ajaxSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (
 		return nil, http.StatusBadRequest, fmt.Errorf("Invalid specId: %w", err)
 	}
 
-	// TODO Verify read access
+	if access, err := verifyReadSpec(db, userID, specID); !access || err != nil {
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("verifying read spec: %w", err)
+		}
+		return nil, http.StatusForbidden,
+			fmt.Errorf("read spec access denied to user %d in spec %d", userID, specID)
+	}
 
 	// TODO Finish owner_name, user_is_admin, user_is_contributor
 	s := &Spec{}
-	row := db.QueryRow(`
-		SELECT spec.id, spec.created_at, spec.owner_type, spec.owner_id, spec.spec_name, spec.spec_desc, spec.is_public
+	err = db.QueryRow(`
+		SELECT spec.id, spec.created_at, spec.owner_type, spec.owner_id,
+		spec.spec_name, spec.spec_desc, spec.is_public
 		FROM spec
-		INNER JOIN user_account
-		ON user_account.id=spec.owner_id
-		WHERE spec.id=$1 AND spec.owner_type=$2 AND spec.owner_id=$3
-		`, specID, "user", userID)
-	err = row.Scan(&s.ID, &s.Created, &s.OwnerType, &s.OwnerID, &s.Name, &s.Desc, &s.Public)
+		WHERE spec.id=$1
+		`, specID).Scan(&s.ID, &s.Created, &s.OwnerType, &s.OwnerID,
+		&s.Name, &s.Desc, &s.Public)
 	if err != nil {
 		return nil, http.StatusInternalServerError, err
 	}

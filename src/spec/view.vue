@@ -150,7 +150,7 @@ export default {
 			let parentId = $parentBlock.length ? $parentBlock.data('vc').getBlockId() : null;
 			let insertBeforeId = sibling ? $(sibling).data('vc').getBlockId() : null;
 			// TODO Revert on error (how?)
-			ajaxMoveBlock($(el).data('vc').getBlockId(), null, parentId, insertBeforeId);
+			ajaxMoveBlock($(el).data('vc').getBlockId(), this.subspecId, parentId, insertBeforeId);
 		});
 	},
 	beforeDestroy() {
@@ -200,6 +200,7 @@ export default {
 				router,
 				propsData: {
 					block,
+					subspecId: this.subspecId,
 					eventBus: this.eventBus,
 				},
 			}).$mount();

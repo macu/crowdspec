@@ -4,57 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 )
-
-// Returns a placeholder representing the given arg in args,
-// adding the arg to args if not already present.
-func argPlaceholder(arg interface{}, args *[]interface{}) string {
-	for i := 0; i < len(*args); i++ {
-		if (*args)[i] == arg {
-			return "$" + strconv.Itoa(i+1)
-		}
-	}
-	*args = append(*args, arg)
-	return "$" + strconv.Itoa(len(*args))
-}
-
-// Returns a condition matching the given subspecID,
-// adding the given subspecID to args if not already present.
-func subspecCond(subspecID *int64, args *[]interface{}) string {
-	if subspecID == nil {
-		return "subspec_id IS NULL"
-	}
-	return "subspec_id = " + argPlaceholder(*subspecID, args)
-}
-
-// Returns a condition matching the given subspecID,
-// using a fixed placeholder index when pointer is non-nil.
-func subspecCondIndexed(subspecID *int64, index int) string {
-	if subspecID == nil {
-		return "subspec_id IS NULL"
-	}
-	return "subspec_id = $" + strconv.Itoa(index)
-}
-
-// Returns a condition matching the given parentID,
-// adding the given parentID to args if not already present.
-func parentCond(parentID *int64, args *[]interface{}) string {
-	if parentID == nil {
-		return "parent_id IS NULL"
-	}
-	return "parent_id = " + argPlaceholder(*parentID, args)
-}
-
-// Returns a condition matching the given parentID,
-// using a fixed placeholder index when pointer is non-nil.
-func parentCondIndexed(parentID *int64, index int) string {
-	if parentID == nil {
-		return "parent_id IS NULL"
-	}
-	return "parent_id = $" + strconv.Itoa(index)
-}
 
 // Creates a block within a spec.
 func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
@@ -70,25 +21,28 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 		return nil, http.StatusBadRequest, fmt.Errorf("parsing specId: %w", err)
 	}
 
-	// TODO Verify write access to spec
-
 	subspecID, err := AtoInt64NilIfEmpty(r.Form.Get("subspecId"))
 	if err != nil {
 		return nil, http.StatusBadRequest, fmt.Errorf("parsing subspecId: %w", err)
 	}
-
-	// TODO Verify subspec is within spec
 
 	parentID, err := AtoInt64NilIfEmpty(r.Form.Get("parentId"))
 	if err != nil {
 		return nil, http.StatusBadRequest, fmt.Errorf("parsing parentId: %w", err)
 	}
 
-	// TODO Verify parent block is within spec/subspec
-
 	insertBeforeID, err := AtoInt64NilIfEmpty(r.Form.Get("insertBeforeId"))
 	if err != nil {
 		return nil, http.StatusBadRequest, fmt.Errorf("parsing insertBeforeId: %w", err)
+	}
+
+	if access, err := verifyWriteSpecSubspecBlocks(db, userID, specID, subspecID,
+		parentID, insertBeforeID); !access || err != nil {
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("verifying write blocks: %w", err)
+		}
+		return nil, http.StatusForbidden,
+			fmt.Errorf("write blocks access denied to user %d in spec %d", userID, specID)
 	}
 
 	styleType := r.Form.Get("styleType")
@@ -104,6 +58,14 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 	refType, refID, err := validateCreateRefItemFields(r.Form)
 	if err != nil {
 		return nil, http.StatusBadRequest, fmt.Errorf("invalid ref fields: %w", err)
+	}
+
+	if access, err := verifyRefAccess(db, specID, refType, refID); !access || err != nil {
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("verifying ref access: %w", err)
+		}
+		return nil, http.StatusForbidden,
+			fmt.Errorf("ref access denied to user %d in spec %d, refType %s refID %d", userID, specID, *refType, *refID)
 	}
 
 	title := AtoPointerNilIfEmpty(strings.TrimSpace(r.Form.Get("title")))
@@ -189,11 +151,17 @@ func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 		return nil, http.StatusBadRequest, fmt.Errorf("parsing specId: %w", err)
 	}
 
-	// TODO Verify access
-
 	blockID, err := AtoInt64(r.Form.Get("blockId"))
 	if err != nil {
 		return nil, http.StatusBadRequest, fmt.Errorf("parsing blockId: %w", err)
+	}
+
+	if access, err := verifyWriteSpecBlock(db, userID, specID, blockID); !access || err != nil {
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("verifying write block: %w", err)
+		}
+		return nil, http.StatusForbidden,
+			fmt.Errorf("write block access denied to user %d in spec %d", userID, specID)
 	}
 
 	styleType := r.Form.Get("styleType")
@@ -209,6 +177,14 @@ func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 	refType, refID, err := validateCreateRefItemFields(r.Form)
 	if err != nil {
 		return nil, http.StatusBadRequest, fmt.Errorf("invalid ref fields: %w", err)
+	}
+
+	if access, err := verifyRefAccess(db, specID, refType, refID); !access || err != nil {
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("verifying ref access: %w", err)
+		}
+		return nil, http.StatusForbidden,
+			fmt.Errorf("ref access denied to user %d in spec %d, refType %s refID %d", userID, specID, *refType, *refID)
 	}
 
 	title := AtoPointerNilIfEmpty(strings.TrimSpace(r.Form.Get("title")))
@@ -290,27 +266,28 @@ func ajaxSpecMoveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 		return nil, http.StatusInternalServerError, fmt.Errorf("loading specID for block %d: %w", blockID, err)
 	}
 
-	// TODO Verify access
-
-	// TODO Verify block is within spec
-
 	subspecID, err := AtoInt64NilIfEmpty(r.Form.Get("subspecId"))
 	if err != nil {
 		return nil, http.StatusBadRequest, fmt.Errorf("parsing subsapceId: %w", err)
 	}
-
-	// TODO Verify subspec is within spec
 
 	parentID, err := AtoInt64NilIfEmpty(r.Form.Get("parentId"))
 	if err != nil {
 		return nil, http.StatusBadRequest, fmt.Errorf("parsing parentId: %w", err)
 	}
 
-	// TODO Verify parent block is within spec/subspec
-
 	insertBeforeID, err := AtoInt64NilIfEmpty(r.Form.Get("insertBeforeId"))
 	if err != nil {
 		return nil, http.StatusBadRequest, fmt.Errorf("parsing insertBeforeId: %w", err)
+	}
+
+	if access, err := verifyWriteSpecSubspecBlocks(db, userID, specID, subspecID,
+		parentID, insertBeforeID, &blockID); !access || err != nil {
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("verifying write blocks: %w", err)
+		}
+		return nil, http.StatusForbidden,
+			fmt.Errorf("write blocks access denied to user %d in spec %d", userID, specID)
 	}
 
 	return inTransaction(r.Context(), db, func(tx *sql.Tx) (interface{}, int, error) {
@@ -416,7 +393,13 @@ func ajaxSpecDeleteBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 		return nil, http.StatusBadRequest, fmt.Errorf("parsing blockId: %w", err)
 	}
 
-	// TODO Verify access
+	if access, err := verifyWriteBlock(db, userID, blockID); !access || err != nil {
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("verifying write block: %w", err)
+		}
+		return nil, http.StatusForbidden,
+			fmt.Errorf("write blocks access denied to user %d on block %d", userID, blockID)
+	}
 
 	return inTransaction(r.Context(), db, func(tx *sql.Tx) (interface{}, int, error) {
 		// Delete block row (delete is cascade; subblocks will also be deleted)
