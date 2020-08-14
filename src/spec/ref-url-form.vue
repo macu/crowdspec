@@ -8,7 +8,10 @@
 			<el-alert v-else-if="newUrlIsVideo" title="Embeddable video detected" type="info" :closable="false"/>
 	  </el-alert>
 		</label>
-		<el-button v-if="selectModeAvailable" @click="creating=false" size="small">
+		<el-button v-if="selectModeAvailable" @click="() => { creating = false; selecting = true; }" size="small">
+			Select an existing link
+		</el-button>
+		<el-button v-if="initialUrlObject" @click="() => { creating = false; selecting = false; }" size="small">
 			Cancel
 		</el-button>
 	</el-card>
@@ -26,8 +29,11 @@
 				@play="raisePlayVideo(selectedUrlObject)"
 				/>
 		</template>
-		<el-button @click="creating=true" size="small">
+		<el-button @click="creating = true" size="small">
 			Create new link
+		</el-button>
+		<el-button v-if="initialUrlObject" @click="selecting = false" size="small">
+			Cancel
 		</el-button>
 	</template>
 	<template v-else>
@@ -39,10 +45,10 @@
 			@play="raisePlayVideo(initialUrlObject)"
 			/>
 		<div>
-			<el-button @click="creating=true" size="small">
+			<el-button @click="creating = true" size="small">
 				Create new link
 			</el-button>
-			<el-button v-if="selectModeAvailable" @click="selecting=true" size="small">
+			<el-button v-if="selectModeAvailable" @click="selecting = true" size="small">
 				Select a different link
 			</el-button>
 		</div>
@@ -72,8 +78,8 @@ export default {
 			refId: this.initialUrlObject ? this.initialUrlObject.id : null,
 			filter: '',
 			// state
-			creating: false,
-			selecting: !this.initialUrlObject, // don't start in select mode if initial
+			creating: !this.initialUrlObject, // start in create mode if no initial
+			selecting: false,
 			urlObjects: null, // null indicates not yet loaded
 			loading: false,
 		};
@@ -95,8 +101,12 @@ export default {
 			return this.urlObjects;
 		},
 		selectModeAvailable() {
-			// Allow cancelling if haven't yet loaded spec links or there are some
-			return this.urlObjects === null || this.urlObjects.length;
+			// Allow switching to select mode if spec links haven't been loaded
+			// or there are options other than the initial urlObject
+			return this.urlObjects === null || this.urlObjects.length > 1 ||
+				(this.urlObjects.length && !this.initialUrlObject) ||
+				(this.urlObjects.length === 1 &&
+					this.urlObjects[0].id !== this.initialUrlObject.id);
 		},
 		selectedUrlObject() {
 			if (this.urlObjects && this.refId) {
@@ -115,7 +125,15 @@ export default {
 			return this.creating ? isValidURL(this.newUrl) : !!this.refId;
 		},
 		refFields() {
-			return this.creating ? {refUrl: this.newUrl} : {refId: this.refId};
+			// refType is passed separately to ajaxCreateBlock/ajaxSaveBlock
+			if (this.creating) {
+				return {refUrl: this.newUrl};
+			} else if (this.selecting) {
+				return {refId: this.refId};
+			} else if (this.initialUrlObject) {
+				return {refId: this.initialUrlObject.id};
+			}
+			return null;
 		},
 	},
 	watch: {
@@ -144,7 +162,7 @@ export default {
 	},
 	methods: {
 		loadLinks() {
-			if (this.loading) {
+			if (this.urlObjects || this.loading) {
 				return;
 			}
 			this.loading = true;

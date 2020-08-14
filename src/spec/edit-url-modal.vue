@@ -149,7 +149,7 @@ export default {
 			});
 		},
 		promptDelete() {
-			this.$confirm('Permanently delete this link?', {
+			this.$confirm('Permanently delete this link? All references to this link within this spec will be cleared.', {
 				confirmButtonText: 'Delete',
 				cancelButtonText: 'Cancel',
 				type: 'warning',
