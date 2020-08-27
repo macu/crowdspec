@@ -107,32 +107,49 @@ export default {
 </script>
 
 <style lang="scss">
+@import '../styles/_breakpoints.scss';
 @import '../styles/_colours.scss';
+@import '../styles/_spec-view.scss';
+@import '../styles/_app.scss';
 
 .spec-page {
+
 	>header {
-		margin-top: -1cm;
-		margin-left: -1cm;
-		margin-right: -1cm;
 		margin-bottom: 1cm;
-		padding: 0.5cm 1cm;
-		background-color: $spec;
+
+		background-color: $spec-bg;
 		color: white;
+
+		padding: 0.5cm $page-header-horiz-padding;
+		@include mobile {
+			padding: 15px $page-header-horiz-padding-sm 15px;
+		}
+
 		>.right {
 			float: right;
 			font-size: small;
 			margin-left: 20px;
+
 			>*+* {
 				margin-left: 15px;
 			}
 		}
+
 		>h2 {
 			margin: 0;
 		}
+
 		>.desc {
 			white-space: pre-wrap;
 			margin-top: 10px;
 			color: white;
+		}
+	} // header
+
+	@include mobile {
+		>.spec-view {
+			margin-left: #{-$content-area-padding-sm};
+			margin-right: calc(-1 * (#{$content-area-padding-sm} - #{$spec-block-bg-padding-horiz}));
 		}
 	}
 }

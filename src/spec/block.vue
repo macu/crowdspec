@@ -242,6 +242,8 @@ export default {
 
 <style lang="scss">
 @import '../styles/_breakpoints.scss';
+@import '../styles/_spec-view.scss';
+@import '../styles/_app.scss';
 
 .spec-block {
 	padding-top: 10px;
@@ -258,18 +260,22 @@ export default {
 			display: none;
 			z-index: -1;
 			position: absolute;
-			left: -3em;
-			right: -7px;
-			top: -7px;
-			bottom: -7px;
+			left: calc(-1 * (#{$spec-block-list-padding-left} + #{$spec-block-bg-padding-horiz}));
+			right: #{-$spec-block-bg-padding-horiz};
+			top: #{-$spec-block-bg-padding-verti};
+			bottom: #{-$spec-block-bg-padding-verti};
 			background-color: #ececec;
+
+			@include mobile {
+				left: calc(-1 * #{$spec-block-list-padding-left});
+			}
 		}
 		&:hover {
 			>.bg {
 				display: block;
 			}
 		}
-		@media screen and (max-width: $max-sm) {
+		@include mobile {
 			&.mobile-adjust {
 				>.layover {
 					margin-bottom: 5px;
@@ -286,7 +292,7 @@ export default {
 			>div {
 				&.expand-control {
 					display: none;
-					@media screen and (max-width: $max-sm) {
+					@include mobile {
 						display: block;
 						&.hide {
 							display: none;
@@ -298,7 +304,7 @@ export default {
 						// Move button hidden by default
 						display: none;
 					}
-					@media screen and (max-width: $max-sm) {
+					@include mobile {
 						display: none;
 						&.show {
 							display: block;

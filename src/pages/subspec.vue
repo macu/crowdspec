@@ -103,44 +103,67 @@ export default {
 </script>
 
 <style lang="scss">
+@import '../styles/_breakpoints.scss';
 @import '../styles/_colours.scss';
+@import '../styles/_spec-view.scss';
+@import '../styles/_app.scss';
 
 .subspec-page {
+
 	>header {
-		margin-top: -1cm;
-		margin-left: -1cm;
-		margin-right: -1cm;
 		margin-bottom: 1cm;
+
 		>.spec {
-			padding: 0.5cm 1cm;
-			background-color: $spec;
+			background-color: $spec-bg;
 			color: white;
 			cursor: pointer;
+
+			padding: 0.5cm $page-header-horiz-padding;
+			@include mobile {
+				padding: 15px $page-header-horiz-padding-sm 15px;
+			}
+
 			>h2 {
 				margin: 0;
 				padding: 0;
 			}
-		}
+		} // .spec
+
 		>.subspec {
-			padding: 0.5cm 1cm;
-			background-color: $subspec;
+			background-color: $subspec-bg;
 			color: white;
+
+			padding: 0.5cm $page-header-horiz-padding;
+			@include mobile {
+				padding: 15px $page-header-horiz-padding-sm 15px;
+			}
+
 			>h3 {
 				margin: 0;
 				padding: 0;
+
 				>.right {
 					float: right;
 					font-size: small;
 					margin-left: 20px;
+
 					>*+* {
 						margin-left: 10px;
 					}
 				}
 			}
+
 			>.desc {
 				white-space: pre-wrap;
 				margin-top: 10px;
 			}
+		} // .subspec
+	} // header
+
+	@include mobile {
+		>.spec-view {
+			margin-left: #{-$content-area-padding-sm};
+			margin-right: calc(-1 * (#{$content-area-padding-sm} - #{$spec-block-bg-padding-horiz}));
 		}
 	}
 }

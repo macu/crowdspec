@@ -1,15 +1,13 @@
 <template>
 <div class="app">
-	<div class="header">
+	<header>
 		<h1 @click="gotoIndex()">CrowdSpec</h1>
 		<div>
 			<span>{{username}}</span>
 			<el-button @click="logout()" size="mini">Log out</el-button>
 		</div>
-	</div>
-	<div class="content-area">
-		<router-view></router-view>
-	</div>
+	</header>
+	<router-view class="page-area"/>
 </div>
 </template>
 
@@ -42,19 +40,23 @@ export default {
 <style lang="scss">
 @import './styles/_breakpoints.scss';
 @import './styles/_colours.scss';
+@import './styles/_app.scss';
 
 .app {
 	height: 100%;
 
-	>.header {
+	>header {
 		display: flex;
-		padding: 20px 8mm 10px;
 		align-items: center;
 		justify-content: flex-end;
-		background-color: $app;
+		flex-wrap: wrap;
+		background-color: $app-bg;
 		color: white;
 
-		flex-wrap: wrap;
+		padding: 20px $app-header-horiz-padding 10px;
+		@include mobile {
+			padding: 15px $app-header-horiz-padding-sm 5px;
+		}
 
 		>h1 {
 			flex: 1;
@@ -71,8 +73,21 @@ export default {
 		}
 	}
 
-	>.content-area {
-		padding: 1cm;
+	>.page-area {
+		padding: $content-area-padding;
+		>header {
+			margin-top: #{-$content-area-padding};
+			margin-left: #{-$content-area-padding};
+			margin-right: #{-$content-area-padding};
+		}
+		@include mobile {
+			padding: $content-area-padding-sm;
+			>header {
+				margin-top: #{-$content-area-padding-sm};
+				margin-left: #{-$content-area-padding-sm};
+				margin-right: #{-$content-area-padding-sm};
+			}
+		}
 	}
 }
 </style>

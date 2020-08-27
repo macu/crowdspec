@@ -7,3 +7,9 @@ $max-md: 991px;
 $min-lg: 992px;
 $max-lg: 1199px;
 $min-xl: 1200px;
+
+@mixin mobile {
+	@media (max-width: #{$max-sm}) {
+		@content;
+	}
+}

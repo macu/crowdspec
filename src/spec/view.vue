@@ -276,34 +276,32 @@ export default {
 
 <style lang="scss">
 @import '../styles/_breakpoints.scss';
-
-$spec-block-list-indent: 3em;
-$spec-block-point-offset: 1em;
-$spec-block-list-margin-left-sm: -2em;
-$spec-block-point-offset-sm: .7em;
+@import '../styles/_spec-view.scss';
+@import '../styles/_app.scss';
 
 .spec-view {
 
 	// Style for spec-block-list within spec-view or spec-block
 	ul.spec-block-list {
 		position: relative;
-		padding-left: $spec-block-list-indent;
+		padding-left: $spec-block-list-padding-left;
 		list-style-type: none;
 		counter-reset: spec-block-list-item-number 0;
-
-		@media screen and (max-width: $max-sm) {
-			margin-left: $spec-block-list-margin-left-sm;
-			ul.spec-block-list {
-				border-left: thin solid lightgray;
-			}
-		}
 
 		&:empty {
 			display: none;
 		}
 
+		ul.spec-block-list {
+			// Sub lists
+			@include mobile {
+				margin-left: $spec-block-list-margin-left-sm;
+				border-left: thin solid lightgray;
+			}
+		}
+
 		&.dragging {
-			// Make all spec-block-list elements non-zero width during drag
+			// Make all spec-block-list elements non-zero height during drag
 			ul.spec-block-list {
 				display: block;
 				min-height: 40px;
@@ -325,11 +323,11 @@ $spec-block-point-offset-sm: .7em;
 				display: block;
 				position: absolute;
 				left: 0;
-				width: $spec-block-list-indent - $spec-block-point-offset;
+				width: #{$spec-block-list-padding-left - $spec-block-point-margin-right};
 				text-align: right;
 
-				@media screen and (max-width: $max-sm) {
-					width: $spec-block-list-indent - $spec-block-point-offset-sm;
+				@include mobile {
+					width: #{$spec-block-list-padding-left - $spec-block-point-margin-right-sm};
 				}
 			}
 		}
