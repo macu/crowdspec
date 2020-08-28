@@ -246,8 +246,8 @@ export default {
 @import '../styles/_app.scss';
 
 .spec-block {
-	padding-top: 10px;
-	padding-bottom: 10px;
+	padding-top: $spec-block-margin;
+	padding-bottom: $spec-block-margin;
 
 	&:not(:first-child) {
 		border-top: thin solid #eee;
@@ -256,76 +256,92 @@ export default {
 	>.content {
 		position: relative;
 		min-height: 20px;
+
 		>.bg {
 			display: none;
 			z-index: -1;
-			position: absolute;
-			left: calc(-1 * (#{$spec-block-list-padding-left} + #{$spec-block-bg-padding-horiz}));
-			right: #{-$spec-block-bg-padding-horiz};
-			top: #{-$spec-block-bg-padding-verti};
-			bottom: #{-$spec-block-bg-padding-verti};
 			background-color: #ececec;
 
-			@include mobile {
-				left: calc(-1 * #{$spec-block-list-padding-left});
-			}
+			position: absolute;
+
+			left: #{- $spec-block-shadow-offset-left};
+			right: #{- $spec-block-shadow-offset};
+			top: #{- $spec-block-shadow-offset};
+			bottom: #{- $spec-block-shadow-offset};
 		}
+
 		&:hover {
 			>.bg {
 				display: block;
 			}
 		}
+
 		@include mobile {
 			&.mobile-adjust {
+
 				>.layover {
 					margin-bottom: 5px;
 				}
+
 				>.ref-item {
 					clear: both;
 				}
 			}
 		}
+
 		>.layover {
 			float: right;
 			margin-left: 10px;
 			// user-select: none; // Don't include in text selection
+
 			>div {
 				&.expand-control {
 					display: none;
+
 					@include mobile {
 						display: block;
+
 						&.hide {
 							display: none;
 						}
 					}
 				}
+
 				&.actions {
+
 					>.move-action {
 						// Move button hidden by default
 						display: none;
 					}
+
 					@include mobile {
 						display: none;
+
 						&.show {
 							display: block;
 						}
+
 						>.move-action {
 							// Show move button in small viewport
 							display: inline-block;
 						}
+
 						>.drag-handle {
 							// Don't show drag handle in small viewport
 							display: none;
 						}
 					}
-				}
+				} // &.actions
+
 				>.el-button {
 					padding: 3px;
 					font-size: 12px;
 				}
+
 				>.el-button+.el-button {
 					margin-left: 5px;
 				}
+
 				>.drag-handle {
 					display: inline-block;
 					padding: 3px;
@@ -336,20 +352,24 @@ export default {
 					cursor: ns-resize;
 				}
 			}
-		}
+		} // .layover
+
 		>.title {
 			font-weight: bold;
 		}
+
 		>.body {
 			white-space: pre-wrap;
 		}
+
 		>.title+.body, >.title+.ref-item, >.ref-item+.body {
 			margin-top: 10px;
 		}
-	}
+	} // .content
 
 	>ul.spec-block-list {
-		margin-top: 10px;
+		margin-top: $spec-block-margin;
+
 		&.moving {
 			.layover {
 				// Hide controls on subblocks of block being moved

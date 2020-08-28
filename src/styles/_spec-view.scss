@@ -1,22 +1,18 @@
-$spec-block-list-padding-left: 60px;
-$spec-block-list-margin-left-sm: -40px; // shift back in parent list padding
-$spec-block-point-margin-right: 20px; // space between right-aligned point and content area
-$spec-block-point-margin-right-sm: 15px;
-$spec-block-bg-padding-horiz: 1em;
-$spec-block-bg-padding-verti: 7px;
+// margin around block that gives space for the hover shadow
+$spec-block-margin: 1rem;
 
-
-/* TODO REDO WITH VARIABLES:
-// block margin (all sides; applied as padding-top on :not(:first-child) blocks to allow border-top)
-$spec-block-margin: 1em;
-// block hover shadow offset from block in margin (calculated as percent of margin)
-$spec-block-hover-shadow-offset: $spec-block-margin / -2;
 // block point area (::before) width
-$spec-block-point-width: 3em;
+$spec-block-before-width: 2rem;
 // offset from right-aligned point area to block content area
-$spec-block-point-offset: 1em;
+$spec-block-before-offset: 1rem;
+
 // block list padding-left (calculated from point area width and offset)
-$spec-block-list-padding-left: $spec-block-point-width + $spec-block-point-offset;
-// inner list mobile margin shift (calculated from block list padding-left and block hover shadow offset)
-$spec-block-list-margin-shift-sm: - ($spec-block-list-padding-left - $spec-block-hover-shadow-offset);
-*/
+$spec-block-list-padding-left: $spec-block-before-width + $spec-block-before-offset + $spec-block-margin;
+
+// inner list mobile margin left shift
+$spec-block-sublist-shift-sm: $spec-block-list-padding-left - $spec-block-margin;
+
+// block hover shadow offset from block in margin (calculated as percent of margin)
+$spec-block-shadow-offset: $spec-block-margin / 2;
+// left shadow offset must extend past the list left padding
+$spec-block-shadow-offset-left: $spec-block-before-width + $spec-block-before-offset + $spec-block-shadow-offset;

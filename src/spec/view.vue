@@ -281,6 +281,13 @@ export default {
 
 .spec-view {
 
+	// Root list
+	>ul.spec-block-list {
+		// add space beyond block shadow right boundary;
+		// block list padding-left includes the same space
+		padding-right: $spec-block-margin;
+	}
+
 	// Style for spec-block-list within spec-view or spec-block
 	ul.spec-block-list {
 		position: relative;
@@ -295,9 +302,10 @@ export default {
 		ul.spec-block-list {
 			// Sub lists
 			@include mobile {
-				margin-left: $spec-block-list-margin-left-sm;
-				border-left: thin solid lightgray;
+				// back shift
+				margin-left: #{- $spec-block-sublist-shift-sm};
 			}
+			border-left: thin solid lightgray;
 		}
 
 		&.dragging {
@@ -322,13 +330,9 @@ export default {
 			&:before {
 				display: block;
 				position: absolute;
-				left: 0;
-				width: #{$spec-block-list-padding-left - $spec-block-point-margin-right};
+				left: $spec-block-margin;
+				width: $spec-block-before-width;
 				text-align: right;
-
-				@include mobile {
-					width: #{$spec-block-list-padding-left - $spec-block-point-margin-right-sm};
-				}
 			}
 		}
 
@@ -361,6 +365,11 @@ export default {
 				display: none;
 			}
 		}
+	}
+
+	>.el-button {
+		margin-top: 2em;
+		margin-left: $spec-block-list-padding-left;
 	}
 }
 </style>

@@ -1,9 +1,12 @@
 // applies to header padding
-$app-header-horiz-padding: 8mm;
+$app-header-horiz-padding: 30px;
 $app-header-horiz-padding-sm: 15px;
-$page-header-horiz-padding: 1cm;
+
+$page-header-vertical-padding: 20px;
+$page-header-vertical-padding-sm: 15px;
+$page-header-horiz-padding: 40px;
 $page-header-horiz-padding-sm: 20px;
 
 // .content-area appears in app.vue
-$content-area-padding: 4em;
-$content-area-padding-sm: 2em;
+$content-area-padding: 64px;
+$content-area-padding-sm: 32px;

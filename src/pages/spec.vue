@@ -120,9 +120,9 @@ export default {
 		background-color: $spec-bg;
 		color: white;
 
-		padding: 0.5cm $page-header-horiz-padding;
+		padding: $page-header-vertical-padding $page-header-horiz-padding;
 		@include mobile {
-			padding: 15px $page-header-horiz-padding-sm 15px;
+			padding: $page-header-vertical-padding-sm $page-header-horiz-padding-sm;
 		}
 
 		>.right {
@@ -149,7 +149,7 @@ export default {
 	@include mobile {
 		>.spec-view {
 			margin-left: #{-$content-area-padding-sm};
-			margin-right: calc(-1 * (#{$content-area-padding-sm} - #{$spec-block-bg-padding-horiz}));
+			margin-right: #{-$content-area-padding-sm};
 		}
 	}
 }
