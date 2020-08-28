@@ -33,7 +33,7 @@ import $ from 'jquery';
 import SpecView from '../spec/view.vue';
 import EditSpecModal from '../spec/edit-spec-modal.vue';
 import {ajaxLoadSpec} from '../spec/ajax.js';
-import {setWindowSubtitle} from '../utils.js';
+import {setWindowSubtitle, idsEq} from '../utils.js';
 
 export default {
 	components: {
@@ -99,7 +99,14 @@ export default {
 		restoreScroll() {
 			let position = this.$store.state.savedScrollPosition;
 			if (position) {
+				// Restore scroll position from history
 				$(window).scrollTop(position.y).scrollLeft(position.x);
+			} else if (
+				idsEq(this.$store.state.currentSpecId, this.spec.id) &&
+				!!this.$store.state.currentSpecScrollTop
+			) {
+				// Restore last saved scroll position on spec page
+				$(window).scrollTop(this.$store.state.currentSpecScrollTop);
 			}
 		},
 	},

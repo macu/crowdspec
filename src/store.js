@@ -14,6 +14,8 @@ export const store = new Vuex.Store({
 		dragging: false,
 		moving: null, // id of node being moved
 		savedScrollPosition: null, // set when returning to routes in history
+		currentSpecId: null,
+		currentSpecScrollTop: null, // saved for navigation improvements
 	},
 	getters: {
 		userID(state) {
@@ -69,6 +71,14 @@ export const store = new Vuex.Store({
 		},
 		clearSavedScrollPosition(state) {
 			state.savedScrollPosition = null;
+		},
+		saveCurrentSpecScrollTop(state, specId) {
+			state.currentSpecId = specId;
+			state.currentSpecScrollTop = $window.scrollTop();
+		},
+		clearCurrentSpec(state) {
+			state.currentSpecId = null;
+			state.currentSpecScrollPosition = null;
 		},
 	},
 });

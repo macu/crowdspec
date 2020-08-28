@@ -1,5 +1,6 @@
 import VueRouter from 'vue-router';
 import store from './store.js';
+import {idsEq} from './utils.js';
 
 import IndexPage from './pages/index.vue';
 import SpecPage from './pages/spec.vue';
@@ -24,6 +25,23 @@ export const router = new VueRouter({
 		return to.hash ? {selector: to.hash}
 			: (savedPosition ? savedPosition : {x: 0, y: 0});
 	},
+});
+
+router.beforeEach((to, from, next) => {
+	// beforeEach is called before navigation is confirmed.
+	if (from) {
+		if (
+			!!store.state.currentSpecId &&
+			(!to.params.specId || !idsEq(to.params.specId, store.state.currentSpecId))
+		) {
+			// Leaving spec context for another context
+			store.commit('clearCurrentSpec');
+		} else if (from.name === 'spec') {
+			// Leaving spec page for another page in same spec
+			store.commit('saveCurrentSpecScrollTop', from.params.specId);
+		}
+	}
+	next();
 });
 
 router.afterEach((to, from) => {

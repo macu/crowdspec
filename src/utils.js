@@ -34,6 +34,7 @@ export function alertError(error) {
 }
 
 // Use in scenarios where comparing numeric IDs of mixed type (string / int).
+// E.g., objects from the server use numeric IDs, but $route params are strings.
 export function idsEq(id1, id2) {
 	return parseInt(id1, 10) === parseInt(id2, 10);
 }
