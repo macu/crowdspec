@@ -35,14 +35,14 @@
 			</div>
 		</div>
 
-		<div v-if="title" class="title">{{title}}</div>
+		<div v-if="hasTitle" class="title">{{title}}</div>
 
-		<template v-if="refType && refItem">
+		<template v-if="hasRefItem">
 			<ref-url v-if="refType === REF_TYPE_URL" :item="refItem" class="ref-item" @play="raisePlayVideo(refItem)"/>
 			<ref-subspec v-else-if="refType === REF_TYPE_SUBSPEC" :item="refItem" class="ref-item"/>
 		</template>
 
-		<div v-if="body" class="body">{{body}}</div>
+		<div v-if="hasBody" class="body">{{body}}</div>
 
 	</div>
 
@@ -94,8 +94,21 @@ export default {
 		REF_TYPE_SUBSPEC() {
 			return REF_TYPE_SUBSPEC;
 		},
+		hasTitle() {
+			return !!(this.title && this.title.trim());
+		},
+		hasBody() {
+			return !!(this.body && this.body.trim());
+		},
+		hasRefItem() {
+			return !!(this.refType && this.refItem);
+		},
 		classes() {
-			return [this.styleType];
+			return {
+				[this.styleType]: true,
+				'title-only': this.hasTitle && !this.hasBody && !this.hasRefItem,
+				'ref-item-only': this.hasRefItem && !this.hasTitle && !this.hasBody,
+			};
 		},
 		movingThis() {
 			return this.$store.state.moving === this.block.id;
@@ -251,6 +264,14 @@ export default {
 
 	&:not(:first-child) {
 		border-top: thin solid #eee;
+	}
+
+	// Remove dividers between simple subsequent blocks of the same type
+	&.title-only + .title-only,
+	&.ref-item-only + .ref-item-only {
+		// Account for $spec-block-margin applied twice as padding
+		margin-top: #{(-2 * $spec-block-margin) + $spec-block-title-only-spacing};
+		border-top: none !important;
 	}
 
 	>.content {

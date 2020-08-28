@@ -1,13 +1,16 @@
 // margin around block that gives space for the hover shadow
 $spec-block-margin: 1rem;
 
+// margin between subsequent title-only blocks
+$spec-block-title-only-spacing: 1rem;
+
 // block point area (::before) width
 $spec-block-before-width: 2rem;
 // offset from right-aligned point area to block content area
 $spec-block-before-offset: 1rem;
 
-// block list padding-left (calculated from point area width and offset)
-$spec-block-list-padding-left: $spec-block-before-width + $spec-block-before-offset + $spec-block-margin;
+// block list padding-left (calculated from margin spanning shadow boundary, point area width and offset)
+$spec-block-list-padding-left: $spec-block-margin + $spec-block-before-width + $spec-block-before-offset;
 
 // inner list mobile margin left shift
 $spec-block-sublist-shift-sm: $spec-block-list-padding-left - $spec-block-margin;
