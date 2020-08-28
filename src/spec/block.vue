@@ -103,11 +103,14 @@ export default {
 		hasRefItem() {
 			return !!(this.refType && this.refItem);
 		},
+		hasSubblocks() {
+			return !!(this.subblocks && this.subblocks.length);
+		},
 		classes() {
 			return {
 				[this.styleType]: true,
-				'title-only': this.hasTitle && !this.hasBody && !this.hasRefItem,
-				'ref-item-only': this.hasRefItem && !this.hasTitle && !this.hasBody,
+				'title-only': this.hasTitle && !this.hasBody && !this.hasRefItem && !this.hasSubblocks,
+				'ref-item-only': this.hasRefItem && !this.hasTitle && !this.hasBody && !this.hasSubblocks,
 			};
 		},
 		movingThis() {
