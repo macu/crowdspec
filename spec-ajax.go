@@ -185,12 +185,7 @@ func ajaxSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (
 			WHEN spec.owner_type = $2 AND spec.owner_id = $3
 				THEN spec.updated_at
 			-- when visitor
-			ELSE GREATEST(spec.updated_at, (
-				SELECT updated_at FROM spec_block
-				WHERE spec_block.spec_id = spec.id
-				ORDER BY updated_at DESC
-				LIMIT 1
-			))
+			ELSE GREATEST(spec.updated_at, spec.blocks_updated_at)
 		END AS last_updated
 		FROM spec
 		LEFT JOIN user_account

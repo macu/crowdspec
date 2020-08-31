@@ -24,4 +24,6 @@
 
 - [ ] use all non-minimized resources when working locally
 
+- [ ] maintenance mode 503
+
 - [ ] display dependencies' licenses on site

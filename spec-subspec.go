@@ -52,3 +52,8 @@ func loadSubspecHeader(db DBConn, subspecID int64) (*SpecSubspec, error) {
 	}
 	return s, nil
 }
+
+func recordSubspecBlocksUpdated(db DBConn, subspecID int64) error {
+	_, err := db.Exec(`UPDATE spec_subspec SET blocks_updated_at=$2 WHERE id=$1`, subspecID, time.Now())
+	return err
+}

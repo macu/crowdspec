@@ -131,6 +131,17 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 			return nil, http.StatusInternalServerError, fmt.Errorf("inserting block: %w", err)
 		}
 
+		err = recordSpecBlocksUpdated(tx, specID)
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("updating spec blocks_updated_at: %w", err)
+		}
+		if subspecID != nil {
+			err = recordSubspecBlocksUpdated(db, *subspecID)
+			if err != nil {
+				return nil, http.StatusInternalServerError, fmt.Errorf("updating subspec blocks_updated_at: %w", err)
+			}
+		}
+
 		return block, http.StatusOK, nil
 	})
 }
@@ -228,12 +239,23 @@ func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 			UPDATE spec_block
 			SET updated_at=$3, style_type=$4, content_type=$5, ref_type=$6, ref_id=$7, block_title=$8, block_body=$9
 			WHERE id=$2 AND spec_id=$1
-			RETURNING updated_at, block_title, block_body
+			RETURNING updated_at, subspec_id, block_title, block_body
 			`, specID, blockID, time.Now(),
 			styleType, contentType, refType, refID, title, body,
-		).Scan(&block.Updated, &block.Title, &block.Body)
+		).Scan(&block.Updated, &block.SubspecID, &block.Title, &block.Body)
 		if err != nil {
 			return nil, http.StatusInternalServerError, fmt.Errorf("updating block: %w", err)
+		}
+
+		err = recordSpecBlocksUpdated(tx, specID)
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("updating spec blocks_updated_at: %w", err)
+		}
+		if block.SubspecID != nil {
+			err = recordSubspecBlocksUpdated(db, *block.SubspecID)
+			if err != nil {
+				return nil, http.StatusInternalServerError, fmt.Errorf("updating subspec blocks_updated_at: %w", err)
+			}
 		}
 
 		return block, http.StatusOK, nil
@@ -254,11 +276,12 @@ func ajaxSpecMoveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 	}
 
 	var specID int64
+	var sourceSubspecID *int64
 	err = db.QueryRow(`
-		SELECT spec_id
+		SELECT spec_id, subspec_id
 		FROM spec_block
 		WHERE id = $1
-		`, blockID).Scan(&specID)
+		`, blockID).Scan(&specID, &sourceSubspecID)
 	if err != nil {
 		return nil, http.StatusInternalServerError, fmt.Errorf("loading specID for block %d: %w", blockID, err)
 	}
@@ -305,6 +328,23 @@ func ajaxSpecMoveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 
 		// TODO move sub blocks recursively to target subspec if changed
 		// See https://stackoverflow.com/a/30274296/1597274
+
+		err = recordSpecBlocksUpdated(tx, specID)
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("updating spec blocks_updated_at: %w", err)
+		}
+		if subspecID != nil {
+			err = recordSubspecBlocksUpdated(db, *subspecID)
+			if err != nil {
+				return nil, http.StatusInternalServerError, fmt.Errorf("updating subspec blocks_updated_at: %w", err)
+			}
+		}
+		if sourceSubspecID != nil && (subspecID == nil || *sourceSubspecID != *subspecID) {
+			err = recordSubspecBlocksUpdated(db, *subspecID)
+			if err != nil {
+				return nil, http.StatusInternalServerError, fmt.Errorf("updating subspec blocks_updated_at: %w", err)
+			}
+		}
 
 		return nil, http.StatusOK, nil
 	})
@@ -390,7 +430,18 @@ func ajaxSpecDeleteBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 		return nil, http.StatusBadRequest, fmt.Errorf("parsing blockId: %w", err)
 	}
 
-	if access, err := verifyWriteBlock(db, userID, blockID); !access || err != nil {
+	var specID int64
+	var subspecID *int64
+	err = db.QueryRow(`
+			SELECT spec_id, subspec_id
+			FROM spec_block
+			WHERE id = $1
+			`, blockID).Scan(&specID, &subspecID)
+	if err != nil {
+		return nil, http.StatusInternalServerError, fmt.Errorf("loading specID for block %d: %w", blockID, err)
+	}
+
+	if access, err := verifyWriteSpecSubspecBlocks(db, userID, specID, subspecID, &blockID); !access || err != nil {
 		if err != nil {
 			return nil, http.StatusInternalServerError, fmt.Errorf("verifying write block: %w", err)
 		}
@@ -407,6 +458,17 @@ func ajaxSpecDeleteBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 			`, blockID)
 		if err != nil {
 			return nil, http.StatusInternalServerError, fmt.Errorf("deleting block: %w", err)
+		}
+
+		err = recordSpecBlocksUpdated(tx, specID)
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("updating spec blocks_updated_at: %w", err)
+		}
+		if subspecID != nil {
+			err = recordSubspecBlocksUpdated(db, *subspecID)
+			if err != nil {
+				return nil, http.StatusInternalServerError, fmt.Errorf("updating subspec blocks_updated_at: %w", err)
+			}
 		}
 
 		return nil, http.StatusOK, nil

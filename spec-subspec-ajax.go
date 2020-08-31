@@ -181,13 +181,7 @@ func ajaxSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request
 			WHEN spec.owner_type = $3 AND spec.owner_id = $4
 				THEN spec_subspec.updated_at
 			-- when visitor
-			ELSE GREATEST(spec_subspec.updated_at, (
-				SELECT updated_at FROM spec_block
-				WHERE spec_block.spec_id = spec.id
-				AND spec_block.subspec_id = spec_subspec.id
-				ORDER BY updated_at DESC
-				LIMIT 1
-			))
+			ELSE GREATEST(spec_subspec.updated_at, spec_subspec.blocks_updated_at)
 		END AS last_updated
 		FROM spec_subspec
 		INNER JOIN spec ON spec.id = $1

@@ -10,12 +10,7 @@ func ajaxUserHome(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 
 	rows, err := db.Query(`
 		SELECT id, owner_type, owner_id, spec_name, spec_desc, is_public,
-		GREATEST(spec.updated_at, (
-			SELECT updated_at FROM spec_block
-			WHERE spec_block.spec_id = spec.id
-			ORDER BY updated_at DESC
-			LIMIT 1
-		)) AS last_updated
+		GREATEST(spec.updated_at, spec.blocks_updated_at) AS last_updated
 		FROM spec
 		WHERE owner_type=$1 AND owner_id=$2
 		ORDER BY created_at ASC
@@ -37,12 +32,7 @@ func ajaxUserHome(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 	rows, err = db.Query(`
 		SELECT spec.id, owner_type, owner_id, spec_name, spec_desc,
 		user_account.username,
-		GREATEST(spec.updated_at, (
-			SELECT updated_at FROM spec_block
-			WHERE spec_block.spec_id = spec.id
-			ORDER BY updated_at DESC
-			LIMIT 1
-		)) AS last_updated
+		GREATEST(spec.updated_at, spec.blocks_updated_at) AS last_updated
 		FROM spec
 		LEFT JOIN user_account
 		ON spec.owner_type=$1 AND user_account.id=owner_id
