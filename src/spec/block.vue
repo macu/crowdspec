@@ -118,6 +118,7 @@ export default {
 			// Dynamic
 			choosingAddPosition: false,
 			focusActions: false,
+			hasSubblocks: !!(this.block.subblocks && this.block.subblocks.length),
 		};
 	},
 	computed: {
@@ -138,9 +139,6 @@ export default {
 		},
 		refItemMissing() {
 			return !!this.refType && !this.refItem;
-		},
-		hasSubblocks() {
-			return !!(this.subblocks && this.subblocks.length);
 		},
 		classes() {
 			return {
@@ -256,7 +254,12 @@ export default {
 			let parentId = this.getParentId();
 			let insertBeforeId = this.block.id; // Add before this
 			ajaxMoveBlock(movingId, this.subspecId, parentId, insertBeforeId).then(() => {
-				$('[data-spec-block="'+movingId+'"]').insertBefore(this.$el);
+				let $moving = $('[data-spec-block="'+movingId+'"]');
+				let $sourceParentBlock = $moving.closest('.spec-block-list').closest('[data-spec-block]');
+				$moving.insertBefore(this.$el);
+				if ($sourceParentBlock.length) {
+					$sourceParentBlock.data('vc').updateHasSubblocks();
+				}
 				this.$store.commit('endMoving');
 			});
 		},
@@ -265,7 +268,13 @@ export default {
 			let parentId = this.block.id; // Add under this
 			let insertBeforeId = null; // Add at end
 			ajaxMoveBlock(movingId, this.subspecId, parentId, insertBeforeId).then(() => {
-				$('[data-spec-block="'+movingId+'"]').appendTo(this.$refs.sublist);
+				let $moving = $('[data-spec-block="'+movingId+'"]');
+				let $sourceParentBlock = $moving.closest('.spec-block-list').closest('[data-spec-block]');
+				$moving.appendTo(this.$refs.sublist);
+				if ($sourceParentBlock.length) {
+					$sourceParentBlock.data('vc').updateHasSubblocks();
+				}
+				this.updateHasSubblocks();
 				this.$store.commit('endMoving');
 			});
 		},
@@ -274,7 +283,12 @@ export default {
 			let parentId = this.getParentId();
 			let insertBeforeId = this.getFollowingBlockId();
 			ajaxMoveBlock(movingId, this.subspecId, parentId, insertBeforeId).then(() => {
-				$('[data-spec-block="'+movingId+'"]').insertAfter(this.$el);
+				let $moving = $('[data-spec-block="'+movingId+'"]');
+				let $sourceParentBlock = $moving.closest('.spec-block-list').closest('[data-spec-block]');
+				$moving.insertAfter(this.$el);
+				if ($sourceParentBlock.length) {
+					$sourceParentBlock.data('vc').updateHasSubblocks();
+				}
 				this.$store.commit('endMoving');
 			});
 		},
@@ -297,6 +311,9 @@ export default {
 		},
 		openCommunity() {
 			this.$alert('Unimplemented');
+		},
+		updateHasSubblocks() {
+			this.hasSubblocks = this.$refs.sublist.childElementCount > 0;
 		},
 	},
 };

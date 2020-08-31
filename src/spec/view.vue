@@ -152,11 +152,21 @@ export default {
 				this.$store.commit('endDragging');
 				this.transitRelativeScroll($(el).attr('data-spec-block'));
 			}).on('drop', (el, target, source, sibling) => {
+				let $sourceParentBlock = $(source).closest('[data-spec-block]');
+				if ($sourceParentBlock.length) {
+					$sourceParentBlock.data('vc').updateHasSubblocks();
+				}
+				let parentId = null;
 				let $parentBlock = $(target).closest('[data-spec-block]');
-				let parentId = $parentBlock.length ? $parentBlock.data('vc').getBlockId() : null;
+				if ($parentBlock.length) {
+					let parentVc = $parentBlock.data('vc');
+					parentId = parentVc.getBlockId();
+					parentVc.updateHasSubblocks();
+				}
 				let insertBeforeId = sibling ? $(sibling).data('vc').getBlockId() : null;
-				// TODO Revert on error (how?)
+				// TODO Revert on error?
 				ajaxMoveBlock($(el).data('vc').getBlockId(), this.subspecId, parentId, insertBeforeId);
+
 			});
 		}
 	},
