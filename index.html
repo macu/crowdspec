@@ -39,14 +39,17 @@ window.appVersion = "{{.VersionStamp}}";
 	integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg=="
 	crossorigin="anonymous"></script>
 
+{{if .Local}}
 <!-- Enable Vue DevTools -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.11/vue.js"
 	integrity="sha512-PyKhbAWS+VlTWXjk/36s5hJmUJBxcGY/1hlxg6woHD/EONP2fawZRKmvHdTGOWPKTqk3CPSUPh7+2boIBklbvw=="
 	crossorigin="anonymous"></script>
+{{else}}
 <!-- Production Vue -->
-<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.11/vue.runtime.min.js"
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.11/vue.runtime.min.js"
 	integrity="sha512-Vzh7nxnYk0GXQx1BNmbBkqmxWIf/kjw+UoddU38COFVvtIeOaz+d+Wk02F8Kt8brFNCavJdTxxL0iWpU1IfF0w=="
-	crossorigin="anonymous"></script> -->
+	crossorigin="anonymous"></script>
+{{end}}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vuex/3.5.1/vuex.min.js"
 	integrity="sha512-n/iV5SyKXzLRbRczKU75fMgHO0A1DWJSWbK5llLNAqdcoxtUK3NfgfszYpjhvcEqS6nEXwu7gQ5bIkx6z8/lrA=="
@@ -62,6 +65,9 @@ window.appVersion = "{{.VersionStamp}}";
 	crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dragula/3.7.2/dragula.min.js"
 	integrity="sha512-T1BAtwCRE7TI7k5m9Pd8El1ARLK06yBaFEHsiIX8JXTtS8wQ5fBknAeLsDrYD3I0UJEwhUgIlugLUOc1nRXUVA=="
+	crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.27.0/moment.min.js"
+	integrity="sha512-rmZcZsyhe0/MAjquhTgiUcb4d9knaFc7b5xAfju483gbEXTkeJRUMIPk6s3ySZMYUHEcjKbjLjyddGWMrNEvZg=="
 	crossorigin="anonymous"></script>
 
 <script src="/js/compiled.js?v={{.VersionStamp}}"></script>

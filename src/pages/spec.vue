@@ -2,55 +2,82 @@
 <section v-if="spec" class="spec-page">
 
 	<header>
+
 		<div class="right">
+
 			<span v-if="currentUserOwns">You own this</span>
-			<span v-else>Owned by {{spec.ownerType}} {{spec.ownerId}}</span>
-
-			<span v-if="spec.public">
-				Public
-			</span>
 			<span v-else>
-				<el-tooltip content="Unpublished" placement="left">
-					<i class="el-icon-lock"></i>
-				</el-tooltip>
+				Owned by
+				<template v-if="spec.username">{{spec.username}}</template>
+				<template v-else>{{spec.ownerType}} {{spec.ownerId}}</template>
 			</span>
 
-			<el-button @click="openManageSpec()" size="mini" icon="el-icon-setting"/>
+			<template v-if="enableEditing">
+				<span v-if="spec.public">
+					Public
+				</span>
+				<span v-else>
+					<el-tooltip content="Unpublished" placement="left">
+						<i class="el-icon-lock"></i>
+					</el-tooltip>
+				</span>
+				<el-button @click="openManageSpec()" size="mini" icon="el-icon-setting"/>
+			</template>
+
+			<span v-else>
+				Last modified <moment :datetime="spec.updated" :offset="true"/>
+			</span>
+
 		</div>
-		<h2>{{name}}</h2>
-		<div v-if="desc" class="desc">{{desc}}</div>
+
+		<h2>{{spec.name}}</h2>
+
+		<div v-if="spec.desc" class="desc">{{spec.desc}}</div>
+
 	</header>
 
-	<spec-view :key="spec.id" :spec="spec"/>
+	<spec-view
+		:key="spec.id"
+		:spec="spec"
+		:enable-editing="enableEditing"
+		/>
 
-	<edit-spec-modal ref="editSpecModal"/>
+	<edit-spec-modal
+		v-if="enableEditing"
+		ref="editSpecModal"
+		/>
 
 </section>
 </template>
 
 <script>
 import $ from 'jquery';
+import Moment from '../widgets/moment.vue';
 import SpecView from '../spec/view.vue';
 import EditSpecModal from '../spec/edit-spec-modal.vue';
 import {ajaxLoadSpec} from '../spec/ajax.js';
+import {OWNER_TYPE_USER} from '../spec/const.js';
 import {setWindowSubtitle, idsEq} from '../utils.js';
 
 export default {
 	components: {
+		Moment,
 		SpecView,
 		EditSpecModal,
 	},
 	data() {
 		return {
 			spec: null,
-			name: '',
-			desc: '',
 		};
 	},
 	computed: {
 		currentUserOwns() {
-			return this.spec.ownerType === 'user' &&
+			return this.spec.ownerType === OWNER_TYPE_USER &&
 				this.$store.getters.userID === this.spec.ownerId;
+		},
+		enableEditing() {
+			// Currently users may edit only their own specs
+			return this.currentUserOwns;
 		},
 	},
 	beforeRouteEnter(to, from, next) {
@@ -77,22 +104,18 @@ export default {
 	methods: {
 		setSpec(spec) {
 			this.spec = spec;
-			this.name = spec.name;
-			this.desc = spec.desc;
 			setWindowSubtitle(spec.name);
 			// vue-router scrollBehavior is applied before spec-view has a chance to populate,
 			// so restore the scroll position again after fully rendering.
 			this.$nextTick(this.restoreScroll);
 		},
 		openManageSpec() {
-			this.$refs.editSpecModal.showEdit({
-				id: this.spec.id,
-				name: this.name,
-				desc: this.desc,
-				created: this.spec.created,
-			}, updatedSpec => {
-				this.name = updatedSpec.name;
-				this.desc = updatedSpec.desc;
+			this.$refs.editSpecModal.showEdit(this.spec, updatedSpec => {
+				// Update properties provided back by ajaxSaveSpec
+				this.spec.updated = updatedSpec.updated;
+				this.spec.name = updatedSpec.name;
+				this.spec.desc = updatedSpec.desc;
+				this.spec.public = updatedSpec.public;
 				setWindowSubtitle(updatedSpec.name);
 			});
 		},

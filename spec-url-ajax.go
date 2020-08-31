@@ -37,7 +37,7 @@ func ajaxSpecURLs(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 	}
 
 	rows, err := db.Query(`
-		SELECT id, url, url_title, url_desc, url_image_data, updated_at
+		SELECT id, created_at, url, url_title, url_desc, url_image_data, updated_at
 		FROM spec_url
 		WHERE spec_id = $1
 		ORDER BY url_title, url`, specID)
@@ -51,7 +51,7 @@ func ajaxSpecURLs(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 		o := &URLObject{
 			SpecID: specID,
 		}
-		err = rows.Scan(&o.ID, &o.URL, &o.Title, &o.Desc, &o.ImageData, &o.UpdatedAt)
+		err = rows.Scan(&o.ID, &o.Created, &o.URL, &o.Title, &o.Desc, &o.ImageData, &o.Updated)
 		if err != nil {
 			if err2 := rows.Close(); err2 != nil { // TODO Add everywhere
 				return nil, http.StatusInternalServerError, fmt.Errorf("error closing rows: %s; on scan error: %w", err2, err)
@@ -94,10 +94,12 @@ func ajaxSpecCreateURL(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 	}
 
 	return inTransaction(r.Context(), db, func(tx *sql.Tx) (interface{}, int, error) {
+
 		urlObject, err := createURLObject(tx, specID, url)
 		if err != nil {
 			return nil, http.StatusInternalServerError, fmt.Errorf("creating spec_url: %w", err)
 		}
+
 		return urlObject, http.StatusOK, nil
 	})
 }
@@ -132,10 +134,12 @@ func ajaxSpecRefreshURL(db *sql.DB, userID uint, w http.ResponseWriter, r *http.
 	}
 
 	return inTransaction(r.Context(), db, func(tx *sql.Tx) (interface{}, int, error) {
+
 		urlObject, err := updateURLObject(tx, id, url)
 		if err != nil {
 			return nil, http.StatusInternalServerError, fmt.Errorf("updating spec_url: %w", err)
 		}
+
 		return urlObject, http.StatusOK, nil
 	})
 }
@@ -162,14 +166,8 @@ func ajaxSpecDeleteURL(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 	}
 
 	return inTransaction(r.Context(), db, func(tx *sql.Tx) (interface{}, int, error) {
-		_, err := tx.Exec(`
-						UPDATE spec_block
-						SET ref_type = NULL, ref_id = NULL
-						WHERE ref_type=$1 AND ref_id=$2
-						`, BlockRefURL, id)
-		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("clearing block references: %w", err)
-		}
+
+		// Leave block references
 
 		_, err = tx.Exec(`
 				DELETE FROM spec_url

@@ -6,32 +6,58 @@
 		<div class="bg"></div>
 
 		<div class="layover" @mouseleave="mouseLeaveLayover()">
-			<div class="expand-control" :class="{hide: showActions}">
-				<el-button @click="focusActions = true" type="default" size="mini" icon="el-icon-more" circle/>
-			</div>
-			<div class="actions" :class="{show: showActions}">
-				<template v-if="choosingAddPosition">
-					<el-button @click="cancelChooseAddPosition()" type="warning" size="mini" icon="el-icon-close" circle/>
-					<el-button @click="addBeforeThis()" type="primary" size="mini" icon="el-icon-top" circle/>
-					<el-button @click="addIntoThis()" type="primary" size="mini" icon="el-icon-bottom-right" circle/>
-					<el-button @click="addAfterThis()" type="primary" size="mini" icon="el-icon-bottom" circle/>
-				</template>
-				<template v-else-if="movingThis">
-					<el-button @click="cancelMoving()" type="warning" size="mini" icon="el-icon-close">Cancel move</el-button>
-				</template>
-				<template v-else-if="movingAnother">
-					<el-button @click="cancelMoving()" type="warning" size="mini" icon="el-icon-close" circle/>
-					<el-button @click="moveBeforeThis()" type="primary" size="mini" icon="el-icon-top" circle/>
-					<el-button @click="moveIntoThis()" type="primary" size="mini" icon="el-icon-bottom-right" circle/>
-					<el-button @click="moveAfterThis()" type="primary" size="mini" icon="el-icon-bottom" circle/>
-				</template>
-				<template v-else>
-					<el-button @click="editBlock()" type="default" size="mini" icon="el-icon-edit" circle/>
-					<el-button @click="promptDeleteBlock()" type="warning" size="mini" icon="el-icon-delete" circle/>
-					<el-button @click="enterChooseAddPosition()" type="primary" size="mini" icon="el-icon-plus" circle/>
-					<el-button @click="startMoving()" class="move-action" type="default" size="mini" icon="el-icon-d-caret" circle/>
-					<i @click="startMoving()" class="el-icon-d-caret drag-handle"></i>
-				</template>
+			<template v-if="enableEditing">
+				<div class="expand-control" :class="{hide: showActions}">
+					<!-- only show community button to admins in collapsed mobile menu when there are unread submissions -->
+					<!-- always show community button to guests, who only make community interactions -->
+					<el-button v-if="unreadSubmissionsCount"
+						@click="openCommunity()"
+						:type="submissionsCount ? 'primary' : 'default'"
+						size="mini"
+						icon="el-icon-chat-dot-square">
+						{{submissionsCount}}
+					</el-button>
+					<el-button @click="focusActions = true" type="default" size="mini" icon="el-icon-more" circle/>
+				</div>
+				<div class="actions" :class="{show: showActions}">
+					<template v-if="choosingAddPosition">
+						<el-button @click="cancelChooseAddPosition()" type="warning" size="mini" icon="el-icon-close" circle/>
+						<el-button @click="addBeforeThis()" type="primary" size="mini" icon="el-icon-top" circle/>
+						<el-button @click="addIntoThis()" type="primary" size="mini" icon="el-icon-bottom-right" circle/>
+						<el-button @click="addAfterThis()" type="primary" size="mini" icon="el-icon-bottom" circle/>
+					</template>
+					<template v-else-if="movingThis">
+						<el-button @click="cancelMoving()" type="warning" size="mini" icon="el-icon-close">Cancel move</el-button>
+					</template>
+					<template v-else-if="movingAnother">
+						<el-button @click="cancelMoving()" type="warning" size="mini" icon="el-icon-close" circle/>
+						<el-button @click="moveBeforeThis()" type="primary" size="mini" icon="el-icon-top" circle/>
+						<el-button @click="moveIntoThis()" type="primary" size="mini" icon="el-icon-bottom-right" circle/>
+						<el-button @click="moveAfterThis()" type="primary" size="mini" icon="el-icon-bottom" circle/>
+					</template>
+					<template v-else>
+						<el-button @click="openCommunity()"
+							:type="submissionsCount ? 'primary' : 'default'"
+							size="mini"
+							icon="el-icon-chat-dot-square">
+							{{submissionsCount}}
+						</el-button>
+						<el-button @click="editBlock()" type="default" size="mini" icon="el-icon-edit" circle/>
+						<el-button @click="promptDeleteBlock()" type="warning" size="mini" icon="el-icon-delete" circle/>
+						<el-button @click="enterChooseAddPosition()" type="primary" size="mini" icon="el-icon-plus" circle/>
+						<el-button @click="startMoving()" class="move-action" type="default" size="mini" icon="el-icon-d-caret" circle/>
+						<i @click="startMoving()" class="el-icon-d-caret drag-handle"></i>
+					</template>
+				</div>
+			</template>
+			<div v-else class="visitor-actions">
+				<el-button
+					@click="openCommunity()"
+					:type="submissionsCount ? 'primary' : 'default'"
+					size="mini"
+					icon="el-icon-chat-dot-square">
+					{{submissionsCount}}
+				</el-button>
 			</div>
 		</div>
 
@@ -41,6 +67,11 @@
 			<ref-url v-if="refType === REF_TYPE_URL" :item="refItem" class="ref-item" @play="raisePlayVideo(refItem)"/>
 			<ref-subspec v-else-if="refType === REF_TYPE_SUBSPEC" :item="refItem" class="ref-item"/>
 		</template>
+
+		<el-alert v-else-if="refItemMissing"
+			title="Content unavailable"
+			:closable="false"
+			type="warning"/>
 
 		<div v-if="hasBody" class="body">{{body}}</div>
 
@@ -69,10 +100,12 @@ export default {
 		block: Object,
 		subspecId: Number,
 		eventBus: Object,
+		enableEditing: Boolean,
 	},
 	data() {
 		return {
 			// Copy dynamic values
+			updated: this.block.updated,
 			styleType: this.block.styleType,
 			contentType: this.block.contentType,
 			refType: this.block.refType,
@@ -103,6 +136,9 @@ export default {
 		hasRefItem() {
 			return !!(this.refType && this.refItem);
 		},
+		refItemMissing() {
+			return !!this.refType && !this.refItem;
+		},
 		hasSubblocks() {
 			return !!(this.subblocks && this.subblocks.length);
 		},
@@ -121,6 +157,12 @@ export default {
 		},
 		showActions() {
 			return this.focusActions || this.movingThis || this.movingAnother;
+		},
+		unreadSubmissionsCount() {
+			return 0;
+		},
+		submissionsCount() {
+			return 0;
 		},
 	},
 	mounted() {
@@ -146,6 +188,8 @@ export default {
 		editBlock() {
 			this.raiseOpenEdit({
 				id: this.block.id,
+				created: this.block.created,
+				updated: this.updated,
 				styleType: this.styleType,
 				contentType: this.contentType,
 				refType: this.refType,
@@ -154,6 +198,7 @@ export default {
 				title: this.title,
 				body: this.body,
 			}, updatedBlock => {
+				this.updated = updatedBlock.updated;
 				this.styleType = updatedBlock.styleType;
 				this.contentType = updatedBlock.contentType;
 				this.refType = updatedBlock.refType;
@@ -244,13 +289,14 @@ export default {
 		},
 		urlDeleted(refId) {
 			if (this.refType === REF_TYPE_URL && refId === this.refId) {
-				this.refType = null;
-				this.refId = null;
 				this.refItem = null;
 			}
 		},
 		raisePlayVideo(urlObject) {
 			this.$emit('play-video', urlObject);
+		},
+		openCommunity() {
+			this.$alert('Unimplemented');
 		},
 	},
 };
@@ -258,6 +304,7 @@ export default {
 
 <style lang="scss">
 @import '../styles/_breakpoints.scss';
+@import '../styles/_colours.scss';
 @import '../styles/_spec-view.scss';
 @import '../styles/_app.scss';
 
@@ -284,7 +331,7 @@ export default {
 		>.bg {
 			display: none;
 			z-index: -1;
-			background-color: #ececec;
+			background-color: $shadow-bg;
 
 			position: absolute;
 
@@ -386,7 +433,11 @@ export default {
 			white-space: pre-wrap;
 		}
 
-		>.title+.body, >.title+.ref-item, >.ref-item+.body {
+		>.el-alert {
+			width: unset;
+		}
+
+		>.layover + * ~ * {
 			margin-top: 10px;
 		}
 	} // .content

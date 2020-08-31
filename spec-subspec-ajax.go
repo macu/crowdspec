@@ -26,7 +26,7 @@ func ajaxSubspecs(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 	}
 
 	rows, err := db.Query(`
-		SELECT id, created_at, subspec_name, subspec_desc
+		SELECT id, created_at, updated_at, subspec_name, subspec_desc
 		FROM spec_subspec
 		WHERE spec_id = $1
 		ORDER BY subspec_name`, specID)
@@ -40,7 +40,7 @@ func ajaxSubspecs(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 		s := &SpecSubspec{
 			SpecID: specID,
 		}
-		err = rows.Scan(&s.ID, &s.Created, &s.Name, &s.Desc)
+		err = rows.Scan(&s.ID, &s.Created, &s.Updated, &s.Name, &s.Desc)
 		if err != nil {
 			if err2 := rows.Close(); err2 != nil { // TODO Add everywhere
 				return nil, http.StatusInternalServerError, fmt.Errorf("error closing rows: %s; on scan error: %w", err2, err)
@@ -82,13 +82,17 @@ func ajaxSpecCreateSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *ht
 	desc := AtoPointerNilIfEmpty(strings.TrimSpace(r.Form.Get("desc")))
 
 	return inTransaction(r.Context(), db, func(tx *sql.Tx) (interface{}, int, error) {
+
 		var subspecID int64
-		err = tx.QueryRow(`INSERT INTO spec_subspec (spec_id, created_at, subspec_name, subspec_desc)
-			VALUES ($1, $2, $3, $4) RETURNING id`,
+
+		err = tx.QueryRow(`INSERT INTO spec_subspec (spec_id, created_at, updated_at, subspec_name, subspec_desc)
+			VALUES ($1, $2, $2, $3, $4) RETURNING id`,
 			specID, time.Now(), name, desc).Scan(&subspecID)
+
 		if err != nil {
 			return nil, http.StatusInternalServerError, fmt.Errorf("inserting new subspec: %w", err)
 		}
+
 		return subspecID, http.StatusCreated, nil
 	})
 }
@@ -127,12 +131,12 @@ func ajaxSpecSaveSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 			ID: subspecID,
 		}
 
-		err = tx.QueryRow(`UPDATE spec_subspec SET subspec_name = $2, subspec_desc = $3
+		// Scan values as represented in DB for return
+		err = tx.QueryRow(`UPDATE spec_subspec SET updated_at = $2,
+			subspec_name = $3, subspec_desc = $4
 			WHERE id = $1
-			RETURNING spec_id, created_at, subspec_name, subspec_desc, (
-				SELECT spec_name FROM spec WHERE spec.id = spec_subspec.spec_id
-			)`,
-			subspecID, name, desc).Scan(&s.SpecID, &s.Created, &s.Name, &s.Desc, &s.SpecName)
+			RETURNING spec_id, updated_at, subspec_name, subspec_desc`,
+			subspecID, time.Now(), name, desc).Scan(&s.SpecID, &s.Updated, &s.Name, &s.Desc)
 
 		if err != nil {
 			return nil, http.StatusInternalServerError, fmt.Errorf("updating subspec: %w", err)
@@ -169,13 +173,15 @@ func ajaxSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request
 		SpecID: specID,
 	}
 
-	err = db.QueryRow(`SELECT spec_subspec.created_at, spec_subspec.subspec_name, spec_subspec.subspec_desc,
-		spec.spec_name
+	err = db.QueryRow(`SELECT spec_subspec.created_at, spec_subspec.updated_at,
+		spec_subspec.subspec_name, spec_subspec.subspec_desc,
+		spec.spec_name, spec.owner_type, spec.owner_id
 		FROM spec_subspec
 		INNER JOIN spec ON spec.id = $2
 		WHERE spec_subspec.id = $1
 		AND spec_subspec.spec_id = $2`,
-		subspecID, specID).Scan(&s.Created, &s.Name, &s.Desc, &s.SpecName)
+		subspecID, specID).Scan(&s.Created, &s.Updated, &s.Name, &s.Desc,
+		&s.SpecName, &s.OwnerType, &s.OwnerID)
 	if err != nil {
 		return nil, http.StatusInternalServerError, fmt.Errorf("loading subspec: %w", err)
 	}
@@ -210,13 +216,13 @@ func ajaxSpecDeleteSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *ht
 	}
 
 	return inTransaction(r.Context(), db, func(tx *sql.Tx) (interface{}, int, error) {
-		_, err := tx.Exec(`UPDATE spec_block SET ref_type = NULL, ref_id = NULL
-				WHERE ref_type=$1 AND ref_id=$2`, BlockRefSubspec, subspecID)
-		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("clearing block references: %w", err)
-		}
 
-		_, err = tx.Exec(`DELETE FROM spec_subspec WHERE id=$1`, subspecID)
+		// Leave block references
+
+		_, err := tx.Exec(`
+			DELETE FROM spec_subspec
+			WHERE id=$1
+			`, subspecID)
 		if err != nil {
 			return nil, http.StatusInternalServerError, fmt.Errorf("deleting subspec: %w", err)
 		}

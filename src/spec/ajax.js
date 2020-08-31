@@ -7,18 +7,20 @@ export function ajaxLoadSpec(specId) {
 	}).fail(alertError);
 }
 
-export function ajaxCreateSpec(name, desc) {
+export function ajaxCreateSpec(name, desc, isPublic) {
 	return $.post('/ajax/spec/create-spec', {
 		name, // must be provided
 		desc,
+		isPublic,
 	}).fail(alertError);
 }
 
-export function ajaxSaveSpec(specId, name, desc) {
+export function ajaxSaveSpec(specId, name, desc, isPublic) {
 	return $.post('/ajax/spec/save-spec', {
 		specId,
 		name, // must be provided
 		desc,
+		isPublic,
 	}).fail(alertError);
 }
 

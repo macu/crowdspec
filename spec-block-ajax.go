@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // Creates a block within a spec.
@@ -104,23 +105,7 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 			return nil, code, err
 		}
 
-		// Create block row
-		var blockID int64
-		err = tx.QueryRow(`
-			INSERT INTO spec_block
-			(spec_id, subspec_id, parent_id, order_number,
-				style_type, content_type, ref_type, ref_id, block_title, block_body)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-			RETURNING id
-			`, specID, subspecID, parentID, insertAt,
-			styleType, contentType, refType, refID, title, body).Scan(&blockID)
-		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("inserting block: %w", err)
-		}
-
-		// Return block
 		block := &SpecBlock{
-			ID:          blockID,
 			SpecID:      specID,
 			SubspecID:   subspecID,
 			ParentID:    parentID,
@@ -129,9 +114,21 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 			ContentType: contentType,
 			RefType:     refType,
 			RefID:       refID,
-			Title:       title,
-			Body:        body,
 			RefItem:     refItem,
+		}
+
+		// Create block row
+		err = tx.QueryRow(`
+			INSERT INTO spec_block
+			(spec_id, created_at, updated_at, subspec_id, parent_id, order_number,
+				style_type, content_type, ref_type, ref_id, block_title, block_body)
+			VALUES ($1, $2, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+			RETURNING id, created_at, updated_at, block_title, block_body
+			`, specID, time.Now(), subspecID, parentID, insertAt,
+			styleType, contentType, refType, refID, title, body,
+		).Scan(&block.ID, &block.Created, &block.Updated, &block.Title, &block.Body)
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("inserting block: %w", err)
 		}
 
 		return block, http.StatusOK, nil
@@ -217,26 +214,26 @@ func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 			}
 		}
 
-		// Update block row
-		_, err = tx.Exec(`
-				UPDATE spec_block
-				SET style_type=$3, content_type=$4, ref_type=$5, ref_id=$6, block_title=$7, block_body=$8
-				WHERE id=$1 AND spec_id=$2
-				`, blockID, specID, styleType, contentType, refType, refID, title, body)
-		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("updating block: %w", err)
-		}
-
-		// Return updated block
 		block := &SpecBlock{
 			ID:          blockID,
 			StyleType:   styleType,
 			ContentType: contentType,
 			RefType:     refType,
 			RefID:       refID,
-			Title:       title,
-			Body:        body,
 			RefItem:     refItem,
+		}
+
+		// Update block row
+		err = tx.QueryRow(`
+			UPDATE spec_block
+			SET updated_at=$3, style_type=$4, content_type=$5, ref_type=$6, ref_id=$7, block_title=$8, block_body=$9
+			WHERE id=$2 AND spec_id=$1
+			RETURNING updated_at, block_title, block_body
+			`, specID, blockID, time.Now(),
+			styleType, contentType, refType, refID, title, body,
+		).Scan(&block.Updated, &block.Title, &block.Body)
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("updating block: %w", err)
 		}
 
 		return block, http.StatusOK, nil
@@ -297,11 +294,11 @@ func ajaxSpecMoveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 			return 0, code, err
 		}
 
-		query := `UPDATE spec_block
-			SET subspec_id = $1, parent_id = $2, order_number = $3
-			WHERE id = $4`
-
-		_, err = tx.Exec(query, subspecID, parentID, insertAt, blockID)
+		_, err = tx.Exec(`
+			UPDATE spec_block
+			SET subspec_id = $2, parent_id = $3, order_number = $4
+			WHERE id = $1
+			`, blockID, subspecID, parentID, insertAt)
 		if err != nil {
 			return nil, http.StatusInternalServerError, fmt.Errorf("inserting at end: %w", err)
 		}
@@ -402,6 +399,7 @@ func ajaxSpecDeleteBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 	}
 
 	return inTransaction(r.Context(), db, func(tx *sql.Tx) (interface{}, int, error) {
+
 		// Delete block row (delete is cascade; subblocks will also be deleted)
 		_, err := tx.Exec(`
 			DELETE FROM spec_block

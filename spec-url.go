@@ -21,11 +21,12 @@ import (
 type URLObject struct {
 	ID        int64     `json:"id"`
 	SpecID    int64     `json:"specId"`
+	Created   time.Time `json:"created"`
 	URL       string    `json:"url"`
 	Title     *string   `json:"title,omitempty"`
 	Desc      *string   `json:"desc,omitempty"`
 	ImageData *string   `json:"imageData,omitempty"`
-	UpdatedAt time.Time `json:"updated"`
+	Updated   time.Time `json:"updated"`
 }
 
 // URLMetadata represents metadata extracted from a request to a URL.
@@ -122,10 +123,10 @@ func createURLObject(tx *sql.Tx, specID int64, url string) (*URLObject, error) {
 
 	// Save URLObject
 	err = tx.QueryRow(
-		`INSERT INTO spec_url (spec_id, url, url_title, url_desc, url_image_data, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, url_title, url_desc, updated_at`,
-		specID, url, urlObject.Title, urlObject.Desc, urlObject.ImageData, time.Now(),
-	).Scan(&urlObject.ID, &urlObject.Title, &urlObject.Desc, &urlObject.UpdatedAt)
+		`INSERT INTO spec_url (spec_id, created_at, url, url_title, url_desc, url_image_data, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $2) RETURNING id, created_at, url_title, url_desc, updated_at`,
+		specID, time.Now(), url, urlObject.Title, urlObject.Desc, urlObject.ImageData,
+	).Scan(&urlObject.ID, &urlObject.Created, &urlObject.Title, &urlObject.Desc, &urlObject.Updated)
 	if err != nil {
 		return nil, fmt.Errorf("error inserting new spec_url: %w", err)
 	}
@@ -134,6 +135,7 @@ func createURLObject(tx *sql.Tx, specID int64, url string) (*URLObject, error) {
 }
 
 func updateURLObject(tx *sql.Tx, id int64, url string) (*URLObject, error) {
+
 	data, err := fetchMetadata(url)
 	if err != nil {
 		return nil, fmt.Errorf("error loading url metadata: %w", err)
@@ -165,9 +167,9 @@ func updateURLObject(tx *sql.Tx, id int64, url string) (*URLObject, error) {
 	// Save URLObject
 	err = tx.QueryRow(
 		`UPDATE spec_url SET url=$2, url_title=$3, url_desc=$4, url_image_data=$5, updated_at=$6
-		WHERE id=$1 RETURNING url_title, url_desc, updated_at`,
+		WHERE id=$1 RETURNING created_at, url_title, url_desc, updated_at`,
 		id, url, urlObject.Title, urlObject.Desc, urlObject.ImageData, time.Now(),
-	).Scan(&urlObject.Title, &urlObject.Desc, &urlObject.UpdatedAt)
+	).Scan(&urlObject.Created, &urlObject.Title, &urlObject.Desc, &urlObject.Updated)
 	if err != nil {
 		return nil, fmt.Errorf("error updating spec_url: %w", err)
 	}
@@ -175,23 +177,20 @@ func updateURLObject(tx *sql.Tx, id int64, url string) (*URLObject, error) {
 	return urlObject, nil
 }
 
+// currently used in loading block ref headers piecewise
 func loadURLObject(db DBConn, id int64) (*URLObject, error) {
-	var urlObject = &URLObject{
+
+	urlObject := &URLObject{
 		ID: id,
 	}
 
 	err := db.QueryRow(
-		`SELECT spec_id, url, url_title, url_desc, url_image_data, updated_at
-		FROM spec_url WHERE id=$1`, id).Scan(&urlObject.SpecID, &urlObject.URL,
-		&urlObject.Title, &urlObject.Desc, &urlObject.ImageData, &urlObject.UpdatedAt)
+		`SELECT spec_id, created_at, url, url_title, url_desc, url_image_data, updated_at
+		FROM spec_url WHERE id=$1`, id).Scan(&urlObject.SpecID, &urlObject.Created,
+		&urlObject.URL, &urlObject.Title, &urlObject.Desc, &urlObject.ImageData, &urlObject.Updated)
 	if err != nil {
 		return nil, err
 	}
 
 	return urlObject, nil
-}
-
-func deleteURLObject(tx *sql.Tx, id int64) error {
-	_, err := tx.Exec(`DELETE FROM spec_url WHERE id=$1`, id)
-	return err
 }

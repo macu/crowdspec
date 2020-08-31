@@ -6,12 +6,48 @@
 	<div class="user-specs">
 		<h2>Your specs</h2>
 		<p v-if="loading">Loading...</p>
-		<ul v-else-if="userSpecs && userSpecs.length">
-			<li v-for="s in userSpecs" :key="s.id">
-				<router-link :to="{name: 'spec', params: {specId: s.id}}">{{s.name}}</router-link>
-			</li>
+		<ul v-else-if="userSpecs && userSpecs.length" class="specs-list">
+			<router-link
+				v-for="s in userSpecs"
+				:key="s.id"
+				tag="li"
+				:to="{name: 'spec', params: {specId: s.id}}">
+				<div class="info">
+					<span class="status" :class="{public: s.public}">
+						<template v-if="s.public"><i class="el-icon-umbrella"></i> Public</template>
+						<template v-else><i class="el-icon-lock"></i> Private</template>
+					</span>
+				</div>
+				<router-link :to="{name: 'spec', params: {specId: s.id}}" class="name">{{s.name}}</router-link>
+				<div class="info">
+					<span class="updated">Last modified <strong><moment :datetime="s.updated" :offset="true"/></strong></span>
+				</div>
+				<div v-if="s.desc" class="desc">{{s.desc}}</div>
+			</router-link>
 		</ul>
 		<p v-else>You do not have any specs.</p>
+	</div>
+
+	<div class="public-specs" :class="{'adjust-margin': !!userSpecs.length}">
+		<h2>Public specs</h2>
+		<p v-if="loading">Loading...</p>
+		<ul v-else-if="publicSpecs && publicSpecs.length" class="specs-list">
+			<router-link
+				v-for="s in publicSpecs"
+				:key="s.id"
+				tag="li"
+				:to="{name: 'spec', params: {specId: s.id}}">
+				<div class="info">
+					<span class="username"><i class="el-icon-user"> {{s.username}}</i></span>
+				</div>
+				<router-link :to="{name: 'spec', params: {specId: s.id}}" class="name">{{s.name}}</router-link>
+				<div class="info">
+					<span class="updated">Last modified <strong><moment :datetime="s.updated" :offset="true"/></strong></span>
+				</div>
+				<div v-if="s.desc" class="desc">{{s.desc}}</div>
+			</router-link>
+		</ul>
+		<p v-else>There are no public specs......</p>
 	</div>
 
 	<edit-spec-modal ref="editSpecModal"/>
@@ -21,16 +57,19 @@
 
 <script>
 import $ from 'jquery';
+import Moment from '../widgets/moment.vue';
 import EditSpecModal from '../spec/edit-spec-modal.vue';
 import {alertError} from '../utils.js';
 
 export default {
 	components: {
+		Moment,
 		EditSpecModal,
 	},
 	data() {
 		return {
 			userSpecs: [],
+			publicSpecs: [],
 			loading: true,
 		};
 	},
@@ -44,8 +83,9 @@ export default {
 	methods: {
 		reloadSpecs() {
 			this.loading = true;
-			$.get('/ajax/user-specs').then(specs => {
-				this.userSpecs = specs;
+			$.get('/ajax/home').then(payload => {
+				this.userSpecs = payload.userSpecs;
+				this.publicSpecs = payload.publicSpecs;
 				this.loading = false;
 			}).fail(jqXHR => {
 				this.loading = false;
@@ -62,9 +102,82 @@ export default {
 </script>
 
 <style lang="scss">
+@import '../styles/_breakpoints.scss';
+@import '../styles/_colours.scss';
+@import '../styles/_app.scss';
+
 .index-page {
+
 	.user-specs, .public-specs {
-		margin-top: 20px;
+		margin-top: $content-area-padding;
+		@include mobile {
+			margin-top: $content-area-padding-sm;
+		}
 	}
-}
+
+	ul.specs-list {
+
+		>li {
+			padding: 20px;
+			cursor: pointer;
+
+			&:not(:first-child) {
+				margin-top: 1px;
+			}
+
+			&:hover {
+				background-color: $shadow-bg;
+			}
+
+			>.info {
+				font-size: small;
+
+				>span {
+					display: inline-block;
+					margin-right: 20px;
+
+					@include mobile {
+						display: block;
+					}
+
+					&.status {
+						color: gray;
+
+						&.public {
+							color: green;
+							font-weight: green;
+						}
+					}
+				}
+			}
+
+			>.name {
+				display: block;
+				font-size: larger;
+			}
+
+			>.desc {
+				font-size: .7rem;
+				line-height: 1rem;
+				white-space: pre-wrap;
+
+				// Text hidden beyond 3 lines
+				max-height: 3rem;
+				overflow: hidden;
+
+				// Special behaviour for Chrome
+				display: -webkit-box;
+				-webkit-line-clamp: 3;
+				-webkit-box-orient: vertical;
+				text-overflow: ellipsis;
+			}
+
+			>* + * {
+				margin-top: 10px;
+			}
+
+		}
+	} // ul.specs-list
+
+} // .index-page
 </style>

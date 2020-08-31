@@ -8,17 +8,19 @@ import (
 
 // SpecBlock represents a section within a spec or spec subspec.
 type SpecBlock struct {
-	ID          int64   `json:"id"`
-	SpecID      int64   `json:"specId"`
-	SubspecID   *int64  `json:"subspecId"` // may be null (belongs to spec directly)
-	ParentID    *int64  `json:"parentId"`  // may be null (root level)
-	OrderNumber int     `json:"orderNumber"`
-	StyleType   string  `json:"styleType"`
-	ContentType *string `json:"contentType"`
-	RefType     *string `json:"refType"`
-	RefID       *int64  `json:"refId"`
-	Title       *string `json:"title"`
-	Body        *string `json:"body"`
+	ID          int64     `json:"id"`
+	SpecID      int64     `json:"specId"`
+	Created     time.Time `json:"created"`
+	Updated     time.Time `json:"updated"`
+	SubspecID   *int64    `json:"subspecId"` // may be null (belongs to spec directly)
+	ParentID    *int64    `json:"parentId"`  // may be null (root level)
+	OrderNumber int       `json:"orderNumber"`
+	StyleType   string    `json:"styleType"`
+	ContentType *string   `json:"contentType"`
+	RefType     *string   `json:"refType"`
+	RefID       *int64    `json:"refId"`
+	Title       *string   `json:"title"`
+	Body        *string   `json:"body"`
 
 	RefItem interface{} `json:"refItem,omitempty"`
 
@@ -113,13 +115,12 @@ func loadBlocks(db *sql.DB, specID int64, subspecID *int64) ([]*SpecBlock, error
 
 	args := []interface{}{specID}
 	query := `
-		SELECT spec_block.id, spec_block.spec_id, spec_block.subspec_id, spec_block.parent_id,
-		spec_block.order_number,
+		SELECT spec_block.id, spec_block.spec_id, spec_block.created_at, spec_block.updated_at,
+		spec_block.subspec_id, spec_block.parent_id, spec_block.order_number,
 		spec_block.style_type, spec_block.content_type, spec_block.ref_type, spec_block.ref_id,
 		spec_block.block_title, spec_block.block_body,
-		spec_subspec.spec_id AS subspec_spec_id,
-		spec_subspec.subspec_name, spec_subspec.subspec_desc, spec_subspec.created_at AS subspec_created_at,
-		spec_url.spec_id AS url_spec_id, spec_url.updated_at AS url_updated_at,
+		spec_subspec.spec_id AS subspec_spec_id, spec_subspec.subspec_name, spec_subspec.subspec_desc,
+		spec_url.spec_id AS url_spec_id, spec_url.created_at AS url_created, spec_url.updated_at AS url_updated,
 		spec_url.url AS url_url, spec_url.url_title, spec_url.url_desc, spec_url.url_image_data
 		FROM spec_block
 		LEFT JOIN spec_subspec
@@ -144,12 +145,13 @@ func loadBlocks(db *sql.DB, specID int64, subspecID *int64) ([]*SpecBlock, error
 		b := &SpecBlock{}
 		var subspecSpecID, urlSpecID *int64
 		var subspecName, subspecDesc *string
-		var subspecCreated, urlUpdated *time.Time
+		var urlCreated, urlUpdated *time.Time
 		var urlURL, urlTitle, urlDesc, urlImageData *string
-		err = rows.Scan(&b.ID, &b.SpecID, &b.SubspecID, &b.ParentID, &b.OrderNumber,
+		err = rows.Scan(&b.ID, &b.SpecID, &b.Created, &b.Updated,
+			&b.SubspecID, &b.ParentID, &b.OrderNumber,
 			&b.StyleType, &b.ContentType, &b.RefType, &b.RefID, &b.Title, &b.Body,
-			&subspecSpecID, &subspecName, &subspecDesc, &subspecCreated,
-			&urlSpecID, &urlUpdated, &urlURL, &urlTitle, &urlDesc, &urlImageData)
+			&subspecSpecID, &subspecName, &subspecDesc,
+			&urlSpecID, &urlCreated, &urlUpdated, &urlURL, &urlTitle, &urlDesc, &urlImageData)
 		if err != nil {
 			if err2 := rows.Close(); err2 != nil { // TODO Add everywhere
 				return nil, fmt.Errorf("error closing rows: %s; on scan error: %w", err2, err)
@@ -159,24 +161,26 @@ func loadBlocks(db *sql.DB, specID int64, subspecID *int64) ([]*SpecBlock, error
 		if b.RefType != nil {
 			switch *b.RefType {
 			case BlockRefURL:
-				if urlURL != nil {
+				if urlSpecID != nil {
 					b.RefItem = &URLObject{
 						ID:        *b.RefID,
 						SpecID:    *urlSpecID,
+						Created:   *urlCreated,
 						URL:       *urlURL,
 						Title:     urlTitle,
 						Desc:      urlDesc,
 						ImageData: urlImageData,
-						UpdatedAt: *urlUpdated,
+						Updated:   *urlUpdated,
 					}
 				}
 			case BlockRefSubspec:
-				b.RefItem = &SpecSubspec{
-					ID:      *b.RefID,
-					SpecID:  *subspecSpecID,
-					Created: *subspecCreated,
-					Name:    *subspecName,
-					Desc:    subspecDesc,
+				if subspecSpecID != nil {
+					b.RefItem = &SpecSubspec{
+						ID:     *b.RefID,
+						SpecID: *subspecSpecID,
+						Name:   *subspecName,
+						Desc:   subspecDesc,
+					}
 				}
 			}
 		}

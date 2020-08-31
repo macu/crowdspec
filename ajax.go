@@ -15,7 +15,7 @@ type AjaxRoute func(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Requ
 var ajaxHandlers = map[string]map[string]AjaxRoute{
 	http.MethodGet: map[string]AjaxRoute{
 		"/ajax/test":          ajaxTest,
-		"/ajax/user-specs":    ajaxUserSpecs,
+		"/ajax/home":          ajaxUserHome,
 		"/ajax/spec":          ajaxSpec,
 		"/ajax/spec/subspecs": ajaxSubspecs,
 		"/ajax/spec/subspec":  ajaxSubspec,

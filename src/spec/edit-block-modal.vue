@@ -7,6 +7,11 @@
 	@closed="closed()"
 	class="spec-edit-block-modal">
 
+	<p v-if="block">
+		Created <strong><moment :datetime="block.created"/></strong>;
+		last modified <strong><moment :datetime="block.updated" :offset="true"/></strong>
+	</p>
+
 	<el-radio-group v-model="styleType">
 		<el-radio label="bullet">Bullet point</el-radio>
 		<el-radio label="numbered">Numbered point</el-radio>
@@ -59,6 +64,7 @@
 
 <script>
 import $ from 'jquery';
+import Moment from '../widgets/moment.vue';
 import RefUrlForm from './ref-url-form.vue';
 import RefSubspecForm from './ref-subspec-form.vue';
 import {
@@ -71,6 +77,7 @@ import {
 
 export default {
 	components: {
+		Moment,
 		RefUrlForm,
 		RefSubspecForm,
 	},
@@ -244,6 +251,9 @@ export default {
 .spec-edit-block-modal {
 	>.el-dialog {
 		>.el-dialog__body {
+			>p {
+				margin-top: 0;
+			}
 			>*+* {
 				margin-top: 20px;
 			}

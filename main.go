@@ -29,7 +29,7 @@ type config struct {
 
 // Loaded from env, used to invalidate cache on compiled client resources
 var cacheControlVersionStamp string
-var appengine bool
+var local, appengine bool
 
 func main() {
 
@@ -44,7 +44,6 @@ func main() {
 	var config = &config{}
 	var db *sql.DB
 	var err error
-	var local bool
 
 	// Establish database connection
 	if os.Getenv("DEV_ENV") == "appengine" {
@@ -203,5 +202,6 @@ func indexHandler(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 		UserID       uint
 		Username     string
 		VersionStamp string
-	}{userID, username, cacheControlVersionStamp})
+		Local        bool
+	}{userID, username, cacheControlVersionStamp, local})
 }

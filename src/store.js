@@ -10,6 +10,7 @@ const MEDIUM_MAX_WIDTH = 991;
 
 export const store = new Vuex.Store({
 	state: {
+		currentTime: Date.now(), // updated every minute
 		windowWidth: $window.width(),
 		dragging: false,
 		moving: null, // id of node being moved
@@ -80,6 +81,9 @@ export const store = new Vuex.Store({
 			state.currentSpecId = null;
 			state.currentSpecScrollPosition = null;
 		},
+		updateCurrentTime(state) {
+			state.currentTime = Date.now();
+		},
 	},
 });
 
@@ -88,3 +92,10 @@ export default store;
 $window.on('resize', () => {
 	store.commit('setWindowWidth', $window.width());
 });
+
+const TIMEOUT = 60 * 1000;
+function updateCurrentTime() {
+	store.commit('updateCurrentTime');
+	setTimeout(updateCurrentTime, TIMEOUT);
+}
+setTimeout(updateCurrentTime, TIMEOUT);

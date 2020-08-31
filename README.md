@@ -76,6 +76,13 @@ postgres=# SELECT pg_size_pretty(pg_database_size('crowdspec'));
 postgres=#
 ```
 
-## TODO
+## Changelog
 
-- display dependencies' licenses on site
+### 2020-08-30
+
+- [x] toggle spec public
+- [x] public specs on dashboard
+- [x] remove editing features for visitors
+- [x] show content unavailable when block refs have been deleted
+- [x] record and display last modified times
+- [x] change all timestamp columns to TIMESTAMPTZ

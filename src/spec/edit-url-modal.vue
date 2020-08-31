@@ -7,6 +7,11 @@
 	@closed="closed()"
 	class="spec-edit-url-modal">
 
+	<p v-if="urlObject">
+		Created <strong><moment :datetime="urlObject.created"/></strong>;
+		last modified <strong><moment :datetime="urlObject.updated" :offset="true"/></strong>
+	</p>
+
 	<label>
 		URL
 		<el-input ref="urlInput" v-model="url"/>
@@ -25,8 +30,6 @@
 		<p v-else>Link will be updated with new URL</p>
 	</template>
 
-	<p v-if="urlObject">Updated {{urlObject.updated}}</p>
-
 	<span slot="footer" class="dialog-footer">
 		<el-button @click="showing = false">Cancel</el-button>
 		<el-button v-if="urlObject" @click="promptDelete()" type="danger">Delete</el-button>
@@ -38,10 +41,14 @@
 
 <script>
 import $ from 'jquery';
+import Moment from '../widgets/moment.vue';
 import {ajaxCreateUrl, ajaxRefreshUrl, ajaxDeleteUrl} from './ajax.js';
 import {isValidURL} from '../utils.js';
 
 export default {
+	components: {
+		Moment,
+	},
 	props: {
 		specId: {
 			type: Number,
@@ -185,6 +192,9 @@ export default {
 .spec-edit-url-modal {
 	>.el-dialog {
 		>.el-dialog__body {
+			>p {
+				margin-top: 0;
+			}
 			>*+* {
 				margin-top: 20px;
 			}

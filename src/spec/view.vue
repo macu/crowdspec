@@ -5,24 +5,28 @@
 		<!-- managed programatically -->
 	</ul>
 
-	<el-button @click="promptAddBlock()" size="small" type="primary">Add block</el-button>
+	<template v-if="enableEditing">
 
-	<ul ref="mirrorList" class="mirror-list">
-		<!-- holds mirror element when dragging block -->
-	</ul>
+		<el-button @click="promptAddBlock()" size="small" type="primary">Add block</el-button>
 
-	<edit-block-modal
-		ref="editBlockModal"
-		:spec-id="specId"
-		:subspec-id="subspecId"
-		@open-edit-url="openEditUrl"
-		@play-video="playVideo"
-		/>
+		<ul ref="mirrorList" class="mirror-list">
+			<!-- holds mirror element when dragging block -->
+		</ul>
 
-	<edit-url-modal
-		ref="editUrlModal"
-		:spec-id="specId"
-		/>
+		<edit-block-modal
+			ref="editBlockModal"
+			:spec-id="specId"
+			:subspec-id="subspecId"
+			@open-edit-url="openEditUrl"
+			@play-video="playVideo"
+			/>
+
+		<edit-url-modal
+			ref="editUrlModal"
+			:spec-id="specId"
+			/>
+
+	</template>
 
 	<play-video-modal
 		ref="playVideoModal"
@@ -61,6 +65,7 @@ export default {
 	props: {
 		spec: Object,
 		subspec: Object,
+		enableEditing: Boolean,
 	},
 	data() {
 		return {
@@ -126,32 +131,34 @@ export default {
 			}
 		}
 
-		this.drake = Dragula({
-			isContainer(el) {
-				return $(el).is('.spec-block-list');
-			},
-			accepts(el, target, source, sibling) {
-				// Don't allow dropping in the transit node
-				return !$(target).closest('.gu-transit').length;
-			},
-			moves(el, source, handle, sibling) {
-				return $(handle).is('.drag-handle');
-			},
-			// revertOnSpill: true,
-			mirrorContainer: this.$refs.mirrorList,
-		}).on('drag', (el, source) => {
-			this.$store.commit('startDragging');
-			this.transitRelativeScroll($(el).attr('data-spec-block'));
-		}).on('dragend', (el) => {
-			this.$store.commit('endDragging');
-			this.transitRelativeScroll($(el).attr('data-spec-block'));
-		}).on('drop', (el, target, source, sibling) => {
-			let $parentBlock = $(target).closest('[data-spec-block]');
-			let parentId = $parentBlock.length ? $parentBlock.data('vc').getBlockId() : null;
-			let insertBeforeId = sibling ? $(sibling).data('vc').getBlockId() : null;
-			// TODO Revert on error (how?)
-			ajaxMoveBlock($(el).data('vc').getBlockId(), this.subspecId, parentId, insertBeforeId);
-		});
+		if (this.enableEditing) {
+			this.drake = Dragula({
+				isContainer(el) {
+					return $(el).is('.spec-block-list');
+				},
+				accepts(el, target, source, sibling) {
+					// Don't allow dropping in the transit node
+					return !$(target).closest('.gu-transit').length;
+				},
+				moves(el, source, handle, sibling) {
+					return $(handle).is('.drag-handle');
+				},
+				// revertOnSpill: true,
+				mirrorContainer: this.$refs.mirrorList,
+			}).on('drag', (el, source) => {
+				this.$store.commit('startDragging');
+				this.transitRelativeScroll($(el).attr('data-spec-block'));
+			}).on('dragend', (el) => {
+				this.$store.commit('endDragging');
+				this.transitRelativeScroll($(el).attr('data-spec-block'));
+			}).on('drop', (el, target, source, sibling) => {
+				let $parentBlock = $(target).closest('[data-spec-block]');
+				let parentId = $parentBlock.length ? $parentBlock.data('vc').getBlockId() : null;
+				let insertBeforeId = sibling ? $(sibling).data('vc').getBlockId() : null;
+				// TODO Revert on error (how?)
+				ajaxMoveBlock($(el).data('vc').getBlockId(), this.subspecId, parentId, insertBeforeId);
+			});
+		}
 	},
 	beforeDestroy() {
 		if (this.drake) {
@@ -202,6 +209,7 @@ export default {
 					block,
 					subspecId: this.subspecId,
 					eventBus: this.eventBus,
+					enableEditing: this.enableEditing,
 				},
 			}).$mount();
 

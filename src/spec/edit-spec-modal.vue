@@ -7,6 +7,11 @@
 	@closed="closed()"
 	class="spec-edit-spec-modal">
 
+	<p v-if="spec">
+		Created <strong><moment :datetime="spec.created"/></strong>;
+		last modified <strong><moment :datetime="spec.updated" :offset="true"/></strong>
+	</p>
+
 	<label>
 		Name
 		<el-input ref="nameInput" v-model="name" clearable/>
@@ -17,7 +22,7 @@
 		<el-input type="textarea" v-model="desc" :autosize="{minRows: 2}"/>
 	</label>
 
-	<p v-if="spec">Created {{spec.created}}</p>
+	<el-checkbox v-model="isPublic">Allow public access and community features</el-checkbox>
 
 	<span slot="footer" class="dialog-footer">
 		<el-button @click="showing = false">Cancel</el-button>
@@ -30,14 +35,19 @@
 
 <script>
 import $ from 'jquery';
+import Moment from '../widgets/moment.vue';
 import {ajaxCreateSpec, ajaxSaveSpec, ajaxDeleteSpec} from './ajax.js';
 
 export default {
+	components: {
+		Moment,
+	},
 	data() {
 		return {
 			// user inputs
 			name: '',
 			desc: '',
+			isPublic: false,
 			// passed in
 			spec: null,
 			callback: null,
@@ -76,6 +86,7 @@ export default {
 			this.spec = spec;
 			this.name = spec.name;
 			this.desc = spec.desc;
+			this.isPublic = spec.public;
 			this.callback = callback;
 			this.showing = true;
 			this.$nextTick(() => {
@@ -100,7 +111,8 @@ export default {
 			let callback = this.callback; // in case modal is closed before complete
 			ajaxCreateSpec(
 				this.name,
-				this.desc
+				this.desc,
+				this.isPublic,
 			).then(newSpecId => {
 				callback(newSpecId);
 				this.showing = false;
@@ -115,7 +127,8 @@ export default {
 			ajaxSaveSpec(
 				this.spec.id,
 				this.name,
-				this.desc
+				this.desc,
+				this.isPublic,
 			).then(updatedSpec => {
 				callback(updatedSpec);
 				this.showing = false;
@@ -148,6 +161,7 @@ export default {
 			this.spec = null;
 			this.name = '';
 			this.desc = '';
+			this.isPublic = false;
 		},
 	},
 };
@@ -157,6 +171,9 @@ export default {
 .spec-edit-spec-modal {
 	>.el-dialog {
 		>.el-dialog__body {
+			>p {
+				margin-top: 0;
+			}
 			>*+* {
 				margin-top: 20px;
 			}

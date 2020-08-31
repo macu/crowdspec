@@ -7,6 +7,11 @@
 	@closed="closed()"
 	class="spec-edit-subspec-modal">
 
+	<p v-if="subspec">
+		Created <strong><moment :datetime="subspec.created"/></strong>;
+		last modified <strong><moment :datetime="subspec.updated" :offset="true"/></strong>
+	</p>
+
 	<label>
 		Name
 		<el-input ref="nameInput" v-model="name" clearable/>
@@ -16,8 +21,6 @@
 		Description
 		<el-input type="textarea" v-model="desc" :autosize="{minRows: 2}"/>
 	</label>
-
-	<p v-if="subspec">Created {{subspec.created}}</p>
 
 	<span slot="footer" class="dialog-footer">
 		<el-button @click="showing = false">Cancel</el-button>
@@ -30,9 +33,13 @@
 
 <script>
 import $ from 'jquery';
+import Moment from '../widgets/moment.vue';
 import {ajaxCreateSubspec, ajaxSaveSubspec, ajaxDeleteSubspec} from './ajax.js';
 
 export default {
+	components: {
+		Moment,
+	},
 	props: {
 		specId: {
 			type: Number,
@@ -164,6 +171,9 @@ export default {
 .spec-edit-subspec-modal {
 	>.el-dialog {
 		>.el-dialog__body {
+			>p {
+				margin-top: 0;
+			}
 			>*+* {
 				margin-top: 20px;
 			}

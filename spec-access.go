@@ -15,7 +15,7 @@ func verifyReadSpec(db DBConn, userID uint, specID int64) (bool, error) {
 		WHERE id = $1
 		AND (is_public OR (
 			owner_type = $2 AND owner_id = $3
-		))`, specID, "user", userID).Scan(&count)
+		))`, specID, OwnerTypeUser, userID).Scan(&count)
 
 	return err == nil && count > 0, err
 }
@@ -28,7 +28,7 @@ func verifyWriteSpec(db DBConn, userID uint, specID int64) (bool, error) {
 		WHERE id = $1
 		AND owner_type = $2
 		AND owner_id = $3
-		`, specID, "user", userID).Scan(&count)
+		`, specID, OwnerTypeUser, userID).Scan(&count)
 
 	return err == nil && count > 0, err
 }
@@ -42,7 +42,7 @@ func verifyReadSubspec(db DBConn, userID uint, subspecID int64) (bool, error) {
 		WHERE spec_subspec.id = $1
 		AND (spec.is_public OR (
 			spec.owner_type = $2 AND spec.owner_id = $3
-		))`, subspecID, "user", userID).Scan(&count)
+		))`, subspecID, OwnerTypeUser, userID).Scan(&count)
 
 	return err == nil && count > 0, err
 }
@@ -56,7 +56,7 @@ func verifyWriteSubspec(db DBConn, userID uint, subspecID int64) (bool, error) {
 		WHERE spec_subspec.id = $1
 		AND spec.owner_type = $2
 		AND spec.owner_id = $3
-		`, subspecID, "user", userID).Scan(&count)
+		`, subspecID, OwnerTypeUser, userID).Scan(&count)
 
 	return err == nil && count > 0, err
 }
@@ -70,7 +70,7 @@ func verifyWriteURL(db DBConn, userID uint, urlID int64) (bool, error) {
 		WHERE spec_url.id = $1
 		AND spec.owner_type = $2
 		AND spec.owner_id = $3
-		`, urlID, "user", userID).Scan(&count)
+		`, urlID, OwnerTypeUser, userID).Scan(&count)
 
 	return err == nil && count > 0, err
 }
@@ -84,15 +84,18 @@ func verifyWriteBlock(db DBConn, userID uint, blockID int64) (bool, error) {
 		WHERE spec_block.id = $1
 		AND spec.owner_type = $2
 		AND spec.owner_id = $3
-		`, blockID, "user", userID).Scan(&count)
+		`, blockID, OwnerTypeUser, userID).Scan(&count)
 
 	return err == nil && count > 0, err
 }
 
+// - verifies the given block belongs to the given spec
 func verifyWriteSpecBlock(db DBConn, userID uint, specID int64, blockID int64) (bool, error) {
 	return verifyWriteSpecSubspecBlocks(db, userID, specID, nil, &blockID)
 }
 
+// - verifies subspec belongs to spec if given
+// - verifies all given blocks belong to spec
 func verifyWriteSpecSubspecBlocks(db DBConn, userID uint, specID int64, subspecID *int64, blockIDs ...*int64) (bool, error) {
 
 	args := []interface{}{}
@@ -114,19 +117,17 @@ func verifyWriteSpecSubspecBlocks(db DBConn, userID uint, specID int64, subspecI
 				INNER JOIN spec_block AS `+tableName+`
 				ON `+tableName+`.id = `+argPlaceholder(*id, &args)+`
 				AND `+tableName+`.spec_id = spec.id
-				AND `+tableName+`.`+subspecCond(subspecID, &args)+`
 				`)
 		}
 	}
 
 	var count uint
-	q := `
-		SELECT COUNT(*) FROM spec` +
-		subspecJoin +
-		strings.Join(blockJoins, "") + `
-		WHERE spec.owner_type = ` + argPlaceholder("user", &args) + `
-		AND spec.owner_id = ` + argPlaceholder(userID, &args)
-	err := db.QueryRow(q,
+	err := db.QueryRow(`
+		SELECT COUNT(*) FROM spec`+
+		subspecJoin+
+		strings.Join(blockJoins, "")+`
+		WHERE spec.owner_type = `+argPlaceholder(OwnerTypeUser, &args)+`
+		AND spec.owner_id = `+argPlaceholder(userID, &args),
 		args...).Scan(&count)
 
 	// TODO return detailed error message about what aspect doesn't check out

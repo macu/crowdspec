@@ -10,6 +10,14 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// UserAccount represents a user_account record.
+type UserAccount struct {
+	ID       int64     `json:"id"`
+	Username string    `json:"username"`
+	Email    string    `json:"email"`
+	Created  time.Time `json:"created"`
+}
+
 // Regex adapted from https://www.w3.org/TR/html5/forms.html#valid-e-mail-address
 var emailRegexp = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 

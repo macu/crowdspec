@@ -36,18 +36,18 @@ CREATE TABLE user_account (
 	username VARCHAR(25) UNIQUE NOT NULL,
 	email VARCHAR(50) UNIQUE NOT NULL,
 	auth_hash VARCHAR(60) NOT NULL,
-	created_at TIMESTAMP NOT NULL
+	created_at TIMESTAMPTZ NOT NULL
 );
 CREATE TABLE user_session (
 	token VARCHAR(30) PRIMARY KEY,
 	user_id INTEGER NOT NULL REFERENCES user_account (id) ON DELETE CASCADE,
-	expires TIMESTAMP NOT NULL
+	expires TIMESTAMPTZ NOT NULL
 );
 
 CREATE TABLE user_group (
 	id SERIAL PRIMARY KEY,
 	group_name VARCHAR(50),
-	created_at TIMESTAMP NOT NULL
+	created_at TIMESTAMPTZ NOT NULL
 );
 CREATE TABLE user_group_member (
 	group_id INTEGER NOT NULL REFERENCES user_group (id) ON DELETE CASCADE,
@@ -89,7 +89,8 @@ CREATE TABLE spec (
 	id SERIAL PRIMARY KEY,
 	owner_type spec_owner_type NOT NULL,
 	owner_id INTEGER NOT NULL,
-	created_at TIMESTAMP NOT NULL,
+	created_at TIMESTAMPTZ NOT NULL,
+	updated_at TIMESTAMPTZ NOT NULL,
 	spec_name VARCHAR(255) NOT NULL,
 	spec_desc TEXT,
 	is_public BOOLEAN NOT NULL DEFAULT false
@@ -102,13 +103,15 @@ CREATE TYPE spec_permission_level AS ENUM (
 CREATE TABLE spec_permission (
 	spec_id INTEGER NOT NULL REFERENCES spec (id) ON DELETE CASCADE,
 	grant_type grant_type NOT NULL,
-	grant_id INTEGER NOT NULL,
+	grant_id INTEGER NOT NULL, -- referrent of type grant_type
 	permission_level spec_permission_level NOT NULL
+	-- TODO add index
 );
 CREATE TABLE spec_subspec (
 	id SERIAL PRIMARY KEY,
 	spec_id INTEGER NOT NULL REFERENCES spec (id) ON DELETE CASCADE,
-	created_at TIMESTAMP NOT NULL,
+	created_at TIMESTAMPTZ NOT NULL,
+	updated_at TIMESTAMPTZ NOT NULL,
 	subspec_name VARCHAR(255) NOT NULL COLLATE case_insensitive,
 	subspec_desc TEXT,
 	INDEX spec_subspec_name (spec_id, subspec_name)
@@ -136,6 +139,8 @@ CREATE TYPE spec_block_ref_type AS ENUM (
 CREATE TABLE spec_block (
 	id SERIAL PRIMARY KEY,
 	spec_id INTEGER NOT NULL REFERENCES spec (id) ON DELETE CASCADE,
+	created_at TIMESTAMPTZ NOT NULL,
+	updated_at TIMESTAMPTZ NOT NULL,
 	subspec_id INTEGER REFERENCES spec_subspec (id) ON DELETE CASCADE,
 	parent_id INTEGER REFERENCES spec_block (id) ON DELETE CASCADE,
 	order_number INTEGER NOT NULL,
@@ -149,11 +154,12 @@ CREATE TABLE spec_block (
 CREATE TABLE spec_url (
 	id SERIAL PRIMARY KEY,
 	spec_id INTEGER NOT NULL REFERENCES spec (id) ON DELETE CASCADE,
+	created_at TIMESTAMPTZ NOT NULL,
+	updated_at TIMESTAMPTZ NOT NULL,
 	url VARCHAR(1024) NOT NULL,
 	url_title VARCHAR(255) COLLATE case_insensitive,
 	url_desc VARCHAR(255),
 	url_image_data TEXT,
-	updated_at TIMESTAMP NOT NULL,
 	INDEX spec_url_url (spec_id, url),
 	INDEX spec_url_title (spec_id, url_title)
 );
