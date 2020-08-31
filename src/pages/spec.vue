@@ -86,7 +86,12 @@ export default {
 				vm.setSpec(spec);
 			});
 		}).fail(jqXHR => {
-			next({name: 'ajax-error', params: {code: jqXHR.status}, replace: true});
+			next({
+				name: 'ajax-error',
+				params: {code: jqXHR.status},
+				query: {url: encodeURIComponent(to.fullPath)},
+				replace: true,
+			});
 		});
 	},
 	beforeRouteUpdate(to, from, next) {
@@ -94,7 +99,12 @@ export default {
 			this.setSpec(spec);
 			next();
 		}).fail(jqXHR => {
-			next({name: 'ajax-error', params: {code: jqXHR.status}, replace: true});
+			next({
+				name: 'ajax-error',
+				params: {code: jqXHR.status},
+				query: {url: encodeURIComponent(to.fullPath)},
+				replace: true,
+			});
 		});
 	},
 	beforeRouteLeave(to, from, next) {

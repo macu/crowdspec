@@ -83,7 +83,12 @@ export default {
 				vm.setSubspec(subspec);
 			});
 		}).fail(jqXHR => {
-			next({name: 'ajax-error', params: {code: jqXHR.status}, replace: true});
+			next({
+				name: 'ajax-error',
+				params: {code: jqXHR.status},
+				query: {url: encodeURIComponent(to.fullPath)},
+				replace: true,
+			});
 		});
 	},
 	beforeRouteUpdate(to, from, next) {
@@ -93,7 +98,12 @@ export default {
 			next();
 			this.$nextTick(this.restoreScroll);
 		}).fail(jqXHR => {
-			next({name: 'ajax-error', params: {code: jqXHR.status}, replace: true});
+			next({
+				name: 'ajax-error',
+				params: {code: jqXHR.status},
+				query: {url: encodeURIComponent(to.fullPath)},
+				replace: true,
+			});
 		});
 	},
 	beforeRouteLeave(to, from, next) {

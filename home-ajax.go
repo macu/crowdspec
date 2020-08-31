@@ -9,7 +9,13 @@ func ajaxUserHome(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 	// GET
 
 	rows, err := db.Query(`
-		SELECT id, owner_type, owner_id, created_at, updated_at, spec_name, spec_desc, is_public
+		SELECT id, owner_type, owner_id, spec_name, spec_desc, is_public,
+		GREATEST(spec.updated_at, (
+			SELECT updated_at FROM spec_block
+			WHERE spec_block.spec_id = spec.id
+			ORDER BY updated_at DESC
+			LIMIT 1
+		)) AS last_updated
 		FROM spec
 		WHERE owner_type=$1 AND owner_id=$2
 		ORDER BY created_at ASC
@@ -21,7 +27,7 @@ func ajaxUserHome(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 	userSpecs := []Spec{}
 	for rows.Next() {
 		s := Spec{}
-		err = rows.Scan(&s.ID, &s.OwnerType, &s.OwnerID, &s.Created, &s.Updated, &s.Name, &s.Desc, &s.Public)
+		err = rows.Scan(&s.ID, &s.OwnerType, &s.OwnerID, &s.Name, &s.Desc, &s.Public, &s.Updated)
 		if err != nil {
 			return nil, http.StatusInternalServerError, err
 		}
@@ -29,13 +35,19 @@ func ajaxUserHome(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 	}
 
 	rows, err = db.Query(`
-		SELECT spec.id, owner_type, owner_id, spec.created_at, spec.updated_at, spec_name, spec_desc,
-		user_account.username
+		SELECT spec.id, owner_type, owner_id, spec_name, spec_desc,
+		user_account.username,
+		GREATEST(spec.updated_at, (
+			SELECT updated_at FROM spec_block
+			WHERE spec_block.spec_id = spec.id
+			ORDER BY updated_at DESC
+			LIMIT 1
+		)) AS last_updated
 		FROM spec
 		LEFT JOIN user_account
 		ON spec.owner_type=$1 AND user_account.id=owner_id
 		WHERE is_public
-		ORDER BY created_at ASC
+		ORDER BY spec.created_at ASC
 		`, OwnerTypeUser)
 	if err != nil {
 		return nil, http.StatusInternalServerError, err
@@ -44,8 +56,8 @@ func ajaxUserHome(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 	publicSpecs := []Spec{}
 	for rows.Next() {
 		s := Spec{}
-		err = rows.Scan(&s.ID, &s.OwnerType, &s.OwnerID, &s.Created, &s.Updated, &s.Name, &s.Desc,
-			&s.Username)
+		err = rows.Scan(&s.ID, &s.OwnerType, &s.OwnerID, &s.Name, &s.Desc,
+			&s.Username, &s.Updated)
 		if err != nil {
 			return nil, http.StatusInternalServerError, err
 		}

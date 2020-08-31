@@ -173,15 +173,29 @@ func ajaxSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request
 		SpecID: specID,
 	}
 
-	err = db.QueryRow(`SELECT spec_subspec.created_at, spec_subspec.updated_at,
+	err = db.QueryRow(`SELECT spec_subspec.created_at,
 		spec_subspec.subspec_name, spec_subspec.subspec_desc,
-		spec.spec_name, spec.owner_type, spec.owner_id
+		spec.spec_name, spec.owner_type, spec.owner_id,
+		CASE
+			-- when editor
+			WHEN spec.owner_type = $3 AND spec.owner_id = $4
+				THEN spec_subspec.updated_at
+			-- when visitor
+			ELSE GREATEST(spec_subspec.updated_at, (
+				SELECT updated_at FROM spec_block
+				WHERE spec_block.spec_id = spec.id
+				AND spec_block.subspec_id = spec_subspec.id
+				ORDER BY updated_at DESC
+				LIMIT 1
+			))
+		END AS last_updated
 		FROM spec_subspec
-		INNER JOIN spec ON spec.id = $2
-		WHERE spec_subspec.id = $1
-		AND spec_subspec.spec_id = $2`,
-		subspecID, specID).Scan(&s.Created, &s.Updated, &s.Name, &s.Desc,
-		&s.SpecName, &s.OwnerType, &s.OwnerID)
+		INNER JOIN spec ON spec.id = $1
+		WHERE spec_subspec.id = $2
+		AND spec_subspec.spec_id = $1`,
+		specID, subspecID, OwnerTypeUser, userID,
+	).Scan(&s.Created, &s.Name, &s.Desc,
+		&s.SpecName, &s.OwnerType, &s.OwnerID, &s.Updated)
 	if err != nil {
 		return nil, http.StatusInternalServerError, fmt.Errorf("loading subspec: %w", err)
 	}

@@ -78,6 +78,11 @@ postgres=#
 
 ## Changelog
 
+### 2020-08-31
+
+- [x] spec/subspec last modified time displayed to visitors now reflects block updates
+	- [ ] consider supporting indexes
+
 ### 2020-08-30
 
 - [x] toggle spec public

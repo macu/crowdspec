@@ -178,17 +178,28 @@ func ajaxSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (
 	// TODO Finish owner_name, user_is_admin, user_is_contributor
 	s := &Spec{}
 	err = db.QueryRow(`
-		SELECT spec.id, spec.created_at, spec.updated_at,
-		spec.owner_type, spec.owner_id, user_account.username,
-		spec.spec_name, spec.spec_desc, spec.is_public
+		SELECT spec.id, spec.owner_type, spec.owner_id, user_account.username,
+		spec.spec_name, spec.spec_desc, spec.is_public,
+		CASE
+			-- when editor
+			WHEN spec.owner_type = $2 AND spec.owner_id = $3
+				THEN spec.updated_at
+			-- when visitor
+			ELSE GREATEST(spec.updated_at, (
+				SELECT updated_at FROM spec_block
+				WHERE spec_block.spec_id = spec.id
+				ORDER BY updated_at DESC
+				LIMIT 1
+			))
+		END AS last_updated
 		FROM spec
 		LEFT JOIN user_account
 		ON spec.owner_type=$2
 		AND user_account.id=spec.owner_id
 		WHERE spec.id=$1
-		`, specID, OwnerTypeUser).Scan(&s.ID, &s.Created, &s.Updated,
-		&s.OwnerType, &s.OwnerID, &s.Username,
-		&s.Name, &s.Desc, &s.Public)
+		`, specID, OwnerTypeUser, userID,
+	).Scan(&s.ID, &s.OwnerType, &s.OwnerID, &s.Username,
+		&s.Name, &s.Desc, &s.Public, &s.Updated)
 	if err != nil {
 		return nil, http.StatusInternalServerError, err
 	}

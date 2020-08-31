@@ -28,5 +28,7 @@
 
 .subspec-page>header{margin-bottom:1cm}.subspec-page>header>.spec{background-color:#313F60;color:white;cursor:pointer;padding:20px 40px}@media (max-width: 767px){.subspec-page>header>.spec{padding:15px 20px}}.subspec-page>header>.spec>h2{margin:0;padding:0}.subspec-page>header>.subspec{background-color:#8D97AE;color:white;padding:20px 40px}@media (max-width: 767px){.subspec-page>header>.subspec{padding:15px 20px}}.subspec-page>header>.subspec>.right{float:right;font-size:small;margin-left:20px}.subspec-page>header>.subspec>.right>*+*{margin-left:10px}.subspec-page>header>.subspec>h3{margin:0;padding:0}.subspec-page>header>.subspec>.desc{white-space:pre-wrap;margin-top:10px}@media (max-width: 767px){.subspec-page>.spec-view{margin-left:-32px;margin-right:-32px}}
 
+.ajax-error-page>.el-button{margin-top:40px}
+
 .app{height:100%}.app>header{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;background-color:#0048FF;color:white;padding:20px 30px 10px}@media (max-width: 767px){.app>header{padding:15px 15px 5px}}.app>header>h1{flex:1;margin:0 0 10px;padding-right:20px;cursor:pointer}.app>header>div{margin:0 0 10px}.app>header>div>*:not(:first-child){margin-left:20px}.app>.page-area{padding:64px}.app>.page-area>header{margin-top:-64px;margin-left:-64px;margin-right:-64px}@media (max-width: 767px){.app>.page-area{padding:32px}.app>.page-area>header{margin-top:-32px;margin-left:-32px;margin-right:-32px}}
 
