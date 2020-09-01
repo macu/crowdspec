@@ -41,22 +41,28 @@ window.appVersion = "{{.VersionStamp}}";
 
 {{if .Local}}
 <!-- Enable Vue DevTools -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.11/vue.js"
-	integrity="sha512-PyKhbAWS+VlTWXjk/36s5hJmUJBxcGY/1hlxg6woHD/EONP2fawZRKmvHdTGOWPKTqk3CPSUPh7+2boIBklbvw=="
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.12/vue.runtime.js"
+	integrity="sha512-MbDBUqdp/G2JUxGdahQfbrfMSHqCp5f+6BK9fKshXb43f44GWCkw5ilQXqi1rZ1h9V8NgOWQh8VW3BdxQDDLpg=="
+	crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vuex/3.5.1/vuex.js"
+	integrity="sha512-LRJP5e30Cahm/OH4lAao+BwWtz7gcz8GDWKQh4aVzHZnTG6RKpVthb17/nBEcBMK5aSgGkI6XjCNRPY221esvQ=="
+	crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue-router/3.4.3/vue-router.js"
+	integrity="sha512-3y+1622sE9JcYGIob4bKvJI6qMHpzrsloehokHVZBk1Lx7lr7H5p6IOqIkRQzB0Ids5l11W3n+vK50xArypH5g=="
 	crossorigin="anonymous"></script>
 {{else}}
 <!-- Production Vue -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.11/vue.runtime.min.js"
-	integrity="sha512-Vzh7nxnYk0GXQx1BNmbBkqmxWIf/kjw+UoddU38COFVvtIeOaz+d+Wk02F8Kt8brFNCavJdTxxL0iWpU1IfF0w=="
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.12/vue.runtime.min.js"
+	integrity="sha512-lioAd6C8U3XVaN4Zy5HEtE6KfEZ8KAqUvRekxUfRGby3UeYF8ZhfzhsnKWazWEGS1RM0R3glU5oXXQN1dCQUnQ=="
 	crossorigin="anonymous"></script>
-{{end}}
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vuex/3.5.1/vuex.min.js"
 	integrity="sha512-n/iV5SyKXzLRbRczKU75fMgHO0A1DWJSWbK5llLNAqdcoxtUK3NfgfszYpjhvcEqS6nEXwu7gQ5bIkx6z8/lrA=="
 	crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vue-router/3.2.0/vue-router.min.js"
-	integrity="sha512-Y1hQd9iqAxeMSJOqHpbFD1AljkJ9w0Igux1GYZhYH36oNFyLYtdwpNHTq17V5spP1jM8a7zimyvyHpR/4WcVDQ=="
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue-router/3.4.3/vue-router.min.js"
+	integrity="sha512-mVyZZ423iwLddhRdWCJeQSysHfnDZZPJRlY9HJI6/39e6D8Myz3nQCelJmSMOf8MOreTzWDmh8bYftrBnTau1Q=="
 	crossorigin="anonymous"></script>
+{{end}}
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/element-ui/2.13.2/index.js"
 	integrity="sha512-5ISWXWibAAxzJ+/xjZh0r6yM+fVNH2RpMWSN1DrPlonE4Ll7pHIM79Wv2aNt+6+RgKp6OIpVeFakPRON1XRXqg=="
 	crossorigin="anonymous"></script>
