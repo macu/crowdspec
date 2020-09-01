@@ -4,7 +4,9 @@
 	<header>
 		<h1 @click="gotoIndex()">CrowdSpec</h1>
 		<div>
-			<span @click="openEditProfile()" class="username">{{username}}</span>
+			<span @click="openEditProfile()" class="username">
+				{{username}}
+			</span>
 			<el-button @click="logout()" size="mini">Log out</el-button>
 		</div>
 	</header>

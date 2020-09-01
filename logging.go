@@ -33,7 +33,7 @@ func logError(r *http.Request, userID uint, err error) {
 		return
 	}
 
-	if appengine {
+	if isAppEngine() {
 		initErrorClient()
 		if appEngineErrorClient != nil {
 			var user string
@@ -53,7 +53,9 @@ func logError(r *http.Request, userID uint, err error) {
 }
 
 func logErrorFatal(err error) {
-	if appengine {
+	// Continue even if err is nil
+
+	if isAppEngine() {
 		initErrorClient()
 		if appEngineErrorClient != nil {
 			appEngineErrorClient.Report(errorreporting.Entry{

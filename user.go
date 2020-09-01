@@ -54,7 +54,7 @@ func createUser(db *sql.DB, username, password, email string) (int64, error) {
 		return 0, errors.New("Username already exists")
 	}
 
-	authHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	authHash, err := bcrypt.GenerateFromPassword([]byte(password), BcryptCost)
 	if err != nil {
 		return 0, err
 	}

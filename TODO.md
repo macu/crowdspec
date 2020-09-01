@@ -2,11 +2,7 @@
 
 ## NOW
 
-- [x] change password form
-
 ## NEXT
-
-- [ ] I am not a robot on login
 
 - [ ] soft delete option
 

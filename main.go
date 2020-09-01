@@ -19,17 +19,32 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// Represents local env.json config
 type config struct {
 	DBUser       string `json:"dbUser"`
 	DBPass       string `json:"dbPass"`
 	DBName       string `json:"dbName"`
 	HTTPPort     string `json:"httpPort"`
+	ReSiteKey    string `json:"recaptchaSiteKey"`
+	ReSecretKey  string `json:"recaptchaSecretKey"`
 	VersionStamp string `json:"versionStamp"`
 }
 
-// Loaded from env, used to invalidate cache on compiled client resources
+// reCAPTCHA site keys
+var recaptchaSiteKey, recaptchaSecretKey string
+
+// Used to invalidate cache on compiled client resources
 var cacheControlVersionStamp string
-var local, appengine bool
+
+// Returns detection of appengine
+func isAppEngine() bool {
+	return os.Getenv("DEV_ENV") == "appengine"
+}
+
+// Returns non-detection of appengine
+func isLocal() bool {
+	return !isAppEngine()
+}
 
 func main() {
 
@@ -46,10 +61,7 @@ func main() {
 	var err error
 
 	// Establish database connection
-	if os.Getenv("DEV_ENV") == "appengine" {
-		// Running on App Engine
-		local = false
-		appengine = true
+	if isAppEngine() {
 
 		// Load DB password from Secret Manager
 		secretName := os.Getenv("DB_PASS_SECRET")
@@ -69,13 +81,14 @@ func main() {
 		// Port number comes from env on App Engine
 		config.HTTPPort = os.Getenv("PORT")
 
+		// Site key comes from env
+		recaptchaSiteKey = os.Getenv("RECAPTCHA_SITE_KEY")
+
 		// Version stamp comes from env
 		cacheControlVersionStamp = os.Getenv("VERSION_STAMP")
 
 	} else {
 		// Running locally
-		local = true
-		appengine = false
 
 		configContents, err := ioutil.ReadFile("env.json")
 		if err != nil {
@@ -95,6 +108,10 @@ func main() {
 			logErrorFatal(err)
 		}
 
+		// Set key and secret key come from env.json
+		recaptchaSiteKey = config.ReSiteKey
+		recaptchaSecretKey = config.ReSecretKey
+
 		// Version stamp comes from env.json
 		cacheControlVersionStamp = config.VersionStamp
 
@@ -106,7 +123,7 @@ func main() {
 		logErrorFatal(err)
 	}
 
-	if local && *initDB {
+	if isLocal() && *initDB {
 		// Load initializing SQL
 		initFileContents, err := ioutil.ReadFile("sql/init.pgsql")
 		if err != nil {
@@ -135,7 +152,7 @@ func main() {
 		log.Println("Database initialized")
 	}
 
-	if local && *createNewUser {
+	if isLocal() && *createNewUser {
 		if _, err := createUser(db, *newUserUsername, *newUserPassword, *newUserEmail); err != nil {
 			logErrorFatal(err)
 		}
@@ -148,13 +165,13 @@ func main() {
 
 	r := mux.NewRouter()
 
-	if local {
+	if isLocal() {
 		// Set up static resource routes
 		// (These static directories are configured by app.yaml for App Engine)
 		r.PathPrefix("/css/").Handler(http.StripPrefix("/css/", http.FileServer(http.Dir("css"))))
 		r.PathPrefix("/img/").Handler(http.StripPrefix("/img/", http.FileServer(http.Dir("img"))))
 		r.PathPrefix("/js/").Handler(http.StripPrefix("/js/", http.FileServer(http.Dir("js"))))
-	} else if appengine {
+	} else if isAppEngine() {
 		// Set up AppEngine cron handlers
 		r.HandleFunc("/cron/cleanup", makeCronHandler(db, cleanupHandler))
 	}
@@ -203,5 +220,5 @@ func indexHandler(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 		Username     string
 		VersionStamp string
 		Local        bool
-	}{userID, username, cacheControlVersionStamp, local})
+	}{userID, username, cacheControlVersionStamp, isLocal()})
 }

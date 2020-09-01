@@ -38,7 +38,10 @@
 				tag="li"
 				:to="{name: 'spec', params: {specId: s.id}}">
 				<div class="info">
-					<span class="username"><i class="el-icon-user"> {{s.username}}</i></span>
+					<span class="username">
+						<i class="el-icon-user"></i>
+						{{s.username}}
+					</span>
 				</div>
 				<router-link :to="{name: 'spec', params: {specId: s.id}}" class="name">{{s.name}}</router-link>
 				<div class="info">

@@ -39,7 +39,7 @@ func ajaxUserChangePassword(db *sql.DB, userID uint, w http.ResponseWriter, r *h
 			return nil, http.StatusForbidden, fmt.Errorf("old password invalid: %w", err)
 		}
 
-		newAuthHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+		newAuthHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), BcryptCost)
 		if err != nil {
 			return nil, http.StatusInternalServerError, fmt.Errorf("hashing password: %w", err)
 		}

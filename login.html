@@ -9,6 +9,8 @@
 <link rel="shortcut icon" href="/img/favicon.ico"/>
 <link rel="stylesheet" href="/css/login.css"/>
 
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+
 </head>
 <body>
 
@@ -18,6 +20,8 @@
 
 		{{if eq .Error 403}}
 		<p class="error">Invalid login</p>
+		{{else if eq .Error 418}}
+		<p class="error">Invalid reCAPTCHA</p>
 		{{else if eq .Error 400}}
 		<p class="error">Bad request</p>
 		{{else if eq .Error 500}}
@@ -34,7 +38,11 @@
 					<td><label for="password">Password</label></td>
 					<td><input id="password" name="password" type="password" autocapitalize="none"/></td>
 				</tr>
-				<!-- TODO Add I Am Not a Robot -->
+				<tr>
+					<td colspan="2">
+						<div class="g-recaptcha" data-sitekey="{{.SiteKey}}"></div>
+					</td>
+				</tr>
 				<tr>
 					<td></td>
 					<td><button type="submit">Log in</button></td>

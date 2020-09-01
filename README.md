@@ -30,6 +30,8 @@ postgres=# \d spec
 	"dbPass": "testpass",
 	"dbName": "crowdspec",
 	"httpPort": "2020",
+	"recaptchaSiteKey": "...",
+	"recaptchaSecretKey": "...",
 	"versionStamp": ""
 }
 ```
@@ -82,6 +84,8 @@ postgres=#
 
 - [x] spec/subspec last modified time displayed to visitors now reflects block updates
 	- [ ] consider supporting indexes
+- [x] change password form
+- [x] reCAPTCHA on login
 
 ### 2020-08-30
 

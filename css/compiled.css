@@ -1,4 +1,4 @@
-*{box-sizing:border-box}html,body{height:100%;margin:0;padding:0}.el-select-dropdown__item{max-width:100vw}.el-message-box{max-width:100%}
+*{box-sizing:border-box}html,body{height:100%;margin:0;padding:0}.el-dialog__body{word-break:normal}.el-select-dropdown__item{max-width:100vw}.el-message-box{max-width:100%}
 
 .spec-edit-spec-modal>.el-dialog>.el-dialog__body>p{margin-top:0}.spec-edit-spec-modal>.el-dialog>.el-dialog__body>*+*{margin-top:20px}.spec-edit-spec-modal>.el-dialog>.el-dialog__body>label{display:block}.spec-edit-spec-modal>.el-dialog>.el-dialog__body>label input,.spec-edit-spec-modal>.el-dialog>.el-dialog__body>label textarea{display:block;width:100%}
 
@@ -30,7 +30,7 @@
 
 .ajax-error-page>.el-button{margin-top:40px}
 
-.edit-profile-modal .el-button.change-password{margin-top:40px}.edit-profile-modal .el-form{margin-top:40px}.edit-profile-modal .el-form .el-form-item{margin-bottom:10px}.edit-profile-modal .el-form .el-form-item .el-form-item__label{font-size:1em;line-height:1.2em}
+.edit-profile-modal .el-form .el-form-item{margin-bottom:30px}.edit-profile-modal .el-form .el-form-item .el-form-item__label{font-size:1em;line-height:1.2em}.edit-profile-modal .el-form .el-form-item .el-alert>.el-alert__content{line-height:1.7em}.edit-profile-modal .el-form .el-form-item .el-alert>.el-alert__content>.el-alert__description>p{margin-top:0;margin-bottom:0}.edit-profile-modal .el-form .el-form-item .el-alert>.el-alert__content>.el-alert__description>p+p{margin-top:5px}
 
 .app{height:100%}.app>header{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;background-color:#0048FF;color:white;padding:20px 30px 10px}@media (max-width: 767px){.app>header{padding:15px 15px 5px}}.app>header>h1{flex:1;margin:0 0 10px;padding-right:20px;cursor:pointer}.app>header>div{margin:0 0 10px}.app>header>div>.username{cursor:pointer}.app>header>div>*:not(:first-child){margin-left:20px}.app>.page-area{padding:64px}.app>.page-area>header{margin-top:-64px;margin-left:-64px;margin-right:-64px}@media (max-width: 767px){.app>.page-area{padding:32px}.app>.page-area>header{margin-top:-32px;margin-left:-32px;margin-right:-32px}}
 

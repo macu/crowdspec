@@ -5,12 +5,15 @@ import (
 	crypto_rand "crypto/rand"
 	"database/sql"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
 	"math/rand"
 	"net"
 	"net/http"
+	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -118,26 +121,48 @@ func makeLoginHandler(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 	if err != nil {
 		panic(err)
 	}
+
+	var executeLoginTemplate = func(w http.ResponseWriter, errcode int) {
+		loginPageTemplate.Execute(w, struct {
+			Error   int
+			SiteKey string
+		}{errcode, recaptchaSiteKey})
+	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
-			loginPageTemplate.Execute(w, struct{ Error int }{})
+			executeLoginTemplate(w, 0)
 		} else if r.Method == http.MethodPost {
 			ip, _, _ := net.SplitHostPort(r.RemoteAddr)
 			username := r.FormValue("username")
 			password := r.FormValue("password")
+			// Validate reCAPTCHA
+			valid, err := verifyRecaptcha(r)
+			if !valid {
+				if err != nil {
+					logError(r, 0, fmt.Errorf("validating recaptcha: %w", err))
+					w.WriteHeader(http.StatusInternalServerError)
+					executeLoginTemplate(w, http.StatusInternalServerError)
+					return
+				}
+				// Use Teapot to indicate reCAPTCHA error
+				w.WriteHeader(http.StatusTeapot)
+				executeLoginTemplate(w, http.StatusTeapot)
+				return
+			}
 			var userID uint
 			var authHash string
-			err := selectUserStmt.QueryRow(username).Scan(&userID, &authHash)
+			err = selectUserStmt.QueryRow(username).Scan(&userID, &authHash)
 			if err == sql.ErrNoRows {
 				// TODO Limit failed attempts
 				log.Printf("invalid username: %s [%s]", username, ip) // no error report
 				w.WriteHeader(http.StatusForbidden)
-				loginPageTemplate.Execute(w, struct{ Error int }{http.StatusForbidden})
+				executeLoginTemplate(w, http.StatusForbidden)
 				return
 			} else if err != nil {
 				logError(r, 0, fmt.Errorf("looking up user: %w", err))
 				w.WriteHeader(http.StatusInternalServerError)
-				loginPageTemplate.Execute(w, struct{ Error int }{http.StatusInternalServerError})
+				executeLoginTemplate(w, http.StatusInternalServerError)
 				return
 			}
 			err = bcrypt.CompareHashAndPassword([]byte(authHash), []byte(password))
@@ -145,7 +170,7 @@ func makeLoginHandler(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 				// TODO Limit failed attempts
 				log.Printf("invalid password for user: %s [%s]", username, ip) // no error report
 				w.WriteHeader(http.StatusUnauthorized)
-				loginPageTemplate.Execute(w, struct{ Error int }{http.StatusForbidden})
+				executeLoginTemplate(w, http.StatusForbidden)
 				return
 			}
 			token := makeSessionID()
@@ -154,7 +179,7 @@ func makeLoginHandler(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 			if err != nil {
 				logError(r, userID, fmt.Errorf("inserting session: %w", err))
 				w.WriteHeader(http.StatusInternalServerError)
-				loginPageTemplate.Execute(w, struct{ Error int }{http.StatusInternalServerError})
+				executeLoginTemplate(w, http.StatusInternalServerError)
 				return
 			}
 			http.SetCookie(w, &http.Cookie{
@@ -168,9 +193,54 @@ func makeLoginHandler(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 			log.Printf("user login: %s [%s]", username, ip)
 		} else {
 			w.WriteHeader(http.StatusBadRequest)
-			loginPageTemplate.Execute(w, struct{ Error int }{http.StatusBadRequest})
+			executeLoginTemplate(w, http.StatusBadRequest)
 		}
 	}
+}
+
+func verifyRecaptcha(r *http.Request) (bool, error) {
+
+	var err error
+
+	if recaptchaSecretKey == "" {
+		if isAppEngine() {
+			recaptchaSecretKey, err = loadSecret(os.Getenv("RECAPTCHA_SECRET"))
+			if err != nil {
+				return false, fmt.Errorf("loading reCAPTCHA secret key: %w", err)
+			}
+		} else {
+			return false, fmt.Errorf("reCAPTCHA secret key undefined")
+		}
+	}
+
+	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
+
+	form := url.Values{}
+	form.Set("secret", recaptchaSecretKey)
+	form.Set("response", r.FormValue("g-recaptcha-response"))
+	form.Set("remoteip", ip)
+
+	client := http.Client{
+		Timeout: 5 * time.Second,
+	}
+
+	res, err := client.PostForm("https://www.google.com/recaptcha/api/siteverify", form)
+	if err != nil {
+		return false, fmt.Errorf("error fetching URL: %w", err)
+	}
+
+	defer res.Body.Close()
+
+	var response = struct {
+		Success bool `json:"success"`
+	}{}
+
+	err = json.NewDecoder(res.Body).Decode(&response)
+	if err != nil {
+		return false, fmt.Errorf("error decoding response: %w", err)
+	}
+
+	return response.Success, nil
 }
 
 func logoutHandler(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) {

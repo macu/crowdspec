@@ -6,7 +6,9 @@ env_variables:
   DB_NAME: "crowdspec"
   DB_USER: "postgres"
   DB_PASS_SECRET: "projects/178253280892/secrets/DB_PASS"
-  VERSION_STAMP: "202008312159"
+  RECAPTCHA_SITE_KEY: "6Lfg_8UZAAAAABHHDDBZfQVED-glpgYUjQjwjpb0"
+  RECAPTCHA_SECRET: "projects/178253280892/secrets/RECAPTCHA"
+  VERSION_STAMP: "202009010305"
 
 handlers:
 - url: /css
