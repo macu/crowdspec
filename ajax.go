@@ -23,6 +23,9 @@ var ajaxHandlers = map[string]map[string]AjaxRoute{
 		"/ajax/fetch-url":     ajaxFetchURLPreview,
 	},
 	http.MethodPost: map[string]AjaxRoute{
+		"/ajax/user/change-password": ajaxUserChangePassword,
+
+		// specs
 		"/ajax/spec/create-spec":    ajaxCreateSpec,
 		"/ajax/spec/save-spec":      ajaxSaveSpec,
 		"/ajax/spec/delete-spec":    ajaxDeleteSpec,

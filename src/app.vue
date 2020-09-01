@@ -1,13 +1,18 @@
 <template>
 <div class="app">
+
 	<header>
 		<h1 @click="gotoIndex()">CrowdSpec</h1>
 		<div>
-			<span>{{username}}</span>
+			<span @click="openEditProfile()" class="username">{{username}}</span>
 			<el-button @click="logout()" size="mini">Log out</el-button>
 		</div>
 	</header>
+
 	<router-view class="page-area"/>
+
+	<edit-profile-modal ref="editProfileModal"/>
+
 </div>
 </template>
 
@@ -15,10 +20,14 @@
 import $ from 'jquery';
 import store from './store.js';
 import router from './router.js';
+import EditProfileModal from './widgets/edit-profile-modal.vue';
 
 export default {
 	store,
 	router,
+	components: {
+		EditProfileModal,
+	},
 	computed: {
 		username() {
 			return this.$store.getters.username;
@@ -32,6 +41,9 @@ export default {
 		},
 		logout() {
 			window.location.href = '/logout';
+		},
+		openEditProfile() {
+			this.$refs.editProfileModal.show();
 		},
 	},
 };
@@ -67,6 +79,9 @@ export default {
 
 		>div {
 			margin: 0 0 10px;
+			>.username {
+				cursor: pointer;
+			}
 			>*:not(:first-child) {
 				margin-left: 20px;
 			}
