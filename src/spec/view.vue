@@ -249,7 +249,9 @@ export default {
 				if (insertBeforeId) {
 					$vc.insertBefore('[data-spec-block="'+insertBeforeId+'"]');
 				} else if (parentId) {
-					$vc.appendTo('[data-spec-block="'+parentId+'"]>ul.spec-block-list');
+					let $parentBlock = $('[data-spec-block="'+parentId+'"]');
+					$vc.appendTo($parentBlock.find('>ul.spec-block-list'));
+					$parentBlock.data('vc').updateHasSubblocks();
 				} else {
 					$vc.appendTo(this.$refs.list);
 				}
