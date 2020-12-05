@@ -130,7 +130,7 @@ func loadBlocks(db *sql.DB, specID int64, subspecID *int64) ([]*SpecBlock, error
 		ON spec_block.ref_type=` + argPlaceholder(BlockRefURL, &args) + `
 		AND spec_url.id=spec_block.ref_id
 		WHERE spec_block.spec_id=$1
-		AND spec_block.` + subspecCond(subspecID, &args) + `
+		AND ` + eqCond("spec_block.subspec_id", subspecID, &args) + `
 		ORDER BY spec_block.parent_id, spec_block.order_number`
 
 	rows, err := db.Query(query, args...)

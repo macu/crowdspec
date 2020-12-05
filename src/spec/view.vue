@@ -19,6 +19,7 @@
 			:subspec-id="subspecId"
 			@open-edit-url="openEditUrl"
 			@play-video="playVideo"
+			@prompt-delete="promptDeleteBlock"
 			/>
 
 		<edit-url-modal
@@ -46,7 +47,7 @@ import PlayVideoModal from './play-video-modal.vue';
 import {ajaxDeleteBlock, ajaxMoveBlock} from './ajax.js';
 import store from '../store.js';
 import router from '../router.js';
-import {startAutoscroll} from '../utils.js';
+import {alertError, startAutoscroll} from '../utils.js';
 
 const SpecBlockClass = Vue.extend(SpecBlock);
 
@@ -210,7 +211,7 @@ export default {
 				$(window).scrollTop($block.offset().top - diff);
 			});
 		},
-		insertBlock(block, append = true) {
+		insertBlock(block, append = true, justAdded = false) {
 			let vc = new SpecBlockClass({
 				parent: this, // allows Vue devtools to detect instances
 				store,
@@ -220,12 +221,13 @@ export default {
 					subspecId: this.subspecId,
 					eventBus: this.eventBus,
 					enableEditing: this.enableEditing,
+					justAdded,
 				},
 			}).$mount();
 
 			vc.$on('open-edit', this.openEdit);
 			vc.$on('prompt-add-subblock', this.promptAddSubblock);
-			vc.$on('prompt-delete-block', this.promptDeleteBlock);
+			vc.$on('prompt-delete', this.promptDeleteBlock);
 			vc.$on('start-moving', this.startMovingBlock);
 			vc.$on('end-moving', this.endMovingBlock);
 			vc.$on('play-video', this.playVideo);
@@ -237,14 +239,16 @@ export default {
 			return $vc;
 		},
 		promptAddBlock() {
-			this.$refs.editBlockModal.showAdd(null, null, this.insertBlock);
+			this.$refs.editBlockModal.showAdd(null, null, newBlock => {
+				this.insertBlock(newBlock, true, true);
+			});
 		},
 		openEdit(block, callback) {
 			this.$refs.editBlockModal.showEdit(block, callback);
 		},
 		promptAddSubblock(parentId, insertBeforeId) {
 			this.$refs.editBlockModal.showAdd(parentId, insertBeforeId, newBlock => {
-				let $vc = this.insertBlock(newBlock, false);
+				let $vc = this.insertBlock(newBlock, false, true);
 				// Add to sublist
 				if (insertBeforeId) {
 					$vc.insertBefore('[data-spec-block="'+insertBeforeId+'"]');
@@ -263,7 +267,12 @@ export default {
 				cancelButtonText: 'Cancel',
 				type: 'warning',
 			}).then(() => {
-				ajaxDeleteBlock(blockId).then(callback);
+				ajaxDeleteBlock(blockId).then(() => {
+					$('[data-spec-block="' + blockId + '"]').remove();
+					if (callback) {
+						callback();
+					}
+				}).fail(alertError);
 			}).catch(() => { /* Cancelled */ });
 		},
 		startMovingBlock(blockId) {

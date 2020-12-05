@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -56,4 +57,37 @@ func ajaxUserChangePassword(db *sql.DB, userID uint, w http.ResponseWriter, r *h
 
 		return nil, http.StatusOK, nil
 	})
+}
+
+func ajaxUserSettings(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
+
+	settings, err := loadUserSettings(db, userID)
+	if err != nil {
+		return nil, http.StatusInternalServerError, err
+	}
+
+	return settings, http.StatusOK, nil
+
+}
+
+func ajaxUserSaveSettings(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
+
+	err := r.ParseForm()
+	if err != nil {
+		return nil, http.StatusInternalServerError, err
+	}
+
+	var settings = UserSettings{}
+	err = json.Unmarshal([]byte(r.Form.Get("settings")), &settings)
+	if err != nil {
+		return nil, http.StatusBadRequest, err
+	}
+
+	err = saveUserSettings(db, userID, &settings)
+	if err != nil {
+		return nil, http.StatusInternalServerError, err
+	}
+
+	return settings, http.StatusOK, nil
+
 }

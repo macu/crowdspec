@@ -362,10 +362,10 @@ func makeInsertAt(tx *sql.Tx, specID int64, subspecID *int64, parentID *int64, i
 		args := []interface{}{specID}
 
 		query := `
-					SELECT COALESCE(MAX(order_number), -1) + 1 AS insert_at FROM spec_block
-					WHERE spec_id = $1
-					AND ` + subspecCond(subspecID, &args) + `
-					AND ` + parentCond(parentID, &args)
+			SELECT COALESCE(MAX(order_number), -1) + 1 AS insert_at FROM spec_block
+			WHERE spec_id = $1
+			AND ` + eqCond("subspec_id", subspecID, &args) + `
+			AND ` + eqCond("parent_id", parentID, &args)
 
 		err := tx.QueryRow(query, args...).Scan(&insertAt)
 		if err != nil {
@@ -382,8 +382,8 @@ func makeInsertAt(tx *sql.Tx, specID int64, subspecID *int64, parentID *int64, i
 	query := `UPDATE spec_block
 		SET order_number = order_number + 1
 		WHERE spec_id = $1
-		AND ` + subspecCond(subspecID, &args) + `
-		AND ` + parentCond(parentID, &args) + `
+		AND ` + eqCond("subspec_id", subspecID, &args) + `
+		AND ` + eqCond("parent_id", parentID, &args) + `
 		AND order_number >= (
 			SELECT insert_before_block.order_number
 			FROM spec_block AS insert_before_block
@@ -401,8 +401,8 @@ func makeInsertAt(tx *sql.Tx, specID int64, subspecID *int64, parentID *int64, i
 
 	query = `SELECT COALESCE(MAX(order_number), -1) + 1 FROM spec_block
 		WHERE spec_id = $1
-		AND ` + subspecCond(subspecID, &args) + `
-		AND ` + parentCond(parentID, &args) + `
+		AND ` + eqCond("subspec_id", subspecID, &args) + `
+		AND ` + eqCond("parent_id", parentID, &args) + `
 		AND order_number < (
 			SELECT insert_before_block.order_number
 			FROM spec_block AS insert_before_block

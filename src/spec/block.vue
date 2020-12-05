@@ -43,7 +43,7 @@
 							{{submissionsCount}}
 						</el-button>
 						<el-button @click="editBlock()" type="default" size="mini" icon="el-icon-edit" circle/>
-						<el-button @click="promptDeleteBlock()" type="warning" size="mini" icon="el-icon-delete" circle/>
+						<el-button v-if="showDeleteButton" @click="promptDeleteBlock()" type="warning" size="mini" icon="el-icon-delete" circle/>
 						<el-button @click="enterChooseAddPosition()" type="primary" size="mini" icon="el-icon-plus" circle/>
 						<el-button @click="startMoving()" class="move-action" type="default" size="mini" icon="el-icon-d-caret" circle/>
 						<i @click="startMoving()" class="el-icon-d-caret drag-handle"></i>
@@ -101,6 +101,7 @@ export default {
 		subspecId: Number,
 		eventBus: Object,
 		enableEditing: Boolean,
+		justAdded: Boolean,
 	},
 	data() {
 		return {
@@ -127,6 +128,16 @@ export default {
 		},
 		REF_TYPE_SUBSPEC() {
 			return REF_TYPE_SUBSPEC;
+		},
+		showDeleteButton() {
+			switch (this.$store.getters.userSettings.blockEditing.deleteButton) {
+				case 'modal':
+					return false;
+				case 'recent':
+					return this.justAdded;
+				default:
+					return true;
+			}
 		},
 		hasTitle() {
 			return !!(this.title && this.title.trim());
@@ -210,12 +221,7 @@ export default {
 			this.$emit('open-edit', block, callback);
 		},
 		promptDeleteBlock() {
-			this.raisePromptDeleteBlock(this.block.id, () => {
-				$(this.$el).remove();
-			});
-		},
-		raisePromptDeleteBlock(blockId, callback) {
-			this.$emit('prompt-delete-block', blockId, callback);
+			this.$emit('prompt-delete', this.block.id);
 		},
 		enterChooseAddPosition() {
 			this.choosingAddPosition = true;

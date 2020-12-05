@@ -16,7 +16,7 @@ import (
 
 	"database/sql"
 
-	_ "github.com/lib/pq"
+	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
 // Represents local env.json config
@@ -70,10 +70,10 @@ func main() {
 			logErrorFatal(err)
 		}
 
-		dataSourceName := fmt.Sprintf("user=%s password=%s host=%s dbname=%s",
-			os.Getenv("DB_USER"), dbPass, os.Getenv("DB_HOST"), os.Getenv("DB_NAME"))
+		dataSource := fmt.Sprintf("host=%s user=%s password=%s database=%s",
+			os.Getenv("DB_HOST"), os.Getenv("DB_USER"), dbPass, os.Getenv("DB_NAME"))
 
-		db, err = sql.Open("postgres", dataSourceName)
+		db, err = sql.Open("pgx", dataSource)
 		if err != nil {
 			logErrorFatal(err)
 		}
@@ -100,10 +100,10 @@ func main() {
 			logErrorFatal(err)
 		}
 
-		dataSourceName := "postgres://" + config.DBUser + ":" + config.DBPass +
-			"@localhost/" + config.DBName + "?sslmode=disable"
+		dataSource := fmt.Sprintf("host=%s user=%s password=%s database=%s",
+			"localhost", config.DBUser, config.DBPass, config.DBName)
 
-		db, err = sql.Open("postgres", dataSourceName)
+		db, err = sql.Open("pgx", dataSource)
 		if err != nil {
 			logErrorFatal(err)
 		}
@@ -215,10 +215,17 @@ func indexHandler(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	settings, err := loadUserSettings(db, userID)
+	if err != nil {
+		logError(r, userID, fmt.Errorf("loading user settings: %w", err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	indexTemplate.Execute(w, struct {
 		UserID       uint
 		Username     string
+		Settings     UserSettings
 		VersionStamp string
 		Local        bool
-	}{userID, username, cacheControlVersionStamp, isLocal()})
+	}{userID, username, *settings, cacheControlVersionStamp, isLocal()})
 }

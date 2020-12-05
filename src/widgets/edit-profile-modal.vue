@@ -11,7 +11,7 @@
 		ref="changePasswordForm"
 		:model="changePasswordForm"
 		:rules="changePasswordRules"
-		v-loading="sending"
+		v-loading="waiting"
 		label-position="top">
 		<el-form-item label="Current password" prop="oldPass">
 			<el-input
@@ -60,11 +60,40 @@
 			</el-button>
 		</el-form-item>
 	</el-form>
-	<el-button v-else
-		@click="enterChangePasswordMode()"
-		class="change-password">
-		Change password
-	</el-button>
+
+	<el-form v-else-if="updateSettingsMode"
+		ref="changePasswordForm"
+		:model="settingsForm"
+		v-loading="waiting"
+		label-position="top">
+		<el-form-item>
+			<strong slot="label" class="section-heading">Block editing</strong>
+			<el-form-item label="Delete button">
+				<el-select v-model="settingsForm.blockEditing.deleteButton">
+					<el-option label="Show delete button only in edit block modal" value="modal"/>
+					<el-option label="Only show delete button on newly added blocks" value="recent"/>
+					<el-option label="Show delete button on all blocks" value="all"/>
+				</el-select>
+			</el-form-item>
+		</el-form-item>
+		<el-form-item>
+			<el-button type="primary" @click="submitSettings()">
+				Update
+			</el-button>
+			<el-button @click="clearMode()">
+				Cancel
+			</el-button>
+		</el-form-item>
+	</el-form>
+
+	<div v-else class="options">
+		<el-button @click="enterChangePasswordMode()">
+			Change password
+		</el-button>
+		<el-button @click="enterUpdateSettingsMode()">
+			Update settings
+		</el-button>
+	</div>
 
 	<span slot="footer" class="dialog-footer">
 		<el-button @click="showing = false">Close</el-button>
@@ -75,12 +104,13 @@
 
 <script>
 import $ from 'jquery';
-import {alertError} from '../utils.js';
+import {alertError, defaultUserSettings} from '../utils.js';
 
 const MODE_CHANGE_PASSWORD = 1;
+const MODE_UPDATE_SETTINGS = 2;
 
-const SUCCESS_TIMEOUT = 1200;
-const ERROR_TIMEOUT = 4000;
+const SUCCESS_MESSAGE_TIMEOUT = 1200;
+const ERROR_MESSAGE_TIMEOUT = 4000;
 
 export default {
 	data() {
@@ -92,7 +122,8 @@ export default {
 				newPass: '',
 				newPass2: '',
 			},
-			sending: false,
+			settingsForm: defaultUserSettings(),
+			waiting: false,
 		};
 	},
 	computed: {
@@ -104,6 +135,9 @@ export default {
 		},
 		changePasswordMode() {
 			return this.mode === MODE_CHANGE_PASSWORD;
+		},
+		updateSettingsMode() {
+			return this.mode === MODE_UPDATE_SETTINGS;
 		},
 		changePasswordRules() {
 			return {
@@ -153,6 +187,21 @@ export default {
 			this.mode = MODE_CHANGE_PASSWORD;
 			this.selectOldPassword();
 		},
+		enterUpdateSettingsMode() {
+			this.mode = MODE_UPDATE_SETTINGS;
+			this.waiting = true;
+			$.get('/ajax/settings').then(settings => {
+				this.settingsForm = $.extend(true, defaultUserSettings(), settings);
+				this.waiting = false;
+			}).fail(() => {
+				this.waiting = false;
+				this.clearMode();
+				this.$alert('Failed to load settings', {
+					confirmButtonText: 'Close',
+					type: 'error',
+				});
+			});
+		},
 		handleChangePasswordReturn() {
 			if (!this.changePasswordForm.oldPass.trim()) {
 				$('input', this.$refs.oldPass.$el).focus().select();
@@ -168,7 +217,7 @@ export default {
 		submitChangePassword() {
 			this.$refs.changePasswordForm.validate(valid => {
 				if (valid) {
-					this.sending = true;
+					this.waiting = true;
 					$.post('/ajax/user/change-password', {
 						old: this.changePasswordForm.oldPass,
 						new: this.changePasswordForm.newPass,
@@ -178,7 +227,7 @@ export default {
 							message: 'Password updated successfully',
 							type: 'success',
 							showClose: true,
-							duration: SUCCESS_TIMEOUT,
+							duration: SUCCESS_MESSAGE_TIMEOUT,
 						});
 						this.clearMode();
 					}).fail(error => {
@@ -189,7 +238,7 @@ export default {
 										message: 'New password rejected',
 										type: 'error',
 										showClose: true,
-										duration: ERROR_TIMEOUT,
+										duration: ERROR_MESSAGE_TIMEOUT,
 									});
 									break;
 								case 403: // Forbidden
@@ -197,7 +246,7 @@ export default {
 										message: 'Current password incorrect',
 										type: 'error',
 										showClose: true,
-										duration: ERROR_TIMEOUT,
+										duration: ERROR_MESSAGE_TIMEOUT,
 									});
 									this.selectOldPassword();
 									break;
@@ -208,7 +257,7 @@ export default {
 							alertError(error);
 						}
 					}).always(() => {
-						this.sending = false;
+						this.waiting = false;
 					});
 				}
 			});
@@ -218,6 +267,27 @@ export default {
 				if (this.$refs.oldPass) {
 					$('input', this.$refs.oldPass.$el).focus().select();
 				}
+			});
+		},
+		submitSettings() {
+			$.post('/ajax/user/save-settings', {
+				settings: JSON.stringify(this.settingsForm),
+			}).then(settings => {
+				this.$message({
+					message: 'Settings updated',
+					type: 'success',
+					showClose: true,
+					duration: SUCCESS_MESSAGE_TIMEOUT,
+				});
+				this.clearMode();
+				this.$store.commit('setUserSettings', settings);
+			}).fail(() => {
+				this.$message({
+					message: 'Failed to update settings',
+					type: 'error',
+					showClose: true,
+					duration: ERROR_MESSAGE_TIMEOUT,
+				});
 			});
 		},
 		clearMode() {
@@ -237,9 +307,17 @@ export default {
 	.el-form {
 		.el-form-item {
 			margin-bottom: 30px;
-			.el-form-item__label {
+			>.el-form-item__label {
 				font-size: 1em;
 				line-height: 1.2em;
+			}
+			>.el-form-item__content {
+				>.el-form-item {
+					margin: 0;
+					&:not(:first-child) {
+						margin-top: 5px;
+					}
+				}
 			}
 			.el-alert {
 				>.el-alert__content {
@@ -254,6 +332,22 @@ export default {
 						}
 					}
 				}
+			}
+			.section-heading {
+				font-size: larger;
+			}
+			.el-select {
+				margin: 0;
+				width: 100%;
+			}
+		}
+	}
+	.options {
+		.el-button {
+			display: block;
+			margin: 0;
+			&:not(:first-child) {
+				margin-top: 10px;
 			}
 		}
 	}

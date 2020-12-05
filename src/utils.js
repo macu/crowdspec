@@ -33,6 +33,14 @@ export function alertError(error) {
 	});
 }
 
+export function defaultUserSettings() {
+	return {
+		blockEditing: {
+			deleteButton: 'all',
+		},
+	};
+}
+
 // Use in scenarios where comparing numeric IDs of mixed type (string / int).
 // E.g., objects from the server use numeric IDs, but $route params are strings.
 export function idsEq(id1, id2) {

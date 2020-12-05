@@ -36,6 +36,7 @@ CREATE TABLE user_account (
 	username VARCHAR(25) UNIQUE NOT NULL,
 	email VARCHAR(50) UNIQUE NOT NULL,
 	auth_hash VARCHAR(60) NOT NULL,
+	user_settings JSON,
 	created_at TIMESTAMPTZ NOT NULL
 );
 CREATE TABLE user_session (

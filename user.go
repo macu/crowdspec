@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"regexp"
 	"strings"
@@ -16,6 +17,16 @@ type UserAccount struct {
 	Username string    `json:"username"`
 	Email    string    `json:"email"`
 	Created  time.Time `json:"created"`
+}
+
+// UserSettings represents a user's configurable settings.
+type UserSettings struct {
+	BlockEditing BlockEditingSettings `json:"blockEditing"`
+}
+
+// BlockEditingSettings holds user settings regarding blocks they can edit.
+type BlockEditingSettings struct {
+	DeleteButton string `json:"deleteButton"`
 }
 
 // Regex adapted from https://www.w3.org/TR/html5/forms.html#valid-e-mail-address
@@ -81,4 +92,64 @@ func createUser(db *sql.DB, username, password, email string) (int64, error) {
 	}
 
 	return userID, nil
+}
+
+func loadUserSettings(c DBConn, userID uint) (*UserSettings, error) {
+
+	var settingsString *string
+
+	err := c.QueryRow(`SELECT user_settings
+		FROM user_account
+		WHERE id = $1`, userID).Scan(&settingsString)
+	if err != nil {
+		return nil, err
+	}
+
+	var settings UserSettings
+
+	if settingsString != nil {
+		err = json.Unmarshal([]byte(*settingsString), &settings)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Apply defaults
+	if settings.BlockEditing.DeleteButton == "" {
+		settings.BlockEditing.DeleteButton = "all"
+	}
+
+	return &settings, nil
+
+}
+
+func saveUserSettings(c DBConn, userID uint, settings *UserSettings) error {
+
+	if settings == nil {
+
+		_, err := c.Exec(`UPDATE user_account
+			SET user_settings = NULL
+			WHERE id = $1`, userID)
+		if err != nil {
+			return err
+		}
+
+	} else {
+
+		settingsBytes, err := json.Marshal(settings)
+		if err != nil {
+			return err
+		}
+
+		_, err = c.Exec(`UPDATE user_account
+			SET user_settings = $2
+			WHERE id = $1`, userID, string(settingsBytes))
+		if err != nil {
+			return err
+		}
+
+	}
+
+	return nil
+
 }

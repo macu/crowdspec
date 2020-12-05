@@ -2,6 +2,8 @@ import $ from 'jquery';
 import Vue from 'vue';
 import Vuex from 'vuex';
 
+import {defaultUserSettings} from './utils.js';
+
 Vue.use(Vuex);
 
 const $window = $(window);
@@ -17,6 +19,7 @@ export const store = new Vuex.Store({
 		savedScrollPosition: null, // set when returning to routes in history
 		currentSpecId: null,
 		currentSpecScrollTop: null, // saved for navigation improvements
+		userSettings: window.user.settings,
 	},
 	getters: {
 		userID(state) {
@@ -24,6 +27,9 @@ export const store = new Vuex.Store({
 		},
 		username(state) {
 			return window.user.username;
+		},
+		userSettings(state) {
+			return $.extend(true, defaultUserSettings(), state.userSettings);
 		},
 		dialogTinyWidth(state) {
 			if (state.windowWidth <= MOBILE_MAX_WIDTH) {
@@ -54,6 +60,9 @@ export const store = new Vuex.Store({
 	mutations: {
 		setWindowWidth(state, width) {
 			state.windowWidth = width;
+		},
+		setUserSettings(state, settings) {
+			state.userSettings = settings;
 		},
 		startDragging(state) {
 			state.dragging = true;

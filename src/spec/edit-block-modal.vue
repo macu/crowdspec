@@ -54,6 +54,7 @@
 
 	<span slot="footer" class="dialog-footer">
 		<el-button @click="showing = false">Cancel</el-button>
+		<el-button v-if="block" @click="promotDelete()" type="warning">Delete</el-button>
 		<el-button @click="submit()" type="primary" :disabled="disableSubmit">
 			{{block ? 'Save' : 'Add'}}
 		</el-button>
@@ -181,6 +182,11 @@ export default {
 		},
 		raisePlayVideo(urlObject) {
 			this.$emit('play-video', urlObject);
+		},
+		promotDelete() {
+			this.$emit('prompt-delete', this.block.id, () => {
+				this.showing = false;
+			});
 		},
 		submit() {
 			if (this.disableSubmit) {

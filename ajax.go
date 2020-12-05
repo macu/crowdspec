@@ -16,6 +16,7 @@ var ajaxHandlers = map[string]map[string]AjaxRoute{
 	http.MethodGet: map[string]AjaxRoute{
 		"/ajax/test":          ajaxTest,
 		"/ajax/home":          ajaxUserHome,
+		"/ajax/settings":      ajaxUserSettings,
 		"/ajax/spec":          ajaxSpec,
 		"/ajax/spec/subspecs": ajaxSubspecs,
 		"/ajax/spec/subspec":  ajaxSubspec,
@@ -24,6 +25,7 @@ var ajaxHandlers = map[string]map[string]AjaxRoute{
 	},
 	http.MethodPost: map[string]AjaxRoute{
 		"/ajax/user/change-password": ajaxUserChangePassword,
+		"/ajax/user/save-settings":   ajaxUserSaveSettings,
 
 		// specs
 		"/ajax/spec/create-spec":    ajaxCreateSpec,
