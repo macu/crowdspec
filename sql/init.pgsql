@@ -94,7 +94,8 @@ CREATE TABLE spec (
 	updated_at TIMESTAMPTZ NOT NULL,
 	spec_name VARCHAR(255) NOT NULL,
 	spec_desc TEXT,
-	is_public BOOLEAN NOT NULL DEFAULT false
+	is_public BOOLEAN NOT NULL DEFAULT false,
+	blocks_updated_at TIMESTAMPTZ
 );
 CREATE TYPE spec_permission_level AS ENUM (
 	'admin', -- user or group can administrate spec
@@ -115,6 +116,7 @@ CREATE TABLE spec_subspec (
 	updated_at TIMESTAMPTZ NOT NULL,
 	subspec_name VARCHAR(255) NOT NULL COLLATE case_insensitive,
 	subspec_desc TEXT,
+	blocks_updated_at TIMESTAMPTZ,
 	INDEX spec_subspec_name (spec_id, subspec_name)
 );
 CREATE TYPE list_style_type AS ENUM (

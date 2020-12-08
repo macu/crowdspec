@@ -33,6 +33,12 @@
 		ref="playVideoModal"
 		/>
 
+	<nav-spec-modal
+		ref="navSpecModal"
+		:spec-id="specId"
+		:subspec-id="subspecId"
+		/>
+
 </div>
 </template>
 
@@ -44,6 +50,7 @@ import SpecBlock from './block.vue';
 import EditBlockModal from './edit-block-modal.vue';
 import EditUrlModal from './edit-url-modal.vue';
 import PlayVideoModal from './play-video-modal.vue';
+import NavSpecModal from './nav-spec-modal.vue';
 import {ajaxDeleteBlock, ajaxMoveBlock} from './ajax.js';
 import store from '../store.js';
 import router from '../router.js';
@@ -62,6 +69,7 @@ export default {
 		EditBlockModal,
 		EditUrlModal,
 		PlayVideoModal,
+		NavSpecModal,
 	},
 	props: {
 		spec: Object,
@@ -112,23 +120,8 @@ export default {
 		}
 
 		if (blocks) {
-			const insertSubblocks = ($parentBlock, subblocks) => {
-				for (var i = 0; i < subblocks.length; i++) {
-					let subblock = subblocks[i];
-					let $subblock = this.insertBlock(subblock, false);
-					$('>ul.spec-block-list', $parentBlock).append($subblock);
-					if (subblock.subblocks) {
-						insertSubblocks($subblock, subblock.subblocks);
-					}
-				}
-			};
-
 			for (var i = 0; i < blocks.length; i++) {
-				let block = blocks[i];
-				let $block = this.insertBlock(block);
-				if (block.subblocks) {
-					insertSubblocks($block, block.subblocks);
-				}
+				this.insertBlock(blocks[i]);
 			}
 		}
 
@@ -231,11 +224,22 @@ export default {
 			vc.$on('start-moving', this.startMovingBlock);
 			vc.$on('end-moving', this.endMovingBlock);
 			vc.$on('play-video', this.playVideo);
+			vc.$on('prompt-nav-spec', this.promptNavSpec);
 
 			let $vc = $(vc.$el).data('vc', vc);
+
+			if (block.subblocks) {
+				for (var i = 0; i < block.subblocks.length; i++) {
+					let subblock = block.subblocks[i];
+					let $subblock = this.insertBlock(subblock, false);
+					$('>ul.spec-block-list', $vc).append($subblock);
+				}
+			}
+
 			if (append) {
 				$vc.appendTo(this.$refs.list);
 			}
+
 			return $vc;
 		},
 		promptAddBlock() {
@@ -276,11 +280,11 @@ export default {
 			}).catch(() => { /* Cancelled */ });
 		},
 		startMovingBlock(blockId) {
-			this.$store.commit('startMoving', blockId);
+			this.$store.commit('startMovingBlock', blockId);
 			this.transitRelativeScroll(blockId);
 		},
 		endMovingBlock(endFromBlockId) {
-			this.$store.commit('endMoving');
+			this.$store.commit('endMovingBlock');
 			this.transitRelativeScroll(endFromBlockId);
 		},
 		openEditUrl(urlObject, updated, deleted) {
@@ -298,6 +302,9 @@ export default {
 		},
 		playVideo(urlObject) {
 			this.$refs.playVideoModal.show(urlObject);
+		},
+		promptNavSpec() {
+			this.$refs.navSpecModal.show();
 		},
 	},
 };

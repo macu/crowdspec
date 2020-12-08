@@ -8,31 +8,55 @@ import (
 	"time"
 )
 
-// Returns a list of the current user's specs.
-// func ajaxUserSpecs(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
-// 	// GET
-// 	rows, err := db.Query(`
-// 		SELECT id, owner_type, owner_id, created_at, spec_name, spec_desc, is_public
-// 		FROM spec
-// 		WHERE owner_type='user' AND owner_id=$1
-// 		ORDER BY created_at DESC
-// 		`, userID)
-// 	if err != nil {
-// 		return nil, http.StatusInternalServerError, err
-// 	}
-//
-// 	specs := []Spec{}
-// 	for rows.Next() {
-// 		s := Spec{}
-// 		err = rows.Scan(&s.ID, &s.OwnerType, &s.OwnerID, &s.Created, &s.Name, &s.Desc, &s.Public)
-// 		if err != nil {
-// 			return nil, http.StatusInternalServerError, err
-// 		}
-// 		specs = append(specs, s)
-// 	}
-//
-// 	return specs, http.StatusOK, nil
-// }
+// Returns the requested spec with immediate blocks.
+func ajaxSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
+	// GET
+	query := r.URL.Query()
+
+	specID, err := AtoInt64(query.Get("specId"))
+	if err != nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("Invalid specId: %w", err)
+	}
+
+	if access, err := verifyReadSpec(db, userID, specID); !access || err != nil {
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("verifying read spec: %w", err)
+		}
+		return nil, http.StatusForbidden,
+			fmt.Errorf("read spec access denied to user %d in spec %d", userID, specID)
+	}
+
+	// TODO Finish owner_name, user_is_admin, user_is_contributor
+	s := &Spec{}
+	err = db.QueryRow(`
+		SELECT spec.id, spec.owner_type, spec.owner_id, user_account.username,
+		spec.spec_name, spec.spec_desc, spec.is_public,
+		CASE
+			-- when editor
+			WHEN spec.owner_type = $2 AND spec.owner_id = $3
+				THEN spec.updated_at
+			-- when visitor
+			ELSE GREATEST(spec.updated_at, spec.blocks_updated_at)
+		END AS last_updated
+		FROM spec
+		LEFT JOIN user_account
+		ON spec.owner_type=$2
+		AND user_account.id=spec.owner_id
+		WHERE spec.id=$1
+		`, specID, OwnerTypeUser, userID,
+	).Scan(&s.ID, &s.OwnerType, &s.OwnerID, &s.Username,
+		&s.Name, &s.Desc, &s.Public, &s.Updated)
+	if err != nil {
+		return nil, http.StatusInternalServerError, err
+	}
+
+	s.Blocks, err = loadBlocks(db, specID, nil)
+	if err != nil {
+		return nil, http.StatusInternalServerError, err
+	}
+
+	return s, http.StatusOK, nil
+}
 
 // Returns the ID of the newly created spec.
 func ajaxCreateSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
@@ -155,54 +179,4 @@ func ajaxDeleteSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Requ
 
 		return nil, http.StatusOK, nil
 	})
-}
-
-// Returns the requested spec with immediate blocks.
-func ajaxSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
-	// GET
-	query := r.URL.Query()
-
-	specID, err := AtoInt64(query.Get("specId"))
-	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("Invalid specId: %w", err)
-	}
-
-	if access, err := verifyReadSpec(db, userID, specID); !access || err != nil {
-		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("verifying read spec: %w", err)
-		}
-		return nil, http.StatusForbidden,
-			fmt.Errorf("read spec access denied to user %d in spec %d", userID, specID)
-	}
-
-	// TODO Finish owner_name, user_is_admin, user_is_contributor
-	s := &Spec{}
-	err = db.QueryRow(`
-		SELECT spec.id, spec.owner_type, spec.owner_id, user_account.username,
-		spec.spec_name, spec.spec_desc, spec.is_public,
-		CASE
-			-- when editor
-			WHEN spec.owner_type = $2 AND spec.owner_id = $3
-				THEN spec.updated_at
-			-- when visitor
-			ELSE GREATEST(spec.updated_at, spec.blocks_updated_at)
-		END AS last_updated
-		FROM spec
-		LEFT JOIN user_account
-		ON spec.owner_type=$2
-		AND user_account.id=spec.owner_id
-		WHERE spec.id=$1
-		`, specID, OwnerTypeUser, userID,
-	).Scan(&s.ID, &s.OwnerType, &s.OwnerID, &s.Username,
-		&s.Name, &s.Desc, &s.Public, &s.Updated)
-	if err != nil {
-		return nil, http.StatusInternalServerError, err
-	}
-
-	s.Blocks, err = loadBlocks(db, specID, nil)
-	if err != nil {
-		return nil, http.StatusInternalServerError, err
-	}
-
-	return s, http.StatusOK, nil
 }

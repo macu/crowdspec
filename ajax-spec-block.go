@@ -323,27 +323,62 @@ func ajaxSpecMoveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 			WHERE id = $1
 			`, blockID, subspecID, parentID, insertAt)
 		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("inserting at end: %w", err)
+			return nil, http.StatusInternalServerError, fmt.Errorf("moving block: %w", err)
 		}
 
-		// TODO move sub blocks recursively to target subspec if changed
-		// See https://stackoverflow.com/a/30274296/1597274
+		subspecChanged := (sourceSubspecID == nil && subspecID != nil) ||
+			(sourceSubspecID != nil && subspecID == nil) ||
+			(sourceSubspecID != nil && subspecID != nil && *sourceSubspecID != *subspecID)
+
+		if subspecChanged {
+			// Recursively set subspec_id
+			_, err = tx.Exec(`
+				WITH RECURSIVE block_tree(id) AS (
+					-- Anchor
+					SELECT id
+					FROM spec_block
+					WHERE id = $1
+					UNION ALL
+					-- Recursive Member
+					SELECT spec_block.id
+					FROM spec_block, block_tree
+					WHERE spec_block.parent_id = block_tree.id
+				)
+		    -- Update original table
+		    UPDATE spec_block
+		    SET subspec_id = $2
+		    WHERE spec_block.id IN (SELECT id FROM block_tree)
+				`, blockID, subspecID)
+			if err != nil {
+				return nil, http.StatusInternalServerError, fmt.Errorf("moving block tree to subspec: %w", err)
+			}
+		}
 
 		err = recordSpecBlocksUpdated(tx, specID)
 		if err != nil {
 			return nil, http.StatusInternalServerError, fmt.Errorf("updating spec blocks_updated_at: %w", err)
 		}
+
 		if subspecID != nil {
 			err = recordSubspecBlocksUpdated(db, *subspecID)
 			if err != nil {
 				return nil, http.StatusInternalServerError, fmt.Errorf("updating subspec blocks_updated_at: %w", err)
 			}
 		}
-		if sourceSubspecID != nil && (subspecID == nil || *sourceSubspecID != *subspecID) {
-			err = recordSubspecBlocksUpdated(db, *subspecID)
+
+		if subspecChanged && sourceSubspecID != nil {
+			err = recordSubspecBlocksUpdated(db, *sourceSubspecID)
 			if err != nil {
 				return nil, http.StatusInternalServerError, fmt.Errorf("updating subspec blocks_updated_at: %w", err)
 			}
+		}
+
+		if subspecChanged {
+			block, err := loadBlock(tx, blockID)
+			if err != nil {
+				return nil, http.StatusInternalServerError, err
+			}
+			return block, http.StatusOK, nil
 		}
 
 		return nil, http.StatusOK, nil

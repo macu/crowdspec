@@ -80,10 +80,15 @@ postgres=#
 
 ## Changelog
 
+### 2020-12
+
+- [x] Add user settings
+- [x] Add forgot password form and email service
+- [x] Freely move blocks between spec/subspec contexts
+
 ### 2020-08-31
 
 - [x] spec/subspec last modified time displayed to visitors now reflects block updates
-	- [ ] consider supporting indexes
 - [x] change password form
 - [x] reCAPTCHA on login
 

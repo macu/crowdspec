@@ -111,6 +111,51 @@ func isURLRequiredForRefType(t *string) bool {
 	})
 }
 
+// Load a sinle block and subblocks.
+func loadBlock(c DBConn, blockID int64) (*SpecBlock, error) {
+
+	args := []interface{}{blockID}
+	query := `
+		WITH RECURSIVE block_tree(id) AS (
+			-- Anchor
+			SELECT id
+			FROM spec_block
+			WHERE id = $1
+			UNION ALL
+			-- Recursive Member
+			SELECT spec_block.id
+			FROM spec_block, block_tree
+			WHERE spec_block.parent_id = block_tree.id
+		)
+		SELECT spec_block.id, spec_block.spec_id, spec_block.created_at, spec_block.updated_at,
+		spec_block.subspec_id, spec_block.parent_id, spec_block.order_number,
+		spec_block.style_type, spec_block.content_type, spec_block.ref_type, spec_block.ref_id,
+		spec_block.block_title, spec_block.block_body,
+		spec_subspec.spec_id AS subspec_spec_id, spec_subspec.subspec_name, spec_subspec.subspec_desc,
+		spec_url.spec_id AS url_spec_id, spec_url.created_at AS url_created, spec_url.updated_at AS url_updated,
+		spec_url.url AS url_url, spec_url.url_title, spec_url.url_desc, spec_url.url_image_data
+		FROM spec_block
+		LEFT JOIN spec_subspec
+		ON spec_block.ref_type = ` + argPlaceholder(BlockRefSubspec, &args) + `
+		AND spec_subspec.id = spec_block.ref_id
+		LEFT JOIN spec_url
+		ON spec_block.ref_type = ` + argPlaceholder(BlockRefURL, &args) + `
+		AND spec_url.id = spec_block.ref_id
+		WHERE spec_block.id IN (SELECT id FROM block_tree)
+		ORDER BY spec_block.parent_id, spec_block.order_number`
+
+	rows, err := c.Query(query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("querying blocks: %w", err)
+	}
+
+	blocks := []*SpecBlock{}
+	blocksByID := map[int64]*SpecBlock{}
+	readBlocks(rows, &blocks, &blocksByID)
+
+	return blocksByID[blockID], nil
+}
+
 func loadBlocks(db *sql.DB, specID int64, subspecID *int64) ([]*SpecBlock, error) {
 
 	args := []interface{}{specID}
@@ -140,6 +185,19 @@ func loadBlocks(db *sql.DB, specID int64, subspecID *int64) ([]*SpecBlock, error
 
 	blocks := []*SpecBlock{}
 	blocksByID := map[int64]*SpecBlock{}
+	readBlocks(rows, &blocks, &blocksByID)
+
+	rootBlocks := []*SpecBlock{}
+	for _, b := range blocks {
+		if b.ParentID == nil {
+			rootBlocks = append(rootBlocks, b)
+		}
+	}
+
+	return rootBlocks, nil
+}
+
+func readBlocks(rows *sql.Rows, blocks *[]*SpecBlock, blocksByID *map[int64]*SpecBlock) error {
 
 	for rows.Next() {
 		b := &SpecBlock{}
@@ -147,17 +205,19 @@ func loadBlocks(db *sql.DB, specID int64, subspecID *int64) ([]*SpecBlock, error
 		var subspecName, subspecDesc *string
 		var urlCreated, urlUpdated *time.Time
 		var urlURL, urlTitle, urlDesc, urlImageData *string
-		err = rows.Scan(&b.ID, &b.SpecID, &b.Created, &b.Updated,
+
+		err := rows.Scan(&b.ID, &b.SpecID, &b.Created, &b.Updated,
 			&b.SubspecID, &b.ParentID, &b.OrderNumber,
 			&b.StyleType, &b.ContentType, &b.RefType, &b.RefID, &b.Title, &b.Body,
 			&subspecSpecID, &subspecName, &subspecDesc,
 			&urlSpecID, &urlCreated, &urlUpdated, &urlURL, &urlTitle, &urlDesc, &urlImageData)
 		if err != nil {
 			if err2 := rows.Close(); err2 != nil { // TODO Add everywhere
-				return nil, fmt.Errorf("error closing rows: %s; on scan error: %w", err2, err)
+				return fmt.Errorf("error closing rows: %s; on scan error: %w", err2, err)
 			}
-			return nil, fmt.Errorf("error scanning spec: %w", err)
+			return fmt.Errorf("error scanning spec: %w", err)
 		}
+
 		if b.RefType != nil {
 			switch *b.RefType {
 			case BlockRefURL:
@@ -184,21 +244,20 @@ func loadBlocks(db *sql.DB, specID int64, subspecID *int64) ([]*SpecBlock, error
 				}
 			}
 		}
-		blocks = append(blocks, b)
-		blocksByID[b.ID] = b
+
+		*blocks = append(*blocks, b)
+		(*blocksByID)[b.ID] = b
 	}
 
-	rootBlocks := []*SpecBlock{}
-	for _, b := range blocks {
-		if b.ParentID == nil {
-			rootBlocks = append(rootBlocks, b)
-		} else {
-			parentBlock, ok := blocksByID[*b.ParentID]
+	// Link blocks to parents
+	for _, b := range *blocks {
+		if b.ParentID != nil {
+			parentBlock, ok := (*blocksByID)[*b.ParentID]
 			if ok {
 				parentBlock.SubBlocks = append(parentBlock.SubBlocks, b)
 			}
 		}
 	}
 
-	return rootBlocks, nil
+	return nil
 }

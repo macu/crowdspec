@@ -15,7 +15,7 @@ export const store = new Vuex.Store({
 		currentTime: Date.now(), // updated every minute
 		windowWidth: $window.width(),
 		dragging: false,
-		moving: null, // id of node being moved
+		movingBlockId: null, // id of block being moved
 		savedScrollPosition: null, // set when returning to routes in history
 		currentSpecId: null,
 		currentSpecScrollTop: null, // saved for navigation improvements
@@ -70,11 +70,11 @@ export const store = new Vuex.Store({
 		endDragging(state) {
 			state.dragging = false;
 		},
-		startMoving(state, blockId) {
-			state.moving = blockId;
+		startMovingBlock(state, blockId) {
+			state.movingBlockId = blockId;
 		},
-		endMoving(state) {
-			state.moving = null;
+		endMovingBlock(state) {
+			state.movingBlockId = null;
 		},
 		setSavedScrollPosition(state, position) {
 			state.savedScrollPosition = position;

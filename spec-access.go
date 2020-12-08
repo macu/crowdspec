@@ -75,6 +75,21 @@ func verifyWriteURL(db DBConn, userID uint, urlID int64) (bool, error) {
 	return err == nil && count > 0, err
 }
 
+func verifyReadBlock(db DBConn, userID uint, blockID int64) (bool, error) {
+
+	var count uint
+	err := db.QueryRow(`
+		SELECT COUNT(*) FROM spec_block
+		INNER JOIN spec ON spec.id = spec_block.spec_id
+		WHERE spec_block.id = $1
+		AND (spec.is_public OR (
+			spec.owner_type = $2 AND spec.owner_id = $3
+		))
+		`, blockID, OwnerTypeUser, userID).Scan(&count)
+
+	return err == nil && count > 0, err
+}
+
 func verifyWriteBlock(db DBConn, userID uint, blockID int64) (bool, error) {
 
 	var count uint

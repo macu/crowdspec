@@ -27,6 +27,7 @@
 						<el-button @click="addAfterThis()" type="primary" size="mini" icon="el-icon-bottom" circle/>
 					</template>
 					<template v-else-if="movingThis">
+						<el-button @click="promptNavSpec()" size="mini" icon="el-icon-folder-add">Change context</el-button>
 						<el-button @click="cancelMoving()" type="warning" size="mini" icon="el-icon-close">Cancel move</el-button>
 					</template>
 					<template v-else-if="movingAnother">
@@ -159,10 +160,10 @@ export default {
 			};
 		},
 		movingThis() {
-			return this.$store.state.moving === this.block.id;
+			return this.$store.state.movingBlockId === this.block.id;
 		},
 		movingAnother() {
-			return this.$store.state.moving && !this.movingThis;
+			return this.$store.state.movingBlockId && !this.movingThis;
 		},
 		showActions() {
 			return this.focusActions || this.movingThis || this.movingAnother;
@@ -255,47 +256,65 @@ export default {
 		cancelMoving() {
 			this.$emit('end-moving', this.block.id);
 		},
+		promptNavSpec() {
+			this.$emit('prompt-nav-spec');
+		},
 		moveBeforeThis() {
-			let movingId = this.$store.state.moving;
+			let movingId = this.$store.state.movingBlockId;
 			let parentId = this.getParentId();
 			let insertBeforeId = this.block.id; // Add before this
-			ajaxMoveBlock(movingId, this.subspecId, parentId, insertBeforeId).then(() => {
-				let $moving = $('[data-spec-block="'+movingId+'"]');
-				let $sourceParentBlock = $moving.closest('.spec-block-list').closest('[data-spec-block]');
-				$moving.insertBefore(this.$el);
-				if ($sourceParentBlock.length) {
-					$sourceParentBlock.data('vc').updateHasSubblocks();
+			ajaxMoveBlock(movingId, this.subspecId, parentId, insertBeforeId).then((block = null) => {
+				if (block) {
+					let $block = this.$parent.insertBlock(block, false, true);
+					$block.insertBefore(this.$el);
+				} else {
+					let $moving = $('[data-spec-block="'+movingId+'"]');
+					let $sourceParentBlock = $moving.closest('.spec-block-list').closest('[data-spec-block]');
+					$moving.insertBefore(this.$el);
+					if ($sourceParentBlock.length) {
+						$sourceParentBlock.data('vc').updateHasSubblocks();
+					}
 				}
-				this.$store.commit('endMoving');
+				this.$store.commit('endMovingBlock');
 			});
 		},
 		moveIntoThis() {
-			let movingId = this.$store.state.moving;
+			let movingId = this.$store.state.movingBlockId;
 			let parentId = this.block.id; // Add under this
 			let insertBeforeId = null; // Add at end
-			ajaxMoveBlock(movingId, this.subspecId, parentId, insertBeforeId).then(() => {
-				let $moving = $('[data-spec-block="'+movingId+'"]');
-				let $sourceParentBlock = $moving.closest('.spec-block-list').closest('[data-spec-block]');
-				$moving.appendTo(this.$refs.sublist);
-				if ($sourceParentBlock.length) {
-					$sourceParentBlock.data('vc').updateHasSubblocks();
+			ajaxMoveBlock(movingId, this.subspecId, parentId, insertBeforeId).then((block = null) => {
+				if (block) {
+					let $block = this.$parent.insertBlock(block, false, true);
+					$block.appendTo(this.$refs.sublist);
+				} else {
+					let $moving = $('[data-spec-block="'+movingId+'"]');
+					let $sourceParentBlock = $moving.closest('.spec-block-list').closest('[data-spec-block]');
+					$moving.appendTo(this.$refs.sublist);
+					if ($sourceParentBlock.length) {
+						$sourceParentBlock.data('vc').updateHasSubblocks();
+					}
 				}
 				this.updateHasSubblocks();
-				this.$store.commit('endMoving');
+				this.$store.commit('endMovingBlock');
 			});
 		},
 		moveAfterThis() {
-			let movingId = this.$store.state.moving;
+			let movingId = this.$store.state.movingBlockId;
 			let parentId = this.getParentId();
 			let insertBeforeId = this.getFollowingBlockId();
-			ajaxMoveBlock(movingId, this.subspecId, parentId, insertBeforeId).then(() => {
-				let $moving = $('[data-spec-block="'+movingId+'"]');
-				let $sourceParentBlock = $moving.closest('.spec-block-list').closest('[data-spec-block]');
-				$moving.insertAfter(this.$el);
-				if ($sourceParentBlock.length) {
-					$sourceParentBlock.data('vc').updateHasSubblocks();
+			ajaxMoveBlock(movingId, this.subspecId, parentId, insertBeforeId).then((block = null) => {
+				if (block) {
+					let $block = this.$parent.insertBlock(block, false, true);
+					$block.insertAfter(this.$el);
+				} else {
+					let $moving = $('[data-spec-block="'+movingId+'"]');
+					let $sourceParentBlock = $moving.closest('.spec-block-list').closest('[data-spec-block]');
+					$moving.insertAfter(this.$el);
+					if ($sourceParentBlock.length) {
+						$sourceParentBlock.data('vc').updateHasSubblocks();
+					}
 				}
-				this.$store.commit('endMoving');
+				this.$store.commit('endMovingBlock');
 			});
 		},
 		mouseLeaveLayover() {
