@@ -1,19 +1,12 @@
 package main
 
 import (
-	"bytes"
-	crypto_rand "crypto/rand"
 	"database/sql"
-	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
-	"math/rand"
 	"net"
 	"net/http"
-	"net/url"
-	"os"
 	"strings"
 	"time"
 
@@ -25,7 +18,7 @@ const sessionTokenCookieName = "session_token"
 const sessionTokenCookieExpiry = time.Hour * 24 * 30
 const sessionTokenCookieRenewIfExpiresIn = time.Hour * 24 * 29
 
-var loginPageTemplate = template.Must(template.ParseFiles("login.html"))
+var loginPageTemplate = template.Must(template.ParseFiles("html/login.html"))
 
 // AuthenticatedRoute is a request handler that also accepts *sql.DB and the authenticated userID.
 type AuthenticatedRoute func(*sql.DB, uint, http.ResponseWriter, *http.Request)
@@ -198,51 +191,6 @@ func makeLoginHandler(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func verifyRecaptcha(r *http.Request) (bool, error) {
-
-	var err error
-
-	if recaptchaSecretKey == "" {
-		if isAppEngine() {
-			recaptchaSecretKey, err = loadSecret(os.Getenv("RECAPTCHA_SECRET"))
-			if err != nil {
-				return false, fmt.Errorf("loading reCAPTCHA secret key: %w", err)
-			}
-		} else {
-			return false, fmt.Errorf("reCAPTCHA secret key undefined")
-		}
-	}
-
-	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
-
-	form := url.Values{}
-	form.Set("secret", recaptchaSecretKey)
-	form.Set("response", r.FormValue("g-recaptcha-response"))
-	form.Set("remoteip", ip)
-
-	client := http.Client{
-		Timeout: 5 * time.Second,
-	}
-
-	res, err := client.PostForm("https://www.google.com/recaptcha/api/siteverify", form)
-	if err != nil {
-		return false, fmt.Errorf("error fetching URL: %w", err)
-	}
-
-	defer res.Body.Close()
-
-	var response = struct {
-		Success bool `json:"success"`
-	}{}
-
-	err = json.NewDecoder(res.Body).Decode(&response)
-	if err != nil {
-		return false, fmt.Errorf("error decoding response: %w", err)
-	}
-
-	return response.Success, nil
-}
-
 func logoutHandler(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) {
 	sessionTokenCookie, _ := r.Cookie(sessionTokenCookieName)
 	_, err := db.Exec("DELETE FROM user_session WHERE token=$1", sessionTokenCookie.Value)
@@ -271,29 +219,6 @@ const sessionRandLetters = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOP
 
 // Returns a random session ID that includes current Unix time in nanoseconds.
 func makeSessionID() string {
-	var seed int64
-	var b [8]byte
-	_, err := crypto_rand.Read(b[:])
-	if err != nil {
-		logError(nil, 0, fmt.Errorf("reading session ID random generator seed bytes with crypto/rand: %w", err))
-		seed = time.Now().UnixNano()
-	} else {
-		buf := bytes.NewBuffer(b[:])
-		err = binary.Read(buf, binary.LittleEndian, &seed)
-		if err != nil {
-			logError(nil, 0, fmt.Errorf("reading session ID random generator seed with binary.Read: %w", err))
-			seed = time.Now().UnixNano()
-		}
-	}
-
-	randGen := rand.New(rand.NewSource(seed))
-
-	bytes := make([]byte, 9)
-
-	for i := range bytes {
-		bytes[i] = sessionRandLetters[randGen.Intn(len(sessionRandLetters))]
-	}
-
 	// 20 digits (current time) + 1 (:) + 9 (random) = 30 digit session ID
-	return fmt.Sprintf("%020d:%s", time.Now().UnixNano(), string(bytes))
+	return fmt.Sprintf("%020d:%s", time.Now().UnixNano(), randomToken(9))
 }

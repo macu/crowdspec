@@ -7,7 +7,9 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/jackc/pgx/v4 v4.10.0
 	github.com/keighl/metabolize v0.0.0-20150915210303-97ab655d4034
+	github.com/mailjet/mailjet-apiv3-go/v3 v3.0.0
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
+	github.com/sendgrid/sendgrid-go v3.7.2+incompatible // indirect
 	golang.org/x/crypto v0.0.0-20201203163018-be400aefbc4c
 	golang.org/x/net v0.0.0-20201202161906-c7110b5ffcbb // indirect
 	golang.org/x/oauth2 v0.0.0-20201203001011-0b49973bad19 // indirect

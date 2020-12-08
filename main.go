@@ -21,17 +21,22 @@ import (
 
 // Represents local env.json config
 type config struct {
-	DBUser       string `json:"dbUser"`
-	DBPass       string `json:"dbPass"`
-	DBName       string `json:"dbName"`
-	HTTPPort     string `json:"httpPort"`
-	ReSiteKey    string `json:"recaptchaSiteKey"`
-	ReSecretKey  string `json:"recaptchaSecretKey"`
-	VersionStamp string `json:"versionStamp"`
+	DBUser           string `json:"dbUser"`
+	DBPass           string `json:"dbPass"`
+	DBName           string `json:"dbName"`
+	HTTPPort         string `json:"httpPort"`
+	ReSiteKey        string `json:"recaptchaSiteKey"`
+	ReSecretKey      string `json:"recaptchaSecretKey"`
+	MailjetAPIKey    string `json:"mailjetApiKey"`
+	MailjetSecretKey string `json:"mailjetSecretKey"`
+	VersionStamp     string `json:"versionStamp"`
 }
 
 // reCAPTCHA site keys
 var recaptchaSiteKey, recaptchaSecretKey string
+
+// Mailjet API keys
+var mailjetAPIKey, mailjetSecretKey string
 
 // Used to invalidate cache on compiled client resources
 var cacheControlVersionStamp string
@@ -83,6 +88,7 @@ func main() {
 
 		// Site key comes from env
 		recaptchaSiteKey = os.Getenv("RECAPTCHA_SITE_KEY")
+		mailjetAPIKey = os.Getenv("MAILJET_API_KEY")
 
 		// Version stamp comes from env
 		cacheControlVersionStamp = os.Getenv("VERSION_STAMP")
@@ -108,9 +114,11 @@ func main() {
 			logErrorFatal(err)
 		}
 
-		// Set key and secret key come from env.json
+		// API keys and secret keys come from env.json
 		recaptchaSiteKey = config.ReSiteKey
 		recaptchaSecretKey = config.ReSecretKey
+		mailjetAPIKey = config.MailjetAPIKey
+		mailjetSecretKey = config.MailjetSecretKey
 
 		// Version stamp comes from env.json
 		cacheControlVersionStamp = config.VersionStamp
@@ -180,6 +188,8 @@ func main() {
 	authenticate := makeAuthenticator(db)
 
 	r.HandleFunc("/login", makeLoginHandler(db))
+	r.HandleFunc("/request-password-reset", makeRequestPasswordResetHandler(db))
+	r.HandleFunc("/reset-password", makeResetPasswordHandler(db))
 	r.HandleFunc("/logout", authenticate(logoutHandler))
 
 	r.PathPrefix("/ajax/").HandlerFunc(authenticate(ajaxHandler))
@@ -204,7 +214,7 @@ func main() {
 	}
 }
 
-var indexTemplate = template.Must(template.ParseFiles("index.html"))
+var indexTemplate = template.Must(template.ParseFiles("html/index.html"))
 
 func indexHandler(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) {
 	row := db.QueryRow("SELECT username FROM user_account WHERE id=$1", userID)
