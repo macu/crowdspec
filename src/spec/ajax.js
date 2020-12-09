@@ -1,9 +1,10 @@
 import $ from 'jquery';
 import {alertError} from '../utils.js';
 
-export function ajaxLoadSpec(specId) {
+export function ajaxLoadSpec(specId, loadBlocks = true) {
 	return $.get('/ajax/spec', {
 		specId,
+		loadBlocks,
 	}).fail(alertError);
 }
 
@@ -36,10 +37,11 @@ export function ajaxLoadSubspecs(specId) {
 	}).fail(alertError);
 }
 
-export function ajaxLoadSubspec(specId, subspecId) {
+export function ajaxLoadSubspec(specId, subspecId, loadBlocks = true) {
 	return $.get('/ajax/spec/subspec', {
 		specId,
 		subspecId,
+		loadBlocks,
 	}).fail(alertError);
 }
 

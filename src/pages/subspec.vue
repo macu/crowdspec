@@ -3,39 +3,29 @@
 
 	<header>
 
-		<div class="spec" @click="gotoSpec()">
-			<h2>
-				{{subspec.specName}}
-			</h2>
-		</div>
+		<div class="right">
 
-		<div class="subspec">
+			<el-button
+				v-if="enableEditing"
+				@click="openManageSubspec()"
+				size="mini" icon="el-icon-setting"/>
 
-			<div class="right">
-
-				<el-button
-					v-if="enableEditing"
-					@click="openManageSubspec()"
-					size="mini" icon="el-icon-setting"/>
-
-				<span v-else>
-					Last modified <moment :datetime="subspec.updated" :offset="true"/>
-				</span>
-
-			</div>
-
-			<h3>{{subspec.name}}</h3>
-
-			<div v-if="subspec.desc" class="desc">{{subspec.desc}}</div>
+			<span v-else>
+				Last modified <moment :datetime="subspec.updated" :offset="true"/>
+			</span>
 
 		</div>
+
+		<h3>{{subspec.name}}</h3>
+
+		<div v-if="subspec.desc" class="desc">{{subspec.desc}}</div>
 
 	</header>
 
-	<spec-view
-		:key="subspec.id"
+	<router-view
 		:subspec="subspec"
 		:enable-editing="enableEditing"
+		@prompt-nav-spec="promptNavSpec()"
 		/>
 
 	<edit-subspec-modal
@@ -62,6 +52,9 @@ export default {
 		SpecView,
 		EditSubspecModal,
 	},
+	params: {
+		enableEditing: Boolean,
+	},
 	data() {
 		return {
 			subspec: null,
@@ -78,7 +71,8 @@ export default {
 		},
 	},
 	beforeRouteEnter(to, from, next) {
-		ajaxLoadSubspec(to.params.specId, to.params.subspecId).then(subspec => {
+		console.debug('beforeRouteEnter subspec', to);
+		ajaxLoadSubspec(to.params.specId, to.params.subspecId, to.name === 'subspec').then(subspec => {
 			next(vm => {
 				vm.setSubspec(subspec);
 			});
@@ -92,8 +86,9 @@ export default {
 		});
 	},
 	beforeRouteUpdate(to, from, next) {
+		console.debug('beforeRouteUpdate subspec', to);
 		// Reload spec even if same across navigation as view must be rebuilt using latest state
-		ajaxLoadSubspec(to.params.specId, to.params.subspecId).then(subspec => {
+		ajaxLoadSubspec(to.params.specId, to.params.subspecId, to.name === 'subspec').then(subspec => {
 			this.setSubspec(subspec);
 			next();
 			this.$nextTick(this.restoreScroll);
@@ -107,19 +102,22 @@ export default {
 		});
 	},
 	beforeRouteLeave(to, from, next) {
+		console.debug('beforeRouteLeave subspec');
+		this.subspec = null;
 		setWindowSubtitle(); // clear
 		next();
 	},
 	methods: {
 		setSubspec(subspec) {
+			console.debug('setSubspec');
 			this.subspec = subspec;
 			setWindowSubtitle(subspec.name);
 			// vue-router scrollBehavior is applied before spec-view has a chance to populate,
 			// so restore the scroll position again after fully rendering.
 			this.$nextTick(this.restoreScroll);
 		},
-		gotoSpec() {
-			this.$router.push({name: 'spec', params: {specId: this.subspec.specId}});
+		promptNavSpec() {
+			this.$emit('prompt-nav-spec');
 		},
 		openManageSubspec() {
 			this.$refs.editSubspecModal.showEdit(this.subspec, updatedSubspec => {
@@ -132,6 +130,7 @@ export default {
 		restoreScroll() {
 			let position = this.$store.state.savedScrollPosition;
 			if (position) {
+				console.debug('restoreScroll subspec');
 				$(window).scrollTop(position.y).scrollLeft(position.x);
 			}
 		},
@@ -148,60 +147,33 @@ export default {
 .subspec-page {
 
 	>header {
-		margin-bottom: 1cm;
+		background-color: $subspec-bg;
+		color: white;
 
-		>.spec {
-			background-color: $spec-bg;
-			color: white;
-			cursor: pointer;
-
-			padding: $page-header-vertical-padding $page-header-horiz-padding;
-			@include mobile {
-				padding: $page-header-vertical-padding-sm $page-header-horiz-padding-sm;
-			}
-
-			>h2 {
-				margin: 0;
-				padding: 0;
-			}
-		} // .spec
-
-		>.subspec {
-			background-color: $subspec-bg;
-			color: white;
-
-			padding: $page-header-vertical-padding $page-header-horiz-padding;
-			@include mobile {
-				padding: $page-header-vertical-padding-sm $page-header-horiz-padding-sm;
-			}
-
-			>.right {
-				float: right;
-				font-size: small;
-				margin-left: 20px;
-
-				>*+* {
-					margin-left: 10px;
-				}
-			}
-
-			>h3 {
-				margin: 0;
-				padding: 0;
-			}
-
-			>.desc {
-				white-space: pre-wrap;
-				margin-top: 10px;
-			}
-		} // .subspec
-	} // header
-
-	@include mobile {
-		>.spec-view {
-			margin-left: #{-$content-area-padding-sm};
-			margin-right: #{-$content-area-padding-sm};
+		padding: $page-header-vertical-padding $page-header-horiz-padding;
+		@include mobile {
+			padding: $page-header-vertical-padding-sm $page-header-horiz-padding-sm;
 		}
-	}
+
+		>.right {
+			float: right;
+			font-size: small;
+			margin-left: 20px;
+
+			>*+* {
+				margin-left: 10px;
+			}
+		}
+
+		>h3 {
+			margin: 0;
+			padding: 0;
+		}
+
+		>.desc {
+			white-space: pre-wrap;
+			margin-top: 10px;
+		}
+	} // header
 }
 </style>

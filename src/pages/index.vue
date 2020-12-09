@@ -111,6 +111,12 @@ export default {
 
 .index-page {
 
+	padding: $content-area-padding;
+
+	@include mobile {
+		padding: $content-area-padding-sm;
+	}
+
 	.user-specs, .public-specs {
 		margin-top: $content-area-padding;
 		@include mobile {

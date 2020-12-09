@@ -16,9 +16,11 @@ type SpecSubspec struct {
 	Desc    *string   `json:"desc"`
 
 	// convenience fields (joined for certain responses)
-	SpecName  string `json:"specName,omitempty"`
-	OwnerType string `json:"ownerType,omitempty"`
-	OwnerID   int64  `json:"ownerId,omitempty"`
+	// Representing time spec was loaded from db
+	RenderTime time.Time `json:"renderTime,omitempty"`
+	SpecName   string    `json:"specName,omitempty"`
+	OwnerType  string    `json:"ownerType,omitempty"`
+	OwnerID    int64     `json:"ownerId,omitempty"`
 
 	Blocks []*SpecBlock `json:"blocks,omitempty"`
 }

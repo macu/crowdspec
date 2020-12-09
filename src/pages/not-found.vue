@@ -1,5 +1,5 @@
 <template>
-<div>
+<div class="content-page">
 	Not found
 </div>
 </template>

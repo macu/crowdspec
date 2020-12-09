@@ -3,7 +3,7 @@
 
 	<header>
 
-		<div class="right">
+		<div v-if="onSpecPage" class="right">
 
 			<span v-if="currentUserOwns">You own this</span>
 			<span v-else>
@@ -30,21 +30,27 @@
 
 		</div>
 
-		<h2>{{spec.name}}</h2>
+		<h2 @click="gotoSpec()">{{spec.name}}</h2>
 
 		<div v-if="spec.desc" class="desc">{{spec.desc}}</div>
 
 	</header>
 
-	<spec-view
-		:key="spec.id"
+	<router-view
 		:spec="spec"
 		:enable-editing="enableEditing"
+		@prompt-nav-spec="promptNavSpec()"
 		/>
 
 	<edit-spec-modal
 		v-if="enableEditing"
 		ref="editSpecModal"
+		/>
+
+	<nav-spec-modal
+		ref="navSpecModal"
+		:spec-id="specId"
+		:subspec-id="subspecId"
 		/>
 
 </section>
@@ -53,8 +59,8 @@
 <script>
 import $ from 'jquery';
 import Moment from '../widgets/moment.vue';
-import SpecView from '../spec/view.vue';
 import EditSpecModal from '../spec/edit-spec-modal.vue';
+import NavSpecModal from '../spec/nav-spec-modal.vue';
 import {ajaxLoadSpec} from '../spec/ajax.js';
 import {OWNER_TYPE_USER} from '../spec/const.js';
 import {setWindowSubtitle, idsEq} from '../utils.js';
@@ -62,15 +68,25 @@ import {setWindowSubtitle, idsEq} from '../utils.js';
 export default {
 	components: {
 		Moment,
-		SpecView,
 		EditSpecModal,
+		NavSpecModal,
 	},
 	data() {
 		return {
+			loading: true,
 			spec: null,
 		};
 	},
 	computed: {
+		specId() {
+			return parseInt(this.$route.params.specId, 10);
+		},
+		subspecId() {
+			return parseInt(this.$route.params.subspecId, 10) || null;
+		},
+		onSpecPage() {
+			return this.$route.name === 'spec';
+		},
 		currentUserOwns() {
 			return this.spec.ownerType === OWNER_TYPE_USER &&
 				this.$store.getters.userID === this.spec.ownerId;
@@ -80,8 +96,10 @@ export default {
 			return this.currentUserOwns;
 		},
 	},
+	// TODO only load whole spec with blocks if navigating into spec view
 	beforeRouteEnter(to, from, next) {
-		ajaxLoadSpec(to.params.specId).then(spec => {
+		console.debug('beforeRouteEnter spec', to);
+		ajaxLoadSpec(to.params.specId, to.name === 'spec').then(spec => {
 			next(vm => {
 				vm.setSpec(spec);
 			});
@@ -90,12 +108,13 @@ export default {
 				name: 'ajax-error',
 				params: {code: jqXHR.status},
 				query: {url: encodeURIComponent(to.fullPath)},
-				replace: true,
+				replace: false,
 			});
 		});
 	},
 	beforeRouteUpdate(to, from, next) {
-		ajaxLoadSpec(to.params.specId).then(spec => {
+		console.debug('beforeRouteUpdate spec', to);
+		ajaxLoadSpec(to.params.specId, to.name === 'spec').then(spec => {
 			this.setSpec(spec);
 			next();
 		}).fail(jqXHR => {
@@ -108,16 +127,27 @@ export default {
 		});
 	},
 	beforeRouteLeave(to, from, next) {
+		console.debug('beforeRouteLeave spec');
+		this.spec = null;
 		setWindowSubtitle(); // clear
 		next();
 	},
 	methods: {
 		setSpec(spec) {
+			console.debug('setSpec');
 			this.spec = spec;
 			setWindowSubtitle(spec.name);
 			// vue-router scrollBehavior is applied before spec-view has a chance to populate,
 			// so restore the scroll position again after fully rendering.
 			this.$nextTick(this.restoreScroll);
+		},
+		gotoSpec() {
+			if (this.$route.name !== 'spec') {
+				this.$router.push({
+					name: 'spec',
+					params: {specId: this.specId},
+				});
+			}
 		},
 		openManageSpec() {
 			this.$refs.editSpecModal.showEdit(this.spec, updatedSpec => {
@@ -129,15 +159,22 @@ export default {
 				setWindowSubtitle(updatedSpec.name);
 			});
 		},
+		promptNavSpec() {
+			this.$refs.navSpecModal.show();
+		},
 		restoreScroll() {
+			// somehow this is available in $nextTick though clearSavedScrollPosition is called in afterEach
 			let position = this.$store.state.savedScrollPosition;
 			if (position) {
+				console.debug('restoreScroll spec');
 				// Restore scroll position from history
 				$(window).scrollTop(position.y).scrollLeft(position.x);
 			} else if (
 				idsEq(this.$store.state.currentSpecId, this.spec.id) &&
 				!!this.$store.state.currentSpecScrollTop
 			) {
+				console.debug('restoreScroll spec from currentSpecScrollTop');
+				// FIXME this is not working when clicking a subspec link and then navigating back
 				// Restore last saved scroll position on spec page
 				$(window).scrollTop(this.$store.state.currentSpecScrollTop);
 			}
@@ -155,8 +192,6 @@ export default {
 .spec-page {
 
 	>header {
-		margin-bottom: 1cm;
-
 		background-color: $spec-bg;
 		color: white;
 
@@ -177,6 +212,7 @@ export default {
 
 		>h2 {
 			margin: 0;
+			cursor: pointer;
 		}
 
 		>.desc {
@@ -185,12 +221,5 @@ export default {
 			color: white;
 		}
 	} // header
-
-	@include mobile {
-		>.spec-view {
-			margin-left: #{-$content-area-padding-sm};
-			margin-right: #{-$content-area-padding-sm};
-		}
-	}
 }
 </style>

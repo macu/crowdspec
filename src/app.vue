@@ -90,20 +90,11 @@ export default {
 		}
 	}
 
-	>.page-area {
+	>.content-page { // just content - no header - standard padding
 		padding: $content-area-padding;
-		>header {
-			margin-top: #{-$content-area-padding};
-			margin-left: #{-$content-area-padding};
-			margin-right: #{-$content-area-padding};
-		}
+
 		@include mobile {
 			padding: $content-area-padding-sm;
-			>header {
-				margin-top: #{-$content-area-padding-sm};
-				margin-left: #{-$content-area-padding-sm};
-				margin-right: #{-$content-area-padding-sm};
-			}
 		}
 	}
 }

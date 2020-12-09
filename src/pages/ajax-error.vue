@@ -1,5 +1,5 @@
 <template>
-<div class="ajax-error-page">
+<div class="ajax-error-page content-page">
 
 	<p v-if="parseInt($route.params.code, 10) === 0">
 		Could not connect to server

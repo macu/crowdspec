@@ -27,7 +27,9 @@ func ajaxSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (
 	}
 
 	// TODO Finish owner_name, user_is_admin, user_is_contributor
-	s := &Spec{}
+	s := &Spec{
+		RenderTime: time.Now(),
+	}
 	err = db.QueryRow(`
 		SELECT spec.id, spec.owner_type, spec.owner_id, user_account.username,
 		spec.spec_name, spec.spec_desc, spec.is_public,
@@ -50,9 +52,11 @@ func ajaxSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (
 		return nil, http.StatusInternalServerError, err
 	}
 
-	s.Blocks, err = loadBlocks(db, specID, nil)
-	if err != nil {
-		return nil, http.StatusInternalServerError, err
+	if AtoBool(query.Get("loadBlocks")) {
+		s.Blocks, err = loadBlocks(db, specID, nil)
+		if err != nil {
+			return nil, http.StatusInternalServerError, err
+		}
 	}
 
 	return s, http.StatusOK, nil

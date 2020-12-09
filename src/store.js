@@ -77,18 +77,21 @@ export const store = new Vuex.Store({
 			state.movingBlockId = null;
 		},
 		setSavedScrollPosition(state, position) {
+			console.debug('setSavedScrollPosition');
 			state.savedScrollPosition = position;
 		},
 		clearSavedScrollPosition(state) {
+			console.debug('clearSavedScrollPosition');
 			state.savedScrollPosition = null;
 		},
 		saveCurrentSpecScrollTop(state, specId) {
+			console.debug('saveCurrentSpecScrollTop');
 			state.currentSpecId = specId;
 			state.currentSpecScrollTop = $window.scrollTop();
 		},
 		clearCurrentSpec(state) {
 			state.currentSpecId = null;
-			state.currentSpecScrollPosition = null;
+			state.currentSpecScrollTop = null;
 		},
 		updateCurrentTime(state) {
 			state.currentTime = Date.now();

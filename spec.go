@@ -13,6 +13,9 @@ type Spec struct {
 	Desc      *string   `json:"desc"`
 	Public    bool      `json:"public"`
 
+	// Representing time spec was loaded from db
+	RenderTime time.Time `json:"renderTime,omitempty"`
+
 	// Joined from owner if owner is user
 	Username string `json:"username,omitempty"`
 

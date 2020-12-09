@@ -85,6 +85,7 @@ postgres=#
 - [x] Add user settings
 - [x] Add forgot password form and email service
 - [x] Freely move blocks between spec/subspec contexts
+- [x] Change routes structure
 
 ### 2020-08-31
 

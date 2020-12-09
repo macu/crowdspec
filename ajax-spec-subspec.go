@@ -8,6 +8,65 @@ import (
 	"time"
 )
 
+func ajaxSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
+	// GET
+	query := r.URL.Query()
+
+	specID, err := AtoInt64(query.Get("specId"))
+	if err != nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("invalid specId: %w", err)
+	}
+
+	subspecID, err := AtoInt64(query.Get("subspecId"))
+	if err != nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("invalid subspecId: %w", err)
+	}
+
+	if access, err := verifyReadSubspec(db, userID, subspecID); !access || err != nil {
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("verifying read subspec: %w", err)
+		}
+		return nil, http.StatusForbidden,
+			fmt.Errorf("read subspec access denied to user %d in subspec %d", userID, subspecID)
+	}
+
+	s := &SpecSubspec{
+		ID:         subspecID,
+		SpecID:     specID,
+		RenderTime: time.Now(),
+	}
+
+	err = db.QueryRow(`SELECT spec_subspec.created_at,
+		spec_subspec.subspec_name, spec_subspec.subspec_desc,
+		spec.spec_name, spec.owner_type, spec.owner_id,
+		CASE
+			-- when editor
+			WHEN spec.owner_type = $3 AND spec.owner_id = $4
+				THEN spec_subspec.updated_at
+			-- when visitor
+			ELSE GREATEST(spec_subspec.updated_at, spec_subspec.blocks_updated_at)
+		END AS last_updated
+		FROM spec_subspec
+		INNER JOIN spec ON spec.id = $1
+		WHERE spec_subspec.id = $2
+		AND spec_subspec.spec_id = $1`,
+		specID, subspecID, OwnerTypeUser, userID,
+	).Scan(&s.Created, &s.Name, &s.Desc,
+		&s.SpecName, &s.OwnerType, &s.OwnerID, &s.Updated)
+	if err != nil {
+		return nil, http.StatusInternalServerError, fmt.Errorf("loading subspec: %w", err)
+	}
+
+	if AtoBool(query.Get("loadBlocks")) {
+		s.Blocks, err = loadBlocks(db, specID, &subspecID)
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("loading subspec block: %w", err)
+		}
+	}
+
+	return s, http.StatusOK, nil
+}
+
 func ajaxSubspecs(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
 	// GET
 	query := r.URL.Query()
@@ -144,62 +203,6 @@ func ajaxSpecSaveSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 
 		return s, http.StatusOK, nil
 	})
-}
-
-func ajaxSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
-	// GET
-	query := r.URL.Query()
-
-	specID, err := AtoInt64(query.Get("specId"))
-	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("invalid specId: %w", err)
-	}
-
-	subspecID, err := AtoInt64(query.Get("subspecId"))
-	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("invalid subspecId: %w", err)
-	}
-
-	if access, err := verifyReadSubspec(db, userID, subspecID); !access || err != nil {
-		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("verifying read subspec: %w", err)
-		}
-		return nil, http.StatusForbidden,
-			fmt.Errorf("read subspec access denied to user %d in subspec %d", userID, subspecID)
-	}
-
-	s := &SpecSubspec{
-		ID:     subspecID,
-		SpecID: specID,
-	}
-
-	err = db.QueryRow(`SELECT spec_subspec.created_at,
-		spec_subspec.subspec_name, spec_subspec.subspec_desc,
-		spec.spec_name, spec.owner_type, spec.owner_id,
-		CASE
-			-- when editor
-			WHEN spec.owner_type = $3 AND spec.owner_id = $4
-				THEN spec_subspec.updated_at
-			-- when visitor
-			ELSE GREATEST(spec_subspec.updated_at, spec_subspec.blocks_updated_at)
-		END AS last_updated
-		FROM spec_subspec
-		INNER JOIN spec ON spec.id = $1
-		WHERE spec_subspec.id = $2
-		AND spec_subspec.spec_id = $1`,
-		specID, subspecID, OwnerTypeUser, userID,
-	).Scan(&s.Created, &s.Name, &s.Desc,
-		&s.SpecName, &s.OwnerType, &s.OwnerID, &s.Updated)
-	if err != nil {
-		return nil, http.StatusInternalServerError, fmt.Errorf("loading subspec: %w", err)
-	}
-
-	s.Blocks, err = loadBlocks(db, specID, &subspecID)
-	if err != nil {
-		return nil, http.StatusInternalServerError, fmt.Errorf("loading subspec block: %w", err)
-	}
-
-	return s, http.StatusOK, nil
 }
 
 func ajaxSpecDeleteSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {

@@ -4,7 +4,9 @@ import {idsEq} from './utils.js';
 
 import IndexPage from './pages/index.vue';
 import SpecPage from './pages/spec.vue';
+import SpecViewPage from './pages/spec-view.vue';
 import SubspecPage from './pages/subspec.vue';
+import SubspecViewPage from './pages/subspec-view.vue';
 import AjaxErrorPage from './pages/ajax-error.vue';
 import NotFoundPage from './pages/not-found.vue';
 
@@ -12,13 +14,18 @@ export const router = new VueRouter({
 	mode: 'history',
 	routes: [
 		{name: 'index', path: '/', component: IndexPage},
-		{name: 'spec', path: '/spec/:specId', component: SpecPage},
-		{name: 'subspec', path: '/spec/:specId/subspec/:subspecId', component: SubspecPage},
+		{path: '/spec/:specId', component: SpecPage, children: [
+			{name: 'spec', path: '', component: SpecViewPage},
+			{path: 'subspec/:subspecId', component: SubspecPage, children: [
+				{name: 'subspec', path: '', component: SubspecViewPage},
+			]},
+		]},
 		{name: 'ajax-error', path: '/ajax-error/:code', component: AjaxErrorPage},
 		{path: '*', component: NotFoundPage},
 	],
 	scrollBehavior(to, from, savedPosition) {
 		// scrollBehavior is called after the new route has been rendered.
+		// savedPosition is the position previously saved at the now restored position in navigation history.
 		// save to allow restoring scroll position following additional DOM updates
 		// made during the route mounted hook
 		store.commit('setSavedScrollPosition', savedPosition);
@@ -48,7 +55,10 @@ router.beforeEach((to, from, next) => {
 router.afterEach((to, from) => {
 	// afterEach is called after navigation is confirmed,
 	// but before the new route has been rendered.
+	// scroll position must be restored within the next() callback
+	// in beforeRouteEnter and before calling next() in beforeRouteUpdate.
 	// clear saved scroll position of previous route
+	console.debug('afterEach');
 	store.commit('clearSavedScrollPosition');
 });
 

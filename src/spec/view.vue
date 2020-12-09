@@ -33,12 +33,6 @@
 		ref="playVideoModal"
 		/>
 
-	<nav-spec-modal
-		ref="navSpecModal"
-		:spec-id="specId"
-		:subspec-id="subspecId"
-		/>
-
 </div>
 </template>
 
@@ -50,7 +44,6 @@ import SpecBlock from './block.vue';
 import EditBlockModal from './edit-block-modal.vue';
 import EditUrlModal from './edit-url-modal.vue';
 import PlayVideoModal from './play-video-modal.vue';
-import NavSpecModal from './nav-spec-modal.vue';
 import {ajaxDeleteBlock, ajaxMoveBlock} from './ajax.js';
 import store from '../store.js';
 import router from '../router.js';
@@ -69,7 +62,6 @@ export default {
 		EditBlockModal,
 		EditUrlModal,
 		PlayVideoModal,
-		NavSpecModal,
 	},
 	props: {
 		spec: Object,
@@ -304,7 +296,7 @@ export default {
 			this.$refs.playVideoModal.show(urlObject);
 		},
 		promptNavSpec() {
-			this.$refs.navSpecModal.show();
+			this.$emit('prompt-nav-spec');
 		},
 	},
 };
