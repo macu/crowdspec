@@ -1,9 +1,9 @@
 <template>
-<section v-if="subspec" class="subspec-page">
+<section class="subspec-page">
 
-	<header>
+	<header v-if="subspec">
 
-		<div class="right">
+		<div v-if="onSubspecRoute && !loading" class="right">
 
 			<el-button
 				v-if="enableEditing"
@@ -23,6 +23,7 @@
 	</header>
 
 	<router-view
+		:loading="loading"
 		:subspec="subspec"
 		:enable-editing="enableEditing"
 		@prompt-nav-spec="promptNavSpec()"
@@ -31,7 +32,7 @@
 	<edit-subspec-modal
 	 	v-if="enableEditing"
 		ref="editSubspecModal"
-		:spec-id="subspec.specId"
+		:spec-id="specId"
 		/>
 
 </section>
@@ -52,44 +53,37 @@ export default {
 		SpecView,
 		EditSubspecModal,
 	},
+	inheritAttrs: false,
 	props: {
 		enableEditing: Boolean,
 	},
 	data() {
 		return {
+			loading: true,
 			subspec: null,
 		};
 	},
+	computed: {
+		specId() {
+			return parseInt(this.$route.params.specId, 10);
+		},
+		subspecId() {
+			return parseInt(this.$route.params.subspecId, 10);
+		},
+		onSubspecRoute() {
+			return this.$route.name === 'subspec';
+		},
+	},
 	beforeRouteEnter(to, from, next) {
 		console.debug('beforeRouteEnter subspec', to);
-		ajaxLoadSubspec(to.params.specId, to.params.subspecId, to.name === 'subspec').then(subspec => {
-			next(vm => {
-				vm.setSubspec(subspec);
-			});
-		}).fail(jqXHR => {
-			next({
-				name: 'ajax-error',
-				params: {code: jqXHR.status},
-				query: {url: encodeURIComponent(to.fullPath)},
-				replace: true,
-			});
+		next(vm => {
+			vm.loadSubspec(to.params.specId, to.params.subspecId, to.name === 'subspec');
 		});
 	},
 	beforeRouteUpdate(to, from, next) {
 		console.debug('beforeRouteUpdate subspec', to);
-		// Reload spec even if same across navigation as view must be rebuilt using latest state
-		ajaxLoadSubspec(to.params.specId, to.params.subspecId, to.name === 'subspec').then(subspec => {
-			this.setSubspec(subspec);
-			next();
-			this.$nextTick(this.restoreScroll);
-		}).fail(jqXHR => {
-			next({
-				name: 'ajax-error',
-				params: {code: jqXHR.status},
-				query: {url: encodeURIComponent(to.fullPath)},
-				replace: true,
-			});
-		});
+		this.loadSubspec(to.params.specId, to.params.subspecId, to.name === 'subspec');
+		next();
 	},
 	beforeRouteLeave(to, from, next) {
 		console.debug('beforeRouteLeave subspec');
@@ -98,13 +92,28 @@ export default {
 		next();
 	},
 	methods: {
-		setSubspec(subspec) {
-			console.debug('setSubspec');
-			this.subspec = subspec;
-			setWindowSubtitle(subspec.name);
-			// vue-router scrollBehavior is applied before spec-view has a chance to populate,
-			// so restore the scroll position again after fully rendering.
-			this.$nextTick(this.restoreScroll);
+		loadSubspec(specId, subspecId, loadBlocks) {
+			console.log('load subspec');
+			this.loading = true;
+			let savedPosition = this.$store.state.savedScrollPosition;
+			ajaxLoadSubspec(specId, subspecId, loadBlocks).then(subspec => {
+				console.debug('subspec loaded', subspec);
+				this.subspec = subspec;
+				setWindowSubtitle(subspec.name);
+				this.loading = false;
+				if (savedPosition && this.onSubspecRoute) {
+					this.$nextTick(() => {
+						console.debug('restoreScroll subspec');
+						$(window).scrollTop(savedPosition.y).scrollLeft(savedPosition.x);
+					});
+				}
+			}).fail(jqXHR => {
+				this.$router.replace({
+					name: 'ajax-error',
+					params: {code: jqXHR.status},
+					query: {url: encodeURIComponent(this.$route.fullPath)},
+				});
+			});
 		},
 		promptNavSpec() {
 			this.$emit('prompt-nav-spec');
@@ -116,13 +125,6 @@ export default {
 				this.subspec.desc = updatedSubspec.desc;
 				setWindowSubtitle(updatedSubspec.name);
 			});
-		},
-		restoreScroll() {
-			let position = this.$store.state.savedScrollPosition;
-			if (position) {
-				console.debug('restoreScroll subspec');
-				$(window).scrollTop(position.y).scrollLeft(position.x);
-			}
 		},
 	},
 };

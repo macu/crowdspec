@@ -1,12 +1,14 @@
 <template>
-<spec-view
-	v-if="spec"
-	:key="spec.renderTime"
-	:spec="spec"
-	:enable-editing="enableEditing"
-	@prompt-nav-spec="promptNavSpec"
-	class="spec-view-page"
-	/>
+<div class="spec-view-page" :class="{loading}">
+	<p v-if="loading">Loading...</p>
+	<spec-view
+		v-else-if="spec"
+		:key="spec.renderTime"
+		:spec="spec"
+		:enable-editing="enableEditing"
+		@prompt-nav-spec="promptNavSpec"
+		/>
+</div>
 </template>
 
 <script>
@@ -14,6 +16,7 @@ import SpecView from '../spec/view.vue';
 
 export default {
 	props: {
+		loading: Boolean,
 		spec: Object,
 		enableEditing: Boolean,
 	},
@@ -45,10 +48,11 @@ export default {
 	padding-top: $content-area-padding / 2;
 
 	@include mobile {
-		padding: $content-area-padding-sm;
+		padding: $content-area-padding-sm 0;
 
-		margin-left: #{-$content-area-padding-sm};
-		margin-right: #{-$content-area-padding-sm};
+		&.loading {
+			padding: $content-area-padding-sm;
+		}
 	}
 }
 </style>

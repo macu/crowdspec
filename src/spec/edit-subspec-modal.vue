@@ -41,10 +41,7 @@ export default {
 		Moment,
 	},
 	props: {
-		specId: {
-			type: Number,
-			required: true,
-		},
+		specId: Number,
 	},
 	data() {
 		return {

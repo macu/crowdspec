@@ -1,9 +1,9 @@
 <template>
-<section v-if="spec" class="spec-page">
+<section class="spec-page">
 
-	<header>
+	<header v-if="spec">
 
-		<div v-if="onSpecPage" class="right">
+		<div v-if="onSpecRoute && !loading" class="right">
 
 			<span v-if="currentUserOwns">You own this</span>
 			<span v-else>
@@ -37,6 +37,7 @@
 	</header>
 
 	<router-view
+		:loading="loading"
 		:spec="spec"
 		:enable-editing="enableEditing"
 		@prompt-nav-spec="promptNavSpec()"
@@ -84,11 +85,12 @@ export default {
 		subspecId() {
 			return parseInt(this.$route.params.subspecId, 10) || null;
 		},
-		onSpecPage() {
+		onSpecRoute() {
 			return this.$route.name === 'spec';
 		},
 		currentUserOwns() {
-			return this.spec.ownerType === OWNER_TYPE_USER &&
+			return this.spec &&
+				this.spec.ownerType === OWNER_TYPE_USER &&
 				this.$store.getters.userID === this.spec.ownerId;
 		},
 		enableEditing() {
@@ -96,35 +98,16 @@ export default {
 			return this.currentUserOwns;
 		},
 	},
-	// TODO only load whole spec with blocks if navigating into spec view
 	beforeRouteEnter(to, from, next) {
 		console.debug('beforeRouteEnter spec', to);
-		ajaxLoadSpec(to.params.specId, to.name === 'spec').then(spec => {
-			next(vm => {
-				vm.setSpec(spec);
-			});
-		}).fail(jqXHR => {
-			next({
-				name: 'ajax-error',
-				params: {code: jqXHR.status},
-				query: {url: encodeURIComponent(to.fullPath)},
-				replace: false,
-			});
+		next(vm => {
+			vm.loadSpec(to.params.specId, to.name === 'spec');
 		});
 	},
 	beforeRouteUpdate(to, from, next) {
 		console.debug('beforeRouteUpdate spec', to);
-		ajaxLoadSpec(to.params.specId, to.name === 'spec').then(spec => {
-			this.setSpec(spec);
-			next();
-		}).fail(jqXHR => {
-			next({
-				name: 'ajax-error',
-				params: {code: jqXHR.status},
-				query: {url: encodeURIComponent(to.fullPath)},
-				replace: true,
-			});
-		});
+		this.loadSpec(to.params.specId, to.name === 'spec');
+		next();
 	},
 	beforeRouteLeave(to, from, next) {
 		console.debug('beforeRouteLeave spec');
@@ -133,13 +116,27 @@ export default {
 		next();
 	},
 	methods: {
-		setSpec(spec) {
-			console.debug('setSpec');
-			this.spec = spec;
-			setWindowSubtitle(spec.name);
-			// vue-router scrollBehavior is applied before spec-view has a chance to populate,
-			// so restore the scroll position again after fully rendering.
-			this.$nextTick(this.restoreScroll);
+		loadSpec(specId, loadBlocks) {
+			console.debug('load spec');
+			this.loading = true;
+			let savedPosition = this.$store.state.savedScrollPosition;
+			ajaxLoadSpec(specId, loadBlocks).then(spec => {
+				console.debug('spec loaded', spec);
+				this.spec = spec;
+				setWindowSubtitle(spec.name);
+				this.loading = false;
+				if (this.onSpecRoute) {
+					this.$nextTick(() => {
+						this.restoreScroll(savedPosition);
+					});
+				}
+			}).fail(jqXHR => {
+				this.$router.replace({
+					name: 'ajax-error',
+					params: {code: jqXHR.status},
+					query: {url: encodeURIComponent(this.$route.fullPath)},
+				});
+			});
 		},
 		gotoSpec() {
 			if (this.$route.name !== 'spec') {
@@ -162,9 +159,7 @@ export default {
 		promptNavSpec() {
 			this.$refs.navSpecModal.show();
 		},
-		restoreScroll() {
-			// somehow this is available in $nextTick though clearSavedScrollPosition is called in afterEach
-			let position = this.$store.state.savedScrollPosition;
+		restoreScroll(position) {
 			if (position) {
 				console.debug('restoreScroll spec');
 				// Restore scroll position from history

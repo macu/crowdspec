@@ -90,7 +90,7 @@ export default {
 		}
 	}
 
-	>.content-page { // just content - no header - standard padding
+	.content-page { // just content - no header - standard padding
 		padding: $content-area-padding;
 
 		@include mobile {
