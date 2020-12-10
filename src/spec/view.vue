@@ -117,6 +117,10 @@ export default {
 			}
 		}
 
+		this.$nextTick(() => {
+			this.$emit('rendered');
+		});
+
 		if (this.enableEditing) {
 			this.drake = Dragula({
 				isContainer(el) {

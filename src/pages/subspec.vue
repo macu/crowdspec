@@ -23,6 +23,7 @@
 	</header>
 
 	<router-view
+		ref="view"
 		:loading="loading"
 		:subspec="subspec"
 		:enable-editing="enableEditing"
@@ -93,20 +94,14 @@ export default {
 	},
 	methods: {
 		loadSubspec(specId, subspecId, loadBlocks) {
-			console.log('load subspec');
+			console.debug('load subspec');
 			this.loading = true;
-			let savedPosition = this.$store.state.savedScrollPosition;
 			ajaxLoadSubspec(specId, subspecId, loadBlocks).then(subspec => {
 				console.debug('subspec loaded', subspec);
 				this.subspec = subspec;
 				setWindowSubtitle(subspec.name);
 				this.loading = false;
-				if (savedPosition && this.onSubspecRoute) {
-					this.$nextTick(() => {
-						console.debug('restoreScroll subspec');
-						$(window).scrollTop(savedPosition.y).scrollLeft(savedPosition.x);
-					});
-				}
+				this.$refs.view.$once('rendered', this.restoreScroll);
 			}).fail(jqXHR => {
 				this.$router.replace({
 					name: 'ajax-error',
@@ -125,6 +120,13 @@ export default {
 				this.subspec.desc = updatedSubspec.desc;
 				setWindowSubtitle(updatedSubspec.name);
 			});
+		},
+		restoreScroll() {
+			let savedPosition = this.$store.state.savedScrollPosition;
+			if (savedPosition && this.onSubspecRoute) {
+				console.debug('restoreScroll subspec');
+				$(window).scrollTop(savedPosition.y).scrollLeft(savedPosition.x);
+			}
 		},
 	},
 };

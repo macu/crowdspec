@@ -7,6 +7,7 @@
 		:subspec="subspec"
 		:enable-editing="enableEditing"
 		@prompt-nav-spec="promptNavSpec"
+		@rendered="$emit('rendered')"
 		/>
 </div>
 </template>

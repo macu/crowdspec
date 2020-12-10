@@ -77,7 +77,7 @@ export const store = new Vuex.Store({
 			state.movingBlockId = null;
 		},
 		setSavedScrollPosition(state, position) {
-			console.debug('setSavedScrollPosition');
+			console.debug('setSavedScrollPosition', position);
 			state.savedScrollPosition = position;
 		},
 		clearSavedScrollPosition(state) {

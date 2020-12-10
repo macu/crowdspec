@@ -37,6 +37,7 @@
 	</header>
 
 	<router-view
+		ref="view"
 		:loading="loading"
 		:spec="spec"
 		:enable-editing="enableEditing"
@@ -119,17 +120,12 @@ export default {
 		loadSpec(specId, loadBlocks) {
 			console.debug('load spec');
 			this.loading = true;
-			let savedPosition = this.$store.state.savedScrollPosition;
 			ajaxLoadSpec(specId, loadBlocks).then(spec => {
 				console.debug('spec loaded', spec);
 				this.spec = spec;
 				setWindowSubtitle(spec.name);
 				this.loading = false;
-				if (this.onSpecRoute) {
-					this.$nextTick(() => {
-						this.restoreScroll(savedPosition);
-					});
-				}
+				this.$refs.view.$once('rendered', this.restoreScroll);
 			}).fail(jqXHR => {
 				this.$router.replace({
 					name: 'ajax-error',
@@ -160,18 +156,20 @@ export default {
 			this.$refs.navSpecModal.show();
 		},
 		restoreScroll(position) {
-			if (position) {
-				console.debug('restoreScroll spec');
-				// Restore scroll position from history
-				$(window).scrollTop(position.y).scrollLeft(position.x);
-			} else if (
-				idsEq(this.$store.state.currentSpecId, this.spec.id) &&
-				!!this.$store.state.currentSpecScrollTop
-			) {
-				console.debug('restoreScroll spec from currentSpecScrollTop');
-				// FIXME this is not working when clicking a subspec link and then navigating back
-				// Restore last saved scroll position on spec page
-				$(window).scrollTop(this.$store.state.currentSpecScrollTop);
+			if (this.onSpecRoute) {
+				let position = this.$store.state.savedScrollPosition;
+				if (position) {
+					console.debug('restoreScroll spec');
+					// Restore scroll position from history
+					$(window).scrollTop(position.y).scrollLeft(position.x);
+				} else if (
+					idsEq(this.$store.state.currentSpecId, this.spec.id) &&
+					!!this.$store.state.currentSpecScrollTop
+				) {
+					console.debug('restoreScroll spec from currentSpecScrollTop');
+					// Restore last saved scroll position on spec page when returning through forward nav
+					$(window).scrollTop(this.$store.state.currentSpecScrollTop);
+				}
 			}
 		},
 	},

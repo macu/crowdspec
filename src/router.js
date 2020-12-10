@@ -29,8 +29,7 @@ export const router = new VueRouter({
 		// save to allow restoring scroll position following additional DOM updates
 		// made during the route mounted hook
 		store.commit('setSavedScrollPosition', savedPosition);
-		return to.hash ? {selector: to.hash}
-			: (savedPosition ? savedPosition : {x: 0, y: 0});
+		return savedPosition ? savedPosition : {x: 0, y: 0};
 	},
 });
 
@@ -55,9 +54,8 @@ router.beforeEach((to, from, next) => {
 router.afterEach((to, from) => {
 	// afterEach is called after navigation is confirmed,
 	// but before the new route has been rendered.
-	// scroll position must be restored within the next() callback
-	// in beforeRouteEnter and before calling next() in beforeRouteUpdate.
-	// clear saved scroll position of previous route
+	// afterEach is called before scrollBehavior is called for the new route.
+	// clear savedScrollPosition retained for the previous route
 	console.debug('afterEach');
 	store.commit('clearSavedScrollPosition');
 });
