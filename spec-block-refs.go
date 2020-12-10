@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"net/http"
 	"net/url"
 	"strings"
 )
@@ -57,7 +56,7 @@ func handleCreateRefItem(tx *sql.Tx, specID int64, fields url.Values) (*int64, i
 		refURL := strings.TrimSpace(fields.Get("refUrl"))
 		refItem, err := createURLObject(tx, specID, refURL)
 		if err != nil {
-			return nil, nil, fmt.Errorf("error creating URL ref item: %w", err)
+			return nil, nil, fmt.Errorf("creating URL ref item: %w", err)
 		}
 		return &refItem.ID, refItem, nil
 
@@ -66,7 +65,7 @@ func handleCreateRefItem(tx *sql.Tx, specID int64, fields url.Values) (*int64, i
 		refDesc := AtoPointerNilIfEmpty(strings.TrimSpace(fields.Get("refDesc")))
 		refItem, err := createSubspec(tx, specID, refName, refDesc)
 		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("error loading subspec: %w", err)
+			return nil, nil, fmt.Errorf("creating subspec ref item: %w", err)
 		}
 		return &refItem.ID, refItem, nil
 

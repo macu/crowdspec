@@ -2,10 +2,11 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 )
 
-func ajaxUserHome(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
+func ajaxUserHome(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
 	// GET
 
 	rows, err := db.Query(`
@@ -16,7 +17,8 @@ func ajaxUserHome(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 		ORDER BY created_at ASC
 		`, OwnerTypeUser, userID)
 	if err != nil {
-		return nil, http.StatusInternalServerError, err
+		logError(r, userID, fmt.Errorf("querying user specs: %w", err))
+		return nil, http.StatusInternalServerError
 	}
 
 	userSpecs := []Spec{}
@@ -24,7 +26,12 @@ func ajaxUserHome(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 		s := Spec{}
 		err = rows.Scan(&s.ID, &s.OwnerType, &s.OwnerID, &s.Name, &s.Desc, &s.Public, &s.Updated)
 		if err != nil {
-			return nil, http.StatusInternalServerError, err
+			if err2 := rows.Close(); err2 != nil { // TODO Add everywhere
+				logError(r, userID, fmt.Errorf("closing rows: %s; on scan error: %w", err2, err))
+				return nil, http.StatusInternalServerError
+			}
+			logError(r, userID, fmt.Errorf("scanning spec: %w", err))
+			return nil, http.StatusInternalServerError
 		}
 		userSpecs = append(userSpecs, s)
 	}
@@ -40,7 +47,8 @@ func ajaxUserHome(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 		ORDER BY spec.created_at ASC
 		`, OwnerTypeUser)
 	if err != nil {
-		return nil, http.StatusInternalServerError, err
+		logError(r, userID, fmt.Errorf("querying public specs: %w", err))
+		return nil, http.StatusInternalServerError
 	}
 
 	publicSpecs := []Spec{}
@@ -49,7 +57,12 @@ func ajaxUserHome(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 		err = rows.Scan(&s.ID, &s.OwnerType, &s.OwnerID, &s.Name, &s.Desc,
 			&s.Username, &s.Updated)
 		if err != nil {
-			return nil, http.StatusInternalServerError, err
+			if err2 := rows.Close(); err2 != nil { // TODO Add everywhere
+				logError(r, userID, fmt.Errorf("closing rows: %s; on scan error: %w", err2, err))
+				return nil, http.StatusInternalServerError
+			}
+			logError(r, userID, fmt.Errorf("scanning spec: %w", err))
+			return nil, http.StatusInternalServerError
 		}
 		publicSpecs = append(publicSpecs, s)
 	}
@@ -62,5 +75,5 @@ func ajaxUserHome(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 		PublicSpecs: publicSpecs,
 	}
 
-	return payload, http.StatusOK, nil
+	return payload, http.StatusOK
 }

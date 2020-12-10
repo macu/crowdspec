@@ -52,23 +52,13 @@ export default {
 		SpecView,
 		EditSubspecModal,
 	},
-	params: {
+	props: {
 		enableEditing: Boolean,
 	},
 	data() {
 		return {
 			subspec: null,
 		};
-	},
-	computed: {
-		currentUserOwns() {
-			return this.subspec.ownerType === OWNER_TYPE_USER &&
-				this.$store.getters.userID === this.subspec.ownerId;
-		},
-		enableEditing() {
-			// Currently users may edit only their own specs
-			return this.currentUserOwns;
-		},
 	},
 	beforeRouteEnter(to, from, next) {
 		console.debug('beforeRouteEnter subspec', to);

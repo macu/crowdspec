@@ -1,6 +1,9 @@
 package main
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 // Spec represents a db spec row
 type Spec struct {
@@ -31,5 +34,8 @@ const (
 
 func recordSpecBlocksUpdated(db DBConn, specID int64) error {
 	_, err := db.Exec(`UPDATE spec SET blocks_updated_at=$2 WHERE id=$1`, specID, time.Now())
-	return err
+	if err != nil {
+		return fmt.Errorf("updating spec: %w", err)
+	}
+	return nil
 }

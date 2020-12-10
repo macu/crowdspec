@@ -9,64 +9,76 @@ import (
 )
 
 // Creates a block within a spec.
-func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
+func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
 	// POST
 
 	err := r.ParseForm()
 	if err != nil {
-		return nil, http.StatusInternalServerError, err
+		logError(r, userID, err)
+		return nil, http.StatusInternalServerError
 	}
 
 	specID, err := AtoInt64(r.Form.Get("specId"))
 	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("parsing specId: %w", err)
+		logError(r, userID, fmt.Errorf("parsing specId: %w", err))
+		return nil, http.StatusBadRequest
 	}
 
 	subspecID, err := AtoInt64NilIfEmpty(r.Form.Get("subspecId"))
 	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("parsing subspecId: %w", err)
+		logError(r, userID, fmt.Errorf("parsing subspecId: %w", err))
+		return nil, http.StatusBadRequest
 	}
 
 	parentID, err := AtoInt64NilIfEmpty(r.Form.Get("parentId"))
 	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("parsing parentId: %w", err)
+		logError(r, userID, fmt.Errorf("parsing parentId: %w", err))
+		return nil, http.StatusBadRequest
 	}
 
 	insertBeforeID, err := AtoInt64NilIfEmpty(r.Form.Get("insertBeforeId"))
 	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("parsing insertBeforeId: %w", err)
+		logError(r, userID, fmt.Errorf("parsing insertBeforeId: %w", err))
+		return nil, http.StatusBadRequest
 	}
 
 	if access, err := verifyWriteSpecSubspecBlocks(db, userID, specID, subspecID,
 		parentID, insertBeforeID); !access || err != nil {
 		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("verifying write blocks: %w", err)
+			logError(r, userID, fmt.Errorf("verifying write blocks: %w", err))
+			return nil, http.StatusInternalServerError
 		}
-		return nil, http.StatusForbidden,
-			fmt.Errorf("write blocks access denied to user %d in spec %d", userID, specID)
+		logError(r, userID, fmt.Errorf("write blocks access denied to user %d in spec %d", userID, specID))
+		return nil, http.StatusForbidden
 	}
 
 	styleType := r.Form.Get("styleType")
 	if !isValidListStyleType(styleType) {
-		return nil, http.StatusBadRequest, fmt.Errorf("invalid styleType: %s", styleType)
+		logError(r, userID, fmt.Errorf("invalid styleType: %s", styleType))
+		return nil, http.StatusBadRequest
 	}
 
 	contentType := AtoPointerNilIfEmpty(r.Form.Get("contentType"))
 	if contentType != nil && !isValidTextContentType(*contentType) {
-		return nil, http.StatusBadRequest, fmt.Errorf("invalid contentType: %s", *contentType)
+		logError(r, userID, fmt.Errorf("invalid contentType: %s", *contentType))
+		return nil, http.StatusBadRequest
 	}
 
 	refType, refID, err := validateCreateRefItemFields(r.Form)
 	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("invalid ref fields: %w", err)
+		logError(r, userID, fmt.Errorf("invalid ref fields: %w", err))
+		return nil, http.StatusBadRequest
 	}
 
 	if access, err := verifyRefAccess(db, specID, refType, refID); !access || err != nil {
 		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("verifying ref access: %w", err)
+			logError(r, userID, fmt.Errorf("validating ref access: %w", err))
+			return nil, http.StatusInternalServerError
 		}
-		return nil, http.StatusForbidden,
-			fmt.Errorf("ref access denied to user %d in spec %d, refType %s refID %d", userID, specID, *refType, *refID)
+		logError(r, userID,
+			fmt.Errorf("ref access denied to user %d in spec %d, refType %s refID %d",
+				userID, specID, *refType, *refID))
+		return nil, http.StatusForbidden
 	}
 
 	title := AtoPointerNilIfEmpty(strings.TrimSpace(r.Form.Get("title")))
@@ -74,12 +86,13 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 	body := AtoPointerNilIfEmpty(strings.TrimSpace(r.Form.Get("body")))
 
 	if refType == nil && title == nil && body == nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("empty blocks are not currently allowed")
+		logError(r, userID, fmt.Errorf("empty blocks are not currently allowed"))
+		return nil, http.StatusBadRequest
 	}
 
 	// TODO Html sanitize title and body
 
-	return inTransaction(r.Context(), db, func(tx *sql.Tx) (interface{}, int, error) {
+	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
 		var err error
 
@@ -89,12 +102,14 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 			if refID == nil {
 				refID, refItem, err = handleCreateRefItem(tx, specID, r.Form)
 				if err != nil {
-					return nil, http.StatusInternalServerError, fmt.Errorf("error creating ref item: %w", err)
+					logError(r, userID, fmt.Errorf("creating ref item: %w", err))
+					return nil, http.StatusInternalServerError
 				}
 			} else {
 				refItem, err = loadRefItem(tx, *refType, *refID)
 				if err != nil {
-					return nil, http.StatusInternalServerError, fmt.Errorf("error loading ref item: %w", err)
+					logError(r, userID, fmt.Errorf("loading ref item: %w", err))
+					return nil, http.StatusInternalServerError
 				}
 			}
 		}
@@ -102,7 +117,8 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 		// Prepare insert position
 		insertAt, code, err := makeInsertAt(tx, specID, subspecID, parentID, insertBeforeID)
 		if err != nil {
-			return nil, code, err
+			logError(r, userID, fmt.Errorf("making insert position: %w", err))
+			return nil, code
 		}
 
 		block := &SpecBlock{
@@ -128,71 +144,84 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 			styleType, contentType, refType, refID, title, body,
 		).Scan(&block.ID, &block.Created, &block.Updated, &block.Title, &block.Body)
 		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("inserting block: %w", err)
+			logError(r, userID, fmt.Errorf("creating block: %w", err))
+			return nil, http.StatusInternalServerError
 		}
 
 		err = recordSpecBlocksUpdated(tx, specID)
 		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("updating spec blocks_updated_at: %w", err)
+			logError(r, userID, fmt.Errorf("recording update time on spec: %w", err))
+			return nil, http.StatusInternalServerError
 		}
 		if subspecID != nil {
 			err = recordSubspecBlocksUpdated(db, *subspecID)
 			if err != nil {
-				return nil, http.StatusInternalServerError, fmt.Errorf("updating subspec blocks_updated_at: %w", err)
+				logError(r, userID, fmt.Errorf("recording update time on subspec: %w", err))
+				return nil, http.StatusInternalServerError
 			}
 		}
 
-		return block, http.StatusOK, nil
+		return block, http.StatusOK
 	})
 }
 
-func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
+func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
 	// POST
 
 	err := r.ParseForm()
 	if err != nil {
-		return nil, http.StatusInternalServerError, err
+		logError(r, userID, err)
+		return nil, http.StatusInternalServerError
 	}
 
 	specID, err := AtoInt64(r.Form.Get("specId"))
 	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("parsing specId: %w", err)
+		logError(r, userID, fmt.Errorf("parsing specId: %w", err))
+		return nil, http.StatusBadRequest
 	}
 
 	blockID, err := AtoInt64(r.Form.Get("blockId"))
 	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("parsing blockId: %w", err)
+		logError(r, userID, fmt.Errorf("parsing blockId: %w", err))
+		return nil, http.StatusBadRequest
 	}
 
 	if access, err := verifyWriteSpecBlock(db, userID, specID, blockID); !access || err != nil {
 		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("verifying write block: %w", err)
+			logError(r, userID, fmt.Errorf("validating write block access: %w", err))
+			return nil, http.StatusInternalServerError
 		}
-		return nil, http.StatusForbidden,
-			fmt.Errorf("write block access denied to user %d in spec %d", userID, specID)
+		logError(r, userID, fmt.Errorf("write block access denied to user %d in spec %d", userID, specID))
+		return nil, http.StatusForbidden
 	}
 
 	styleType := r.Form.Get("styleType")
 	if !isValidListStyleType(styleType) {
-		return nil, http.StatusBadRequest, fmt.Errorf("invalid styleType: %s", styleType)
+		logError(r, userID, fmt.Errorf("invalid styleType: %s", styleType))
+		return nil, http.StatusBadRequest
 	}
 
 	contentType := AtoPointerNilIfEmpty(r.Form.Get("contentType"))
 	if contentType != nil && !isValidTextContentType(*contentType) {
-		return nil, http.StatusBadRequest, fmt.Errorf("invalid contentType: %s", *contentType)
+		logError(r, userID, fmt.Errorf("invalid contentType: %s", *contentType))
+		return nil, http.StatusBadRequest
 	}
 
 	refType, refID, err := validateCreateRefItemFields(r.Form)
 	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("invalid ref fields: %w", err)
+		logError(r, userID, fmt.Errorf("invalid ref fields: %w", err))
+		return nil, http.StatusBadRequest
 	}
 
 	if access, err := verifyRefAccess(db, specID, refType, refID); !access || err != nil {
 		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("verifying ref access: %w", err)
+			logError(r, userID, fmt.Errorf("validating ref access: %w", err))
+			return nil, http.StatusInternalServerError
 		}
-		return nil, http.StatusForbidden,
-			fmt.Errorf("ref access denied to user %d in spec %d, refType %s refID %d", userID, specID, *refType, *refID)
+		logError(r, userID,
+			fmt.Errorf("ref access denied to user %d in spec %d, refType %s refID %d",
+				userID, specID, *refType, *refID))
+		return nil, http.StatusForbidden
 	}
 
 	title := AtoPointerNilIfEmpty(strings.TrimSpace(r.Form.Get("title")))
@@ -200,12 +229,13 @@ func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 	body := AtoPointerNilIfEmpty(strings.TrimSpace(r.Form.Get("body")))
 
 	if refType == nil && title == nil && body == nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("empty blocks are not currently allowed")
+		logError(r, userID, fmt.Errorf("empty blocks are not currently allowed"))
+		return nil, http.StatusBadRequest
 	}
 
 	// TODO Html sanitize title and body
 
-	return inTransaction(r.Context(), db, func(tx *sql.Tx) (interface{}, int, error) {
+	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
 		var err error
 
@@ -215,12 +245,14 @@ func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 			if refID == nil {
 				refID, refItem, err = handleCreateRefItem(tx, specID, r.Form)
 				if err != nil {
-					return nil, http.StatusInternalServerError, fmt.Errorf("error creating ref item: %w", err)
+					logError(r, userID, fmt.Errorf("creating ref item: %w", err))
+					return nil, http.StatusInternalServerError
 				}
 			} else {
 				refItem, err = loadRefItem(tx, *refType, *refID)
 				if err != nil {
-					return nil, http.StatusInternalServerError, fmt.Errorf("error loading ref item: %w", err)
+					logError(r, userID, fmt.Errorf("loading ref item: %w", err))
+					return nil, http.StatusInternalServerError
 				}
 			}
 		}
@@ -244,35 +276,40 @@ func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 			styleType, contentType, refType, refID, title, body,
 		).Scan(&block.Updated, &block.SubspecID, &block.Title, &block.Body)
 		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("updating block: %w", err)
+			logError(r, userID, fmt.Errorf("updating block: %w", err))
+			return nil, http.StatusInternalServerError
 		}
 
 		err = recordSpecBlocksUpdated(tx, specID)
 		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("updating spec blocks_updated_at: %w", err)
+			logError(r, userID, fmt.Errorf("recording update time on spec: %w", err))
+			return nil, http.StatusInternalServerError
 		}
 		if block.SubspecID != nil {
 			err = recordSubspecBlocksUpdated(db, *block.SubspecID)
 			if err != nil {
-				return nil, http.StatusInternalServerError, fmt.Errorf("updating subspec blocks_updated_at: %w", err)
+				logError(r, userID, fmt.Errorf("recording update time on subspec: %w", err))
+				return nil, http.StatusInternalServerError
 			}
 		}
 
-		return block, http.StatusOK, nil
+		return block, http.StatusOK
 	})
 }
 
-func ajaxSpecMoveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
+func ajaxSpecMoveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
 	// POST
 
 	err := r.ParseForm()
 	if err != nil {
-		return nil, http.StatusInternalServerError, err
+		logError(r, userID, err)
+		return nil, http.StatusInternalServerError
 	}
 
 	blockID, err := AtoInt64(r.Form.Get("blockId"))
 	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("parsing blockId: %w", err)
+		logError(r, userID, fmt.Errorf("parsing blockId: %w", err))
+		return nil, http.StatusBadRequest
 	}
 
 	var specID int64
@@ -283,38 +320,45 @@ func ajaxSpecMoveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 		WHERE id = $1
 		`, blockID).Scan(&specID, &sourceSubspecID)
 	if err != nil {
-		return nil, http.StatusInternalServerError, fmt.Errorf("loading specID for block %d: %w", blockID, err)
+		logError(r, userID, fmt.Errorf("loading specID for block %d: %w", blockID, err))
+		return nil, http.StatusInternalServerError
 	}
 
 	subspecID, err := AtoInt64NilIfEmpty(r.Form.Get("subspecId"))
 	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("parsing subsapceId: %w", err)
+		logError(r, userID, fmt.Errorf("parsing subsapceId: %w", err))
+		return nil, http.StatusBadRequest
 	}
 
 	parentID, err := AtoInt64NilIfEmpty(r.Form.Get("parentId"))
 	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("parsing parentId: %w", err)
+		logError(r, userID, fmt.Errorf("parsing parentId: %w", err))
+		return nil, http.StatusBadRequest
 	}
 
 	insertBeforeID, err := AtoInt64NilIfEmpty(r.Form.Get("insertBeforeId"))
 	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("parsing insertBeforeId: %w", err)
+		logError(r, userID, fmt.Errorf("parsing insertBeforeId: %w", err))
+		return nil, http.StatusBadRequest
 	}
 
 	if access, err := verifyWriteSpecSubspecBlocks(db, userID, specID, subspecID,
 		parentID, insertBeforeID, &blockID); !access || err != nil {
 		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("verifying write blocks: %w", err)
+			logError(r, userID, fmt.Errorf("validating write blocks access: %w", err))
+			return nil, http.StatusInternalServerError
 		}
-		return nil, http.StatusForbidden,
-			fmt.Errorf("write blocks access denied to user %d in spec %d", userID, specID)
+		logError(r, userID,
+			fmt.Errorf("write blocks access denied to user %d in spec %d", userID, specID))
+		return nil, http.StatusForbidden
 	}
 
-	return inTransaction(r.Context(), db, func(tx *sql.Tx) (interface{}, int, error) {
+	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
 		insertAt, code, err := makeInsertAt(tx, specID, subspecID, parentID, insertBeforeID)
 		if err != nil {
-			return 0, code, err
+			logError(r, userID, fmt.Errorf("making insert position: %w", err))
+			return 0, code
 		}
 
 		_, err = tx.Exec(`
@@ -323,7 +367,8 @@ func ajaxSpecMoveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 			WHERE id = $1
 			`, blockID, subspecID, parentID, insertAt)
 		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("moving block: %w", err)
+			logError(r, userID, fmt.Errorf("moving block: %w", err))
+			return nil, http.StatusInternalServerError
 		}
 
 		subspecChanged := (sourceSubspecID == nil && subspecID != nil) ||
@@ -350,38 +395,43 @@ func ajaxSpecMoveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 		    WHERE spec_block.id IN (SELECT id FROM block_tree)
 				`, blockID, subspecID)
 			if err != nil {
-				return nil, http.StatusInternalServerError, fmt.Errorf("moving block tree to subspec: %w", err)
+				logError(r, userID, fmt.Errorf("moving block tree to subspec: %w", err))
+				return nil, http.StatusInternalServerError
 			}
 		}
 
 		err = recordSpecBlocksUpdated(tx, specID)
 		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("updating spec blocks_updated_at: %w", err)
+			logError(r, userID, fmt.Errorf("recording update time on spec: %w", err))
+			return nil, http.StatusInternalServerError
 		}
 
 		if subspecID != nil {
 			err = recordSubspecBlocksUpdated(db, *subspecID)
 			if err != nil {
-				return nil, http.StatusInternalServerError, fmt.Errorf("updating subspec blocks_updated_at: %w", err)
+				logError(r, userID, fmt.Errorf("recording update time on subspec: %w", err))
+				return nil, http.StatusInternalServerError
 			}
 		}
 
 		if subspecChanged && sourceSubspecID != nil {
 			err = recordSubspecBlocksUpdated(db, *sourceSubspecID)
 			if err != nil {
-				return nil, http.StatusInternalServerError, fmt.Errorf("updating subspec blocks_updated_at: %w", err)
+				logError(r, userID, fmt.Errorf("recording update time on subspec: %w", err))
+				return nil, http.StatusInternalServerError
 			}
 		}
 
 		if subspecChanged {
 			block, err := loadBlock(tx, blockID)
 			if err != nil {
-				return nil, http.StatusInternalServerError, err
+				logError(r, userID, fmt.Errorf("loading blocks: %w", err))
+				return nil, http.StatusInternalServerError
 			}
-			return block, http.StatusOK, nil
+			return block, http.StatusOK
 		}
 
-		return nil, http.StatusOK, nil
+		return nil, http.StatusOK
 	})
 }
 
@@ -452,17 +502,19 @@ func makeInsertAt(tx *sql.Tx, specID int64, subspecID *int64, parentID *int64, i
 	return insertAt, http.StatusOK, nil
 }
 
-func ajaxSpecDeleteBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
+func ajaxSpecDeleteBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
 	// POST
 
 	err := r.ParseForm()
 	if err != nil {
-		return nil, http.StatusInternalServerError, err
+		logError(r, userID, err)
+		return nil, http.StatusInternalServerError
 	}
 
 	blockID, err := AtoInt64(r.Form.Get("blockId"))
 	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("parsing blockId: %w", err)
+		logError(r, userID, fmt.Errorf("parsing blockId: %w", err))
+		return nil, http.StatusBadRequest
 	}
 
 	var specID int64
@@ -473,18 +525,21 @@ func ajaxSpecDeleteBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 			WHERE id = $1
 			`, blockID).Scan(&specID, &subspecID)
 	if err != nil {
-		return nil, http.StatusInternalServerError, fmt.Errorf("loading specID for block %d: %w", blockID, err)
+		logError(r, userID, fmt.Errorf("loading specID for block %d: %w", blockID, err))
+		return nil, http.StatusInternalServerError
 	}
 
 	if access, err := verifyWriteSpecSubspecBlocks(db, userID, specID, subspecID, &blockID); !access || err != nil {
 		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("verifying write block: %w", err)
+			logError(r, userID, fmt.Errorf("validating write block access: %w", err))
+			return nil, http.StatusInternalServerError
 		}
-		return nil, http.StatusForbidden,
-			fmt.Errorf("write blocks access denied to user %d on block %d", userID, blockID)
+		logError(r, userID,
+			fmt.Errorf("write blocks access denied to user %d on block %d", userID, blockID))
+		return nil, http.StatusForbidden
 	}
 
-	return inTransaction(r.Context(), db, func(tx *sql.Tx) (interface{}, int, error) {
+	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
 		// Delete block row (delete is cascade; subblocks will also be deleted)
 		_, err := tx.Exec(`
@@ -492,20 +547,23 @@ func ajaxSpecDeleteBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 			WHERE id=$1
 			`, blockID)
 		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("deleting block: %w", err)
+			logError(r, userID, fmt.Errorf("deleting block: %w", err))
+			return nil, http.StatusInternalServerError
 		}
 
 		err = recordSpecBlocksUpdated(tx, specID)
 		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("updating spec blocks_updated_at: %w", err)
+			logError(r, userID, fmt.Errorf("recording update time on spec: %w", err))
+			return nil, http.StatusInternalServerError
 		}
 		if subspecID != nil {
 			err = recordSubspecBlocksUpdated(db, *subspecID)
 			if err != nil {
-				return nil, http.StatusInternalServerError, fmt.Errorf("updating subspec blocks_updated_at: %w", err)
+				logError(r, userID, fmt.Errorf("recording update time on subspec: %w", err))
+				return nil, http.StatusInternalServerError
 			}
 		}
 
-		return nil, http.StatusOK, nil
+		return nil, http.StatusOK
 	})
 }

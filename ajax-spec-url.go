@@ -19,21 +19,24 @@ func validateURL(s string) error {
 	return nil
 }
 
-func ajaxSpecURLs(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
+func ajaxSpecURLs(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
 	// GET
 	query := r.URL.Query()
 
 	specID, err := AtoInt64(query.Get("specId"))
 	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("invalid specId: %w", err)
+		logError(r, userID, fmt.Errorf("parsing specId: %w", err))
+		return nil, http.StatusBadRequest
 	}
 
 	if access, err := verifyReadSpec(db, userID, specID); !access || err != nil {
 		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("verifying read spec: %w", err)
+			logError(r, userID, fmt.Errorf("validating read spec access: %w", err))
+			return nil, http.StatusInternalServerError
 		}
-		return nil, http.StatusForbidden,
-			fmt.Errorf("read spec access denied to user %d in spec %d", userID, specID)
+		logError(r, userID,
+			fmt.Errorf("read spec access denied to user %d in spec %d", userID, specID))
+		return nil, http.StatusForbidden
 	}
 
 	rows, err := db.Query(`
@@ -42,7 +45,8 @@ func ajaxSpecURLs(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 		WHERE spec_id = $1
 		ORDER BY url_title, url`, specID)
 	if err != nil {
-		return nil, http.StatusInternalServerError, fmt.Errorf("querying links: %w", err)
+		logError(r, userID, fmt.Errorf("querying links: %w", err))
+		return nil, http.StatusInternalServerError
 	}
 
 	links := []*URLObject{}
@@ -54,153 +58,180 @@ func ajaxSpecURLs(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 		err = rows.Scan(&o.ID, &o.Created, &o.URL, &o.Title, &o.Desc, &o.ImageData, &o.Updated)
 		if err != nil {
 			if err2 := rows.Close(); err2 != nil { // TODO Add everywhere
-				return nil, http.StatusInternalServerError, fmt.Errorf("error closing rows: %s; on scan error: %w", err2, err)
+				logError(r, userID, fmt.Errorf("closing rows: %s; on scan error: %w", err2, err))
+				return nil, http.StatusInternalServerError
 			}
-			return nil, http.StatusInternalServerError, fmt.Errorf("error scanning spec_url: %w", err)
+			logError(r, userID, fmt.Errorf("scanning spec_url: %w", err))
+			return nil, http.StatusInternalServerError
 		}
 		links = append(links, o)
 	}
 
-	return links, http.StatusOK, nil
+	return links, http.StatusOK
 }
 
-func ajaxSpecCreateURL(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
+func ajaxSpecCreateURL(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
 	// POST
 
 	err := r.ParseForm()
 	if err != nil {
-		return nil, http.StatusInternalServerError, err
+		logError(r, userID, err)
+		return nil, http.StatusInternalServerError
 	}
 
 	specID, err := AtoInt64(r.Form.Get("specId"))
 	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("parsing specId: %w", err)
+		logError(r, userID, fmt.Errorf("parsing specId: %w", err))
+		return nil, http.StatusBadRequest
 	}
 
 	if access, err := verifyWriteSpec(db, userID, specID); !access || err != nil {
 		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("verifying write spec: %w", err)
+			logError(r, userID, fmt.Errorf("validating write spec access: %w", err))
+			return nil, http.StatusInternalServerError
 		}
-		return nil, http.StatusForbidden,
-			fmt.Errorf("write spec access denied to user %d in spec %d", userID, specID)
+		logError(r, userID,
+			fmt.Errorf("write spec access denied to user %d in spec %d", userID, specID))
+		return nil, http.StatusForbidden
 	}
 
 	url := strings.TrimSpace(r.Form.Get("url"))
 	if url == "" {
-		return nil, http.StatusBadRequest, fmt.Errorf("url required")
+		logError(r, userID, fmt.Errorf("url required"))
+		return nil, http.StatusBadRequest
 	}
 	if err = validateURL(url); err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("invalid url: %w", err)
+		logError(r, userID, fmt.Errorf("invalid url: %w", err))
+		return nil, http.StatusBadRequest
 	}
 
-	return inTransaction(r.Context(), db, func(tx *sql.Tx) (interface{}, int, error) {
+	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
 		urlObject, err := createURLObject(tx, specID, url)
+
 		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("creating spec_url: %w", err)
+			logError(r, userID, fmt.Errorf("creating spec_url: %w", err))
+			return nil, http.StatusInternalServerError
 		}
 
-		return urlObject, http.StatusOK, nil
+		return urlObject, http.StatusOK
 	})
 }
 
-func ajaxSpecRefreshURL(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
+func ajaxSpecRefreshURL(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
 	// POST
 
 	err := r.ParseForm()
 	if err != nil {
-		return nil, http.StatusInternalServerError, err
+		logError(r, userID, err)
+		return nil, http.StatusInternalServerError
 	}
 
 	id, err := AtoInt64(r.Form.Get("id"))
 	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("parsing id: %w", err)
+		logError(r, userID, fmt.Errorf("parsing id: %w", err))
+		return nil, http.StatusBadRequest
 	}
 
 	if access, err := verifyWriteURL(db, userID, id); !access || err != nil {
 		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("verifying write url: %w", err)
+			logError(r, userID, fmt.Errorf("validating write url access: %w", err))
+			return nil, http.StatusInternalServerError
 		}
-		return nil, http.StatusForbidden,
-			fmt.Errorf("write url access denied to user %d for url %d", userID, id)
+		logError(r, userID, fmt.Errorf("write url access denied to user %d for url %d", userID, id))
+		return nil, http.StatusForbidden
 	}
 
 	url := strings.TrimSpace(r.Form.Get("url"))
 	if url == "" {
-		return nil, http.StatusBadRequest, fmt.Errorf("url required")
+		logError(r, userID, fmt.Errorf("url required"))
+		return nil, http.StatusBadRequest
 	}
 	if err = validateURL(url); err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("invalid url: %w", err)
+		logError(r, userID, fmt.Errorf("invalid url: %w", err))
+		return nil, http.StatusBadRequest
 	}
 
-	return inTransaction(r.Context(), db, func(tx *sql.Tx) (interface{}, int, error) {
+	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
 		urlObject, err := updateURLObject(tx, id, url)
+
 		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("updating spec_url: %w", err)
+			logError(r, userID, fmt.Errorf("updating spec_url: %w", err))
+			return nil, http.StatusInternalServerError
 		}
 
-		return urlObject, http.StatusOK, nil
+		return urlObject, http.StatusOK
 	})
 }
 
-func ajaxSpecDeleteURL(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
+func ajaxSpecDeleteURL(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
 	// POST
 
 	err := r.ParseForm()
 	if err != nil {
-		return nil, http.StatusInternalServerError, err
+		logError(r, userID, err)
+		return nil, http.StatusInternalServerError
 	}
 
 	id, err := AtoInt64(r.Form.Get("id"))
 	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("parsing id: %w", err)
+		logError(r, userID, fmt.Errorf("parsing id: %w", err))
+		return nil, http.StatusBadRequest
 	}
 
 	if access, err := verifyWriteURL(db, userID, id); !access || err != nil {
 		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("verifying write url: %w", err)
+			logError(r, userID, fmt.Errorf("validating write url access: %w", err))
+			return nil, http.StatusInternalServerError
 		}
-		return nil, http.StatusForbidden,
-			fmt.Errorf("write url access denied to user %d for url %d", userID, id)
+		logError(r, userID,
+			fmt.Errorf("write url access denied to user %d for url %d", userID, id))
+		return nil, http.StatusForbidden
 	}
 
-	return inTransaction(r.Context(), db, func(tx *sql.Tx) (interface{}, int, error) {
+	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
-		// Leave block references
+		// Don't clear references from blocks - display "content unavailable" message
 
 		_, err = tx.Exec(`
 				DELETE FROM spec_url
 				WHERE id=$1
 				`, id)
+
 		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("deleting spec_url: %w", err)
+			logError(r, userID, fmt.Errorf("deleting spec_url: %w", err))
+			return nil, http.StatusInternalServerError
 		}
 
-		return nil, http.StatusOK, nil
+		return nil, http.StatusOK
 	})
 }
 
 // Returns a URL preview.
-func ajaxFetchURLPreview(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
+func ajaxFetchURLPreview(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
 	// GET
 
 	err := r.ParseForm()
 	if err != nil {
-		return nil, http.StatusInternalServerError, err
+		logError(r, userID, err)
+		return nil, http.StatusInternalServerError
 	}
 
 	url := strings.TrimSpace(r.Form.Get("url"))
 	if url == "" {
-		return nil, http.StatusBadRequest, fmt.Errorf("url required")
+		logError(r, userID, fmt.Errorf("url required"))
+		return nil, http.StatusBadRequest
 	}
 	if err = validateURL(url); err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("invalid url: %w", err)
+		logError(r, userID, fmt.Errorf("invalid url: %w", err))
+		return nil, http.StatusBadRequest
 	}
 
 	data, err := fetchMetadata(url)
 	if err != nil {
-		return nil, http.StatusInternalServerError, fmt.Errorf("error loading url metadata: %w", err)
+		logError(r, userID, fmt.Errorf("loading url metadata: %w", err))
+		return nil, http.StatusInternalServerError
 	}
 
 	urlObject := &URLObject{}
@@ -227,5 +258,5 @@ func ajaxFetchURLPreview(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 		}
 	}
 
-	return urlObject, http.StatusOK, nil
+	return urlObject, http.StatusOK
 }

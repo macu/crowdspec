@@ -8,7 +8,7 @@ html, body {
 	padding: 0;
 }
 
-.el-dialog__body, .el-checkbox__label {
+.el-dialog__body, .el-checkbox__label, .el-popover {
 	// Apply normal word-break (Element is from China)
 	word-break: normal;
 }

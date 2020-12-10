@@ -114,6 +114,8 @@ func isURLRequiredForRefType(t *string) bool {
 // Load a sinle block and subblocks.
 func loadBlock(c DBConn, blockID int64) (*SpecBlock, error) {
 
+	// Ref items are only loaded if belonging to the same spec.
+	// TODO Allow linking to any ref item, but verify current user's access when joining info.
 	args := []interface{}{blockID}
 	query := `
 		WITH RECURSIVE block_tree(id) AS (
@@ -138,9 +140,11 @@ func loadBlock(c DBConn, blockID int64) (*SpecBlock, error) {
 		LEFT JOIN spec_subspec
 		ON spec_block.ref_type = ` + argPlaceholder(BlockRefSubspec, &args) + `
 		AND spec_subspec.id = spec_block.ref_id
+		AND spec_subspec.spec_id = spec_block.spec_id
 		LEFT JOIN spec_url
 		ON spec_block.ref_type = ` + argPlaceholder(BlockRefURL, &args) + `
 		AND spec_url.id = spec_block.ref_id
+		AND spec_url.spec_id = spec_block.spec_id
 		WHERE spec_block.id IN (SELECT id FROM block_tree)
 		ORDER BY spec_block.parent_id, spec_block.order_number`
 
@@ -158,6 +162,8 @@ func loadBlock(c DBConn, blockID int64) (*SpecBlock, error) {
 
 func loadBlocks(db *sql.DB, specID int64, subspecID *int64) ([]*SpecBlock, error) {
 
+	// Ref items are only loaded if belonging to the same spec.
+	// TODO Allow linking to any ref item, but verify current user's access when joining info.
 	args := []interface{}{specID}
 	query := `
 		SELECT spec_block.id, spec_block.spec_id, spec_block.created_at, spec_block.updated_at,
@@ -171,9 +177,11 @@ func loadBlocks(db *sql.DB, specID int64, subspecID *int64) ([]*SpecBlock, error
 		LEFT JOIN spec_subspec
 		ON spec_block.ref_type=` + argPlaceholder(BlockRefSubspec, &args) + `
 		AND spec_subspec.id=spec_block.ref_id
+		AND spec_subspec.spec_id = spec_block.spec_id
 		LEFT JOIN spec_url
 		ON spec_block.ref_type=` + argPlaceholder(BlockRefURL, &args) + `
 		AND spec_url.id=spec_block.ref_id
+		AND spec_url.spec_id = spec_block.spec_id
 		WHERE spec_block.spec_id=$1
 		AND ` + eqCond("spec_block.subspec_id", subspecID, &args) + `
 		ORDER BY spec_block.parent_id, spec_block.order_number`
@@ -213,9 +221,9 @@ func readBlocks(rows *sql.Rows, blocks *[]*SpecBlock, blocksByID *map[int64]*Spe
 			&urlSpecID, &urlCreated, &urlUpdated, &urlURL, &urlTitle, &urlDesc, &urlImageData)
 		if err != nil {
 			if err2 := rows.Close(); err2 != nil { // TODO Add everywhere
-				return fmt.Errorf("error closing rows: %s; on scan error: %w", err2, err)
+				return fmt.Errorf("closing rows: %s; on scan error: %w", err2, err)
 			}
-			return fmt.Errorf("error scanning spec: %w", err)
+			return fmt.Errorf("scanning block: %w", err)
 		}
 
 		if b.RefType != nil {

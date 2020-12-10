@@ -47,7 +47,7 @@ func fetchMetadata(url string) (*URLMetadata, error) {
 	}
 	res, err := client.Get(url)
 	if err != nil {
-		return nil, fmt.Errorf("error fetching URL: %w", err)
+		return nil, fmt.Errorf("fetching URL: %w", err)
 	}
 
 	defer res.Body.Close()
@@ -56,7 +56,7 @@ func fetchMetadata(url string) (*URLMetadata, error) {
 
 	err = m.Metabolize(res.Body, data)
 	if err != nil {
-		return nil, fmt.Errorf("error reading meta tags: %w", err)
+		return nil, fmt.Errorf("reading meta tags: %w", err)
 	}
 
 	return data, nil
@@ -68,7 +68,7 @@ func loadImageThumbData(imageURL string) (string, error) {
 	}
 	res, err := client.Get(imageURL)
 	if err != nil {
-		return "", fmt.Errorf("error fetching URL: %w", err)
+		return "", fmt.Errorf("fetching URL: %w", err)
 	}
 
 	defer res.Body.Close()
@@ -76,7 +76,7 @@ func loadImageThumbData(imageURL string) (string, error) {
 	// Load image
 	image, _, err := image.Decode(res.Body)
 	if err != nil {
-		return "", fmt.Errorf("error decoding image: %w", err)
+		return "", fmt.Errorf("decoding image: %w", err)
 	}
 
 	thumb := resize.Thumbnail(300, 300, image, resize.Lanczos3)
@@ -86,7 +86,7 @@ func loadImageThumbData(imageURL string) (string, error) {
 
 	err = png.Encode(base64Writer, thumb)
 	if err != nil {
-		return "", fmt.Errorf("error encoding thumbnail: %w", err)
+		return "", fmt.Errorf("encoding thumbnail: %w", err)
 	}
 
 	return "data:image/png;base64," + stringBuilder.String(), nil
@@ -95,7 +95,7 @@ func loadImageThumbData(imageURL string) (string, error) {
 func createURLObject(tx *sql.Tx, specID int64, url string) (*URLObject, error) {
 	data, err := fetchMetadata(url)
 	if err != nil {
-		return nil, fmt.Errorf("error loading url metadata: %w", err)
+		return nil, fmt.Errorf("loading url metadata: %w", err)
 	}
 
 	urlObject := &URLObject{
@@ -128,7 +128,7 @@ func createURLObject(tx *sql.Tx, specID int64, url string) (*URLObject, error) {
 		specID, time.Now(), url, urlObject.Title, urlObject.Desc, urlObject.ImageData,
 	).Scan(&urlObject.ID, &urlObject.Created, &urlObject.Title, &urlObject.Desc, &urlObject.Updated)
 	if err != nil {
-		return nil, fmt.Errorf("error inserting new spec_url: %w", err)
+		return nil, fmt.Errorf("creating spec_url: %w", err)
 	}
 
 	return urlObject, nil
@@ -138,7 +138,7 @@ func updateURLObject(tx *sql.Tx, id int64, url string) (*URLObject, error) {
 
 	data, err := fetchMetadata(url)
 	if err != nil {
-		return nil, fmt.Errorf("error loading url metadata: %w", err)
+		return nil, fmt.Errorf("loading url metadata: %w", err)
 	}
 
 	urlObject := &URLObject{
@@ -171,7 +171,7 @@ func updateURLObject(tx *sql.Tx, id int64, url string) (*URLObject, error) {
 		id, url, urlObject.Title, urlObject.Desc, urlObject.ImageData, time.Now(),
 	).Scan(&urlObject.Created, &urlObject.Title, &urlObject.Desc, &urlObject.Updated)
 	if err != nil {
-		return nil, fmt.Errorf("error updating spec_url: %w", err)
+		return nil, fmt.Errorf("updating spec_url: %w", err)
 	}
 
 	return urlObject, nil
@@ -189,7 +189,7 @@ func loadURLObject(db DBConn, id int64) (*URLObject, error) {
 		FROM spec_url WHERE id=$1`, id).Scan(&urlObject.SpecID, &urlObject.Created,
 		&urlObject.URL, &urlObject.Title, &urlObject.Desc, &urlObject.ImageData, &urlObject.Updated)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reading spec_url: %w", err)
 	}
 
 	return urlObject, nil

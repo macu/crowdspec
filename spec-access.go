@@ -109,7 +109,7 @@ func verifyWriteSpecBlock(db DBConn, userID uint, specID int64, blockID int64) (
 	return verifyWriteSpecSubspecBlocks(db, userID, specID, nil, &blockID)
 }
 
-// - verifies subspec belongs to spec if given
+// - verifies given subspec belongs to spec
 // - verifies all given blocks belong to spec
 func verifyWriteSpecSubspecBlocks(db DBConn, userID uint, specID int64, subspecID *int64, blockIDs ...*int64) (bool, error) {
 
@@ -142,10 +142,9 @@ func verifyWriteSpecSubspecBlocks(db DBConn, userID uint, specID int64, subspecI
 		subspecJoin+
 		strings.Join(blockJoins, "")+`
 		WHERE spec.owner_type = `+argPlaceholder(OwnerTypeUser, &args)+`
-		AND spec.owner_id = `+argPlaceholder(userID, &args),
+		AND spec.owner_id = `+argPlaceholder(userID, &args)+`
+		AND spec.id = `+argPlaceholder(specID, &args),
 		args...).Scan(&count)
-
-	// TODO return detailed error message about what aspect doesn't check out
 
 	return err == nil && count > 0, err
 }
@@ -153,6 +152,8 @@ func verifyWriteSpecSubspecBlocks(db DBConn, userID uint, specID int64, subspecI
 // Current policy is that the ref item must belong to the spec it is referenced in.
 func verifyRefAccess(db DBConn, specID int64, refType *string, refID *int64) (bool, error) {
 
+	// Function is used when checking request parameters,
+	// which are valid when nil
 	if refType == nil || refID == nil {
 		return true, nil
 	}

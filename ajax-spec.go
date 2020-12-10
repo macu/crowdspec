@@ -9,21 +9,24 @@ import (
 )
 
 // Returns the requested spec with immediate blocks.
-func ajaxSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
+func ajaxSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
 	// GET
 	query := r.URL.Query()
 
 	specID, err := AtoInt64(query.Get("specId"))
 	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("Invalid specId: %w", err)
+		logError(r, userID, fmt.Errorf("parsing specId: %w", err))
+		return nil, http.StatusBadRequest
 	}
 
 	if access, err := verifyReadSpec(db, userID, specID); !access || err != nil {
 		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("verifying read spec: %w", err)
+			logError(r, userID, fmt.Errorf("validating read spec access: %w", err))
+			return nil, http.StatusInternalServerError
 		}
-		return nil, http.StatusForbidden,
-			fmt.Errorf("read spec access denied to user %d in spec %d", userID, specID)
+		logError(r, userID,
+			fmt.Errorf("read spec access denied to user %d in spec %d", userID, specID))
+		return nil, http.StatusForbidden
 	}
 
 	// TODO Finish owner_name, user_is_admin, user_is_contributor
@@ -49,40 +52,44 @@ func ajaxSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (
 	).Scan(&s.ID, &s.OwnerType, &s.OwnerID, &s.Username,
 		&s.Name, &s.Desc, &s.Public, &s.Updated)
 	if err != nil {
-		return nil, http.StatusInternalServerError, err
+		logError(r, userID, fmt.Errorf("reading spec: %w", err))
+		return nil, http.StatusInternalServerError
 	}
 
 	if AtoBool(query.Get("loadBlocks")) {
 		s.Blocks, err = loadBlocks(db, specID, nil)
 		if err != nil {
-			return nil, http.StatusInternalServerError, err
+			logError(r, userID, fmt.Errorf("loading spec blocks: %w", err))
+			return nil, http.StatusInternalServerError
 		}
 	}
 
-	return s, http.StatusOK, nil
+	return s, http.StatusOK
 }
 
 // Returns the ID of the newly created spec.
-func ajaxCreateSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
+func ajaxCreateSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
 	// POST
 
 	err := r.ParseForm()
 	if err != nil {
-		return nil, http.StatusInternalServerError, err
+		logError(r, userID, err)
+		return nil, http.StatusInternalServerError
 	}
 
 	// TODO ALlow creating within an org
 
 	name := strings.TrimSpace(r.Form.Get("name"))
 	if name == "" {
-		return nil, http.StatusBadRequest, fmt.Errorf("Blank spec name")
+		logError(r, userID, fmt.Errorf("spec name required"))
+		return nil, http.StatusBadRequest
 	}
 
 	desc := AtoPointerNilIfEmpty(strings.TrimSpace(r.Form.Get("desc")))
 
 	isPublic := AtoBool(r.Form.Get("isPublic"))
 
-	return inTransaction(r.Context(), db, func(tx *sql.Tx) (interface{}, int, error) {
+	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
 		var specID int64
 
@@ -93,44 +100,50 @@ func ajaxCreateSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Requ
 				`, OwnerTypeUser, userID, time.Now(), name, desc, isPublic).Scan(&specID)
 
 		if err != nil {
-			return nil, http.StatusInternalServerError, err
+			logError(r, userID, fmt.Errorf("creating spec: %w", err))
+			return nil, http.StatusInternalServerError
 		}
 
-		return specID, http.StatusCreated, nil
+		return specID, http.StatusCreated
 	})
 }
 
-func ajaxSaveSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
+func ajaxSaveSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
 	// POST
 
 	err := r.ParseForm()
 	if err != nil {
-		return nil, http.StatusInternalServerError, err
+		logError(r, userID, err)
+		return nil, http.StatusInternalServerError
 	}
 
 	specID, err := AtoInt64(r.Form.Get("specId"))
 	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("parsing specId: %w", err)
+		logError(r, userID, fmt.Errorf("parsing specId: %w", err))
+		return nil, http.StatusBadRequest
 	}
 
 	if access, err := verifyWriteSpec(db, userID, specID); !access || err != nil {
 		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("verifying write spec: %w", err)
+			logError(r, userID, fmt.Errorf("validating write spec access: %w", err))
+			return nil, http.StatusInternalServerError
 		}
-		return nil, http.StatusForbidden,
-			fmt.Errorf("write spec access denied to user %d in spec %d", userID, specID)
+		logError(r, userID,
+			fmt.Errorf("write spec access denied to user %d in spec %d", userID, specID))
+		return nil, http.StatusForbidden
 	}
 
 	name := strings.TrimSpace(r.Form.Get("name"))
 	if name == "" {
-		return nil, http.StatusBadRequest, fmt.Errorf("Blank spec name")
+		logError(r, userID, fmt.Errorf("spec name required"))
+		return nil, http.StatusBadRequest
 	}
 
 	desc := AtoPointerNilIfEmpty(strings.TrimSpace(r.Form.Get("desc")))
 
 	isPublic := AtoBool(r.Form.Get("isPublic"))
 
-	return inTransaction(r.Context(), db, func(tx *sql.Tx) (interface{}, int, error) {
+	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
 		spec := &Spec{
 			ID:     specID,
@@ -145,42 +158,48 @@ func ajaxSaveSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 			`, specID, time.Now(), name, desc, isPublic).Scan(&spec.Updated, &spec.Name, &spec.Desc)
 
 		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("updating spec: %w", err)
+			logError(r, userID, fmt.Errorf("updating spec: %w", err))
+			return nil, http.StatusInternalServerError
 		}
 
-		return spec, http.StatusOK, nil
+		return spec, http.StatusOK
 	})
 }
 
-func ajaxDeleteSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
+func ajaxDeleteSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
 	// POST
 
 	err := r.ParseForm()
 	if err != nil {
-		return nil, http.StatusInternalServerError, err
+		logError(r, userID, err)
+		return nil, http.StatusInternalServerError
 	}
 
 	specID, err := AtoInt64(r.Form.Get("specId"))
 	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("parsing specId: %w", err)
+		logError(r, userID, fmt.Errorf("parsing specId: %w", err))
+		return nil, http.StatusBadRequest
 	}
 
 	if access, err := verifyWriteSpec(db, userID, specID); !access || err != nil {
 		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("verifying write spec: %w", err)
+			logError(r, userID, fmt.Errorf("validating write spec access: %w", err))
+			return nil, http.StatusInternalServerError
 		}
-		return nil, http.StatusForbidden,
-			fmt.Errorf("write spec access denied to user %d in spec %d", userID, specID)
+		logError(r, userID,
+			fmt.Errorf("write spec access denied to user %d in spec %d", userID, specID))
+		return nil, http.StatusForbidden
 	}
 
-	return inTransaction(r.Context(), db, func(tx *sql.Tx) (interface{}, int, error) {
+	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
 		_, err := tx.Exec(`DELETE FROM spec WHERE id=$1`, specID)
 
 		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("deleting spec: %w", err)
+			logError(r, userID, fmt.Errorf("deleting spec: %w", err))
+			return nil, http.StatusInternalServerError
 		}
 
-		return nil, http.StatusOK, nil
+		return nil, http.StatusOK
 	})
 }
