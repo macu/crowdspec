@@ -40,32 +40,36 @@ func ajaxSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request
 		RenderTime: time.Now(),
 	}
 
-	err = db.QueryRow(`SELECT spec_subspec.created_at,
-		spec_subspec.subspec_name, spec_subspec.subspec_desc,
-		-- spec.spec_name, spec.owner_type, spec.owner_id,
-		CASE
-			-- when editor
-			WHEN spec.owner_type = $3 AND spec.owner_id = $4
-				THEN spec_subspec.updated_at
-			-- when visitor
-			ELSE GREATEST(spec_subspec.updated_at, spec_subspec.blocks_updated_at)
-		END AS last_updated
+	err = db.QueryRow(
+		`SELECT spec_subspec.created_at,
+			spec_subspec.subspec_name, spec_subspec.subspec_desc,
+			spec_subspec.updated_at, spec_subspec.blocks_updated_at
 		FROM spec_subspec
-		INNER JOIN spec ON spec.id = $1
+		INNER JOIN spec
+			ON spec.id = spec_subspec.spec_id
 		WHERE spec_subspec.id = $2
-		AND spec_subspec.spec_id = $1`,
-		specID, subspecID, OwnerTypeUser, userID,
-	).Scan(&s.Created, &s.Name, &s.Desc, &s.Updated)
+			AND spec_subspec.spec_id = $1`,
+		specID, subspecID,
+	).Scan(&s.Created, &s.Name, &s.Desc, &s.Updated, &s.BlocksUpdated)
 	if err != nil {
 		logError(r, userID, fmt.Errorf("reading subspec: %w", err))
 		return nil, http.StatusInternalServerError
 	}
 
 	if AtoBool(query.Get("loadBlocks")) {
-		s.Blocks, err = loadBlocks(db, specID, &subspecID)
+		cacheTime, err := AtoTimeNilIfEmpty(query.Get("cacheTime"))
 		if err != nil {
-			logError(r, userID, fmt.Errorf("loading subspec blocks: %w", err))
-			return nil, http.StatusInternalServerError
+			logError(r, userID, fmt.Errorf("parsing time: %w", err))
+			return nil, http.StatusBadRequest
+		}
+		if cacheTime == nil ||
+			cacheTime.Before(s.Updated) ||
+			cacheTime.Before(s.BlocksUpdated) {
+			s.Blocks, err = loadBlocks(db, specID, &subspecID)
+			if err != nil {
+				logError(r, userID, fmt.Errorf("loading subspec blocks: %w", err))
+				return nil, http.StatusInternalServerError
+			}
 		}
 	}
 

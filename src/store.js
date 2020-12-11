@@ -18,6 +18,8 @@ export const store = new Vuex.Store({
 		movingBlockId: null, // id of block being moved
 		savedScrollPosition: null, // set when returning to routes in history
 		currentSpecId: null,
+		cachedSpec: null,
+		cachedSubspecsById: {},
 		currentSpecScrollTop: null, // saved for navigation improvements
 		userSettings: window.user.settings,
 	},
@@ -56,6 +58,24 @@ export const store = new Vuex.Store({
 				return '90%';
 			}
 		},
+		getCachedFullSpec(state) {
+			return (id) => {
+				id = parseInt(id, 10);
+				if (state.cachedSpec && state.cachedSpec.id === id) {
+					return state.cachedSpec;
+				}
+				return null;
+			};
+		},
+		getCachedFullSubspec(state) {
+			return (id) => {
+				id = parseInt(id, 10);
+				if (state.cachedSubspecsById[id]) {
+					return state.cachedSubspecsById[id];
+				}
+				return null;
+			};
+		},
 	},
 	mutations: {
 		setWindowWidth(state, width) {
@@ -89,9 +109,20 @@ export const store = new Vuex.Store({
 			state.currentSpecId = specId;
 			state.currentSpecScrollTop = $window.scrollTop();
 		},
+		cacheLatestFullSpec(state, spec) {
+			state.cachedSpec = spec;
+		},
+		cacheLatestFullSubspec(state, subspec) {
+			state.cachedSubspecsById[subspec.id] = subspec;
+		},
+		forgetSubspec(state, subspecId) {
+			delete(state.cachedSubspecsById[subspecId]);
+		},
 		clearCurrentSpec(state) {
 			state.currentSpecId = null;
 			state.currentSpecScrollTop = null;
+			state.cachedSpec = null;
+			state.cachedSubspecsById = {};
 		},
 		updateCurrentTime(state) {
 			state.currentTime = Date.now();

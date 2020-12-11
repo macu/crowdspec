@@ -35,32 +35,35 @@ func ajaxSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (
 	}
 	err = db.QueryRow(`
 		SELECT spec.id, spec.owner_type, spec.owner_id, user_account.username,
-		spec.spec_name, spec.spec_desc, spec.is_public,
-		CASE
-			-- when editor
-			WHEN spec.owner_type = $2 AND spec.owner_id = $3
-				THEN spec.updated_at
-			-- when visitor
-			ELSE GREATEST(spec.updated_at, spec.blocks_updated_at)
-		END AS last_updated
+			spec.spec_name, spec.spec_desc, spec.is_public,
+			spec.updated_at, spec.blocks_updated_at
 		FROM spec
 		LEFT JOIN user_account
-		ON spec.owner_type=$2
-		AND user_account.id=spec.owner_id
+			ON spec.owner_type=$2
+			AND user_account.id=spec.owner_id
 		WHERE spec.id=$1
-		`, specID, OwnerTypeUser, userID,
+		`, specID, OwnerTypeUser,
 	).Scan(&s.ID, &s.OwnerType, &s.OwnerID, &s.Username,
-		&s.Name, &s.Desc, &s.Public, &s.Updated)
+		&s.Name, &s.Desc, &s.Public, &s.Updated, &s.BlocksUpdated)
 	if err != nil {
 		logError(r, userID, fmt.Errorf("reading spec: %w", err))
 		return nil, http.StatusInternalServerError
 	}
 
 	if AtoBool(query.Get("loadBlocks")) {
-		s.Blocks, err = loadBlocks(db, specID, nil)
+		cacheTime, err := AtoTimeNilIfEmpty(query.Get("cacheTime"))
 		if err != nil {
-			logError(r, userID, fmt.Errorf("loading spec blocks: %w", err))
-			return nil, http.StatusInternalServerError
+			logError(r, userID, fmt.Errorf("parsing time: %w", err))
+			return nil, http.StatusBadRequest
+		}
+		if cacheTime == nil ||
+			cacheTime.Before(s.Updated) ||
+			cacheTime.Before(s.BlocksUpdated) {
+			s.Blocks, err = loadBlocks(db, specID, nil)
+			if err != nil {
+				logError(r, userID, fmt.Errorf("loading spec blocks: %w", err))
+				return nil, http.StatusInternalServerError
+			}
 		}
 	}
 

@@ -1,5 +1,6 @@
 import $ from 'jquery';
 import Vue from 'vue';
+import moment from 'moment';
 
 const VERSION_STAMP_RESPONSE = /^VersionStamp: (.+)$/m;
 
@@ -155,4 +156,24 @@ export function extractVid(url) {
 		return {type: 'vimeo', id: match[1]};
 	}
 	return null;
+}
+
+export function momentIsAfter(time1, time2) {
+	if (!moment.isMoment(time1)) {
+		time1 = moment.parseZone(time1);
+	}
+	if (!moment.isMoment(time2)) {
+		time2 = moment.parseZone(time2);
+	}
+	return time1.isAfter(time2);
+}
+
+export function greatestMoment(time1, time2) {
+	if (!moment.isMoment(time1)) {
+		time1 = moment.parseZone(time1);
+	}
+	if (!moment.isMoment(time2)) {
+		time2 = moment.parseZone(time2);
+	}
+	return time1.isAfter(time2) ? time1 : time2;
 }

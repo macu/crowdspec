@@ -87,6 +87,7 @@ postgres=#
 - [x] Freely move blocks between spec/subspec contexts
 - [x] Change routes structure
 - [x] Add loading messages when navigating specs
+- [x] Add client-side caching within spec context (what about ref items?)
 
 ### 2020-08-31
 

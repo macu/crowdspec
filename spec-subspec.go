@@ -11,9 +11,12 @@ type SpecSubspec struct {
 	ID      int64     `json:"id"`
 	SpecID  int64     `json:"specId"`
 	Created time.Time `json:"created"`
-	Updated time.Time `json:"updated"`
-	Name    string    `json:"name"`
-	Desc    *string   `json:"desc"`
+
+	Updated       time.Time `json:"updated"`
+	BlocksUpdated time.Time `json:"blocksUpdated"`
+
+	Name string  `json:"name"`
+	Desc *string `json:"desc"`
 
 	// convenience fields (joined for certain responses)
 	// Representing time spec was loaded from db

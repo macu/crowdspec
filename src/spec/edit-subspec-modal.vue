@@ -142,11 +142,13 @@ export default {
 				type: 'warning',
 			}).then(() => {
 				this.sending = true;
-				ajaxDeleteSubspec(this.subspec.id).then(() => {
+				let subspecId = this.subspec.id;
+				ajaxDeleteSubspec(subspecId).then(() => {
 					this.sending = false;
 					this.showing = false;
 					this.$nextTick(() => {
 						this.$router.push({name: 'spec', params: {specId: this.specId}});
+						this.$store.commit('forgetSubspec', subspecId);
 					});
 				}).fail(() => {
 					this.sending = false;

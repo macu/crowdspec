@@ -11,7 +11,7 @@
 				size="mini" icon="el-icon-setting"/>
 
 			<span v-else>
-				Last modified <moment :datetime="subspec.updated" :offset="true"/>
+				Last modified <moment :datetime="lastModifiedMoment" :offset="true"/>
 			</span>
 
 		</div>
@@ -46,7 +46,7 @@ import SpecView from '../spec/view.vue';
 import EditSubspecModal from '../spec/edit-subspec-modal.vue';
 import {ajaxLoadSubspec} from '../spec/ajax.js';
 import {OWNER_TYPE_USER} from '../spec/const.js';
-import {setWindowSubtitle} from '../utils.js';
+import {setWindowSubtitle, momentIsAfter, greatestMoment} from '../utils.js';
 
 export default {
 	components: {
@@ -74,6 +74,12 @@ export default {
 		onSubspecRoute() {
 			return this.$route.name === 'subspec';
 		},
+		lastModifiedMoment() {
+			if (this.subspec) {
+				return greatestMoment(this.subspec.updated, this.subspec.blocksUpdated);
+			}
+			return null;
+		},
 	},
 	beforeRouteEnter(to, from, next) {
 		console.debug('beforeRouteEnter subspec', to);
@@ -96,9 +102,25 @@ export default {
 		loadSubspec(specId, subspecId, loadBlocks) {
 			console.debug('load subspec');
 			this.loading = true;
-			ajaxLoadSubspec(specId, subspecId, loadBlocks).then(subspec => {
+			let cached = this.$store.getters.getCachedFullSubspec(subspecId);
+			ajaxLoadSubspec(specId, subspecId, loadBlocks, cached).then(subspec => {
 				console.debug('subspec loaded', subspec);
-				this.subspec = subspec;
+				if (
+					loadBlocks && ( // blocks requested
+						!cached || // no cached
+						subspec.blocks || // blocks were returned
+						momentIsAfter(subspec.updated, cached.updated) || // header updated since
+						momentIsAfter(subspec.blocksUpdated, cached.blocksUpdated) // blocks updated since
+					)
+				) {
+					this.subspec = subspec;
+					this.$store.commit('cacheLatestFullSubspec', subspec);
+				} else if (loadBlocks && cached) {
+					// Latest available; returned spec doesn't include blocks
+					this.subspec = cached;
+				} else {
+					this.subspec = subspec;
+				}
 				setWindowSubtitle(subspec.name);
 				this.loading = false;
 				this.$refs.view.$once('rendered', this.restoreScroll);

@@ -11,10 +11,13 @@ type Spec struct {
 	OwnerType string    `json:"ownerType"`
 	OwnerID   int64     `json:"ownerId"`
 	Created   time.Time `json:"created"`
-	Updated   time.Time `json:"updated"`
-	Name      string    `json:"name"`
-	Desc      *string   `json:"desc"`
-	Public    bool      `json:"public"`
+
+	Updated       time.Time `json:"updated"`
+	BlocksUpdated time.Time `json:"blocksUpdated"`
+
+	Name   string  `json:"name"`
+	Desc   *string `json:"desc"`
+	Public bool    `json:"public"`
 
 	// Representing time spec was loaded from db
 	RenderTime time.Time `json:"renderTime,omitempty"`

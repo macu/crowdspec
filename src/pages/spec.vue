@@ -25,7 +25,7 @@
 			</template>
 
 			<span v-else>
-				Last modified <moment :datetime="spec.updated" :offset="true"/>
+				Last modified <moment :datetime="lastModifiedMoment" :offset="true"/>
 			</span>
 
 		</div>
@@ -60,12 +60,13 @@
 
 <script>
 import $ from 'jquery';
+import moment from 'moment';
 import Moment from '../widgets/moment.vue';
 import EditSpecModal from '../spec/edit-spec-modal.vue';
 import NavSpecModal from '../spec/nav-spec-modal.vue';
 import {ajaxLoadSpec} from '../spec/ajax.js';
 import {OWNER_TYPE_USER} from '../spec/const.js';
-import {setWindowSubtitle, idsEq} from '../utils.js';
+import {setWindowSubtitle, idsEq, momentIsAfter, greatestMoment} from '../utils.js';
 
 export default {
 	components: {
@@ -98,6 +99,12 @@ export default {
 			// Currently users may edit only their own specs
 			return this.currentUserOwns;
 		},
+		lastModifiedMoment() {
+			if (this.spec) {
+				return greatestMoment(this.spec.updated, this.spec.blocksUpdated);
+			}
+			return null;
+		},
 	},
 	beforeRouteEnter(to, from, next) {
 		console.debug('beforeRouteEnter spec', to);
@@ -120,9 +127,25 @@ export default {
 		loadSpec(specId, loadBlocks) {
 			console.debug('load spec');
 			this.loading = true;
-			ajaxLoadSpec(specId, loadBlocks).then(spec => {
+			let cached = this.$store.getters.getCachedFullSpec(specId);
+			ajaxLoadSpec(specId, loadBlocks, cached).then(spec => {
 				console.debug('spec loaded', spec);
-				this.spec = spec;
+				if (
+					loadBlocks && ( // blocks requested
+						!cached || // no cached
+						spec.blocks || // blocks were returned
+						momentIsAfter(spec.updated, cached.updated) || // header updated since
+						momentIsAfter(spec.blocksUpdated, cached.blocksUpdated) // blocks updated since
+					)
+				) {
+					this.spec = spec;
+					this.$store.commit('cacheLatestFullSpec', spec);
+				} else if (loadBlocks && cached) {
+					// Latest available; returned spec doesn't include blocks
+					this.spec = cached;
+				} else {
+					this.spec = spec;
+				}
 				setWindowSubtitle(spec.name);
 				this.loading = false;
 				this.$refs.view.$once('rendered', this.restoreScroll);

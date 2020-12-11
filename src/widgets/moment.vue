@@ -17,6 +17,9 @@ export default {
 	},
 	computed: {
 		moment() {
+			if (moment.isMoment(this.datetime)) {
+				return this.datetime;
+			}
 			return moment.parseZone(this.datetime);
 		},
 		currentTime() {

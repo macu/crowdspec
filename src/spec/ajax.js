@@ -1,11 +1,17 @@
 import $ from 'jquery';
-import {alertError} from '../utils.js';
+import {alertError, momentIsAfter} from '../utils.js';
 
-export function ajaxLoadSpec(specId, loadBlocks = true) {
-	return $.get('/ajax/spec', {
+export function ajaxLoadSpec(specId, loadBlocks = true, cached = null) {
+	let params = {
 		specId,
 		loadBlocks,
-	}).fail(alertError);
+	};
+	if (loadBlocks && cached) {
+		// Request only to load blocks if updated since latest cache time
+		params.cacheTime = momentIsAfter(cached.updated, cached.blocksUpdated)
+			? cached.updated : cached.blocksUpdated;
+	}
+	return $.get('/ajax/spec', params).fail(alertError);
 }
 
 export function ajaxCreateSpec(name, desc, isPublic) {
@@ -37,12 +43,18 @@ export function ajaxLoadSubspecs(specId) {
 	}).fail(alertError);
 }
 
-export function ajaxLoadSubspec(specId, subspecId, loadBlocks = true) {
-	return $.get('/ajax/spec/subspec', {
+export function ajaxLoadSubspec(specId, subspecId, loadBlocks = true, cached = null) {
+	let params = {
 		specId,
 		subspecId,
 		loadBlocks,
-	}).fail(alertError);
+	};
+	if (loadBlocks && cached) {
+		// Request only to load blocks if updated since latest cache time
+		params.cacheTime = momentIsAfter(cached.updated, cached.blocksUpdated)
+			? cached.updated : cached.blocksUpdated;
+	}
+	return $.get('/ajax/spec/subspec', params).fail(alertError);
 }
 
 export function ajaxCreateSubspec(specId, name, desc) {
