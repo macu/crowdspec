@@ -180,6 +180,19 @@ func makeResetPasswordHandler(db *sql.DB) func(w http.ResponseWriter, r *http.Re
 
 		if r.Method == http.MethodGet {
 
+			var createdAt time.Time
+			err := db.QueryRow(`
+				SELECT r.created_at
+				FROM password_reset_request r
+				WHERE r.token = $1
+				AND r.fulfilled_at_ip_address IS NULL
+				`, token).Scan(&createdAt)
+			if err != nil {
+				// Token not found or expired - don't log error
+				executeTemplate(w, r, "", http.StatusNotFound, nil)
+				return
+			}
+
 			executeTemplate(w, r, token, 0, nil)
 
 		} else if r.Method == http.MethodPost {
@@ -221,9 +234,8 @@ func makeResetPasswordHandler(db *sql.DB) func(w http.ResponseWriter, r *http.Re
 				AND r.fulfilled_at_ip_address IS NULL
 				`, token).Scan(&userID, &username, &createdAt)
 			if err != nil {
-				executeTemplate(w, r, "",
-					http.StatusNotFound,
-					fmt.Errorf("fetching password reset request: %w", err))
+				// Token not found or expired - don't log error
+				executeTemplate(w, r, "", http.StatusNotFound, nil)
 				return
 			}
 

@@ -1,23 +1,13 @@
 var reCAPTCHA_ok = false;
 
 var form = document.getElementById('form');
-var usernameInput = document.getElementById('username');
-var passwordInput = document.getElementById('password');
+var emailInput = document.getElementById('email');
 var submitButton = document.getElementById('submitButton');
 
-usernameInput.addEventListener('keydown', function(e) {
+emailInput.addEventListener('keydown', function(e) {
 	if (e.keyCode === 13) {
 		e.preventDefault();
-		if (usernameInput.value.trim() !== '') {
-			passwordInput.focus();
-		}
-	}
-});
-
-passwordInput.addEventListener('keydown', function(e) {
-	if (e.keyCode === 13) {
-		e.preventDefault();
-		if (passwordInput.value.trim() !== '') {
+		if (emailInput.value.trim() !== '') {
 			if (reCAPTCHA_ok) {
 				form.submit();
 			}
@@ -48,5 +38,5 @@ function recaptchaError() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-	usernameInput.focus();
+	emailInput.focus();
 });

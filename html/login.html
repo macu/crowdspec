@@ -40,12 +40,16 @@
 				</tr>
 				<tr>
 					<td colspan="2">
-						<div class="g-recaptcha" data-sitekey="{{.SiteKey}}"></div>
+						<div class="g-recaptcha"
+							data-sitekey="{{.SiteKey}}"
+							data-callback="recaptchaSuccess"
+							data-expired-callback="recaptchaExpired"
+							data-error-callback="recaptchaError"></div>
 					</td>
 				</tr>
 				<tr>
 					<td></td>
-					<td><button type="submit">Log in</button></td>
+					<td><button id="submitButton" type="submit" disabled>Log in</button></td>
 				</tr>
 			</table>
 		</form>
