@@ -14,7 +14,7 @@ newPassInput.addEventListener('keydown', function(e) {
 	}
 });
 
-newPasswInput.addEventListener('keydown', function(e) {
+newPass2Input.addEventListener('keydown', function(e) {
 	if (e.keyCode === 13) {
 		e.preventDefault();
 		if (newPass2Input.value.trim() !== '') {
