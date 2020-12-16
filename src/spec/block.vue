@@ -335,7 +335,7 @@ export default {
 			this.$emit('play-video', urlObject);
 		},
 		openCommunity() {
-			this.$alert('Unimplemented');
+			this.$emit('open-block-community', this.block.id);
 		},
 		updateHasSubblocks() {
 			this.hasSubblocks = this.$refs.sublist.childElementCount > 0;

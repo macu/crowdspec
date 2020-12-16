@@ -29,6 +29,12 @@
 
 	</template>
 
+	<block-community-modal
+		ref="blockCommunityModal"
+		:spec-id="specId"
+		@play-video="playVideo"
+		/>
+
 	<play-video-modal
 		ref="playVideoModal"
 		/>
@@ -41,6 +47,7 @@ import $ from 'jquery';
 import Vue from 'vue';
 import Dragula from 'dragula';
 import SpecBlock from './block.vue';
+import BlockCommunityModal from './block-community-modal.vue';
 import EditBlockModal from './edit-block-modal.vue';
 import EditUrlModal from './edit-url-modal.vue';
 import PlayVideoModal from './play-video-modal.vue';
@@ -59,6 +66,7 @@ apply same relative condition from present to next state
 
 export default {
 	components: {
+		BlockCommunityModal,
 		EditBlockModal,
 		EditUrlModal,
 		PlayVideoModal,
@@ -214,6 +222,7 @@ export default {
 				},
 			}).$mount();
 
+			vc.$on('open-block-community', this.openBlockCommunity);
 			vc.$on('open-edit', this.openEdit);
 			vc.$on('prompt-add-subblock', this.promptAddSubblock);
 			vc.$on('prompt-delete', this.promptDeleteBlock);
@@ -242,6 +251,9 @@ export default {
 			this.$refs.editBlockModal.showAdd(null, null, newBlock => {
 				this.insertBlock(newBlock, true, true);
 			});
+		},
+		openBlockCommunity(blockId) {
+			this.$refs.blockCommunityModal.show(blockId);
 		},
 		openEdit(block, callback) {
 			this.$refs.editBlockModal.showEdit(block, callback);

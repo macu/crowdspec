@@ -140,6 +140,9 @@ export function ajaxDeleteUrl(id) {
 	}).fail(alertError);
 }
 
-export function fetchUrlPreview(url) {
-	return $.get('/ajax/fetch-url', {url}); // No alert on error
+export function ajaxLoadBlockCommunity(specId, blockId) {
+	return $.get('/ajax/spec/block-community', {
+		specId,
+		blockId,
+	}).fail(alertError);
 }

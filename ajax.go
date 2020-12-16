@@ -13,14 +13,15 @@ type AjaxRoute func(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Requ
 
 var ajaxHandlers = map[string]map[string]AjaxRoute{
 	http.MethodGet: map[string]AjaxRoute{
-		"/ajax/test":          ajaxTest,
-		"/ajax/home":          ajaxUserHome,
-		"/ajax/settings":      ajaxUserSettings,
-		"/ajax/spec":          ajaxSpec,
-		"/ajax/spec/subspecs": ajaxSubspecs,
-		"/ajax/spec/subspec":  ajaxSubspec,
-		"/ajax/spec/urls":     ajaxSpecURLs,
-		"/ajax/fetch-url":     ajaxFetchURLPreview,
+		"/ajax/test":     ajaxTest,
+		"/ajax/home":     ajaxUserHome,
+		"/ajax/settings": ajaxUserSettings,
+
+		"/ajax/spec":                 ajaxSpec,
+		"/ajax/spec/subspecs":        ajaxSubspecs,
+		"/ajax/spec/subspec":         ajaxSubspec,
+		"/ajax/spec/urls":            ajaxSpecURLs,
+		"/ajax/spec/block-community": ajaxSpecLoadBlockCommunity,
 	},
 	http.MethodPost: map[string]AjaxRoute{
 		"/ajax/user/change-password": ajaxUserChangePassword,

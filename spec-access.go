@@ -10,12 +10,13 @@ import (
 func verifyReadSpec(db DBConn, userID uint, specID int64) (bool, error) {
 
 	var count uint
-	err := db.QueryRow(`
-		SELECT COUNT(*) FROM spec
+	err := db.QueryRow(
+		`SELECT COUNT(*) FROM spec
 		WHERE id = $1
-		AND (is_public OR (
-			owner_type = $2 AND owner_id = $3
-		))`, specID, OwnerTypeUser, userID).Scan(&count)
+			AND (is_public OR
+				(owner_type = $2 AND owner_id = $3)
+			)`,
+		specID, OwnerTypeUser, userID).Scan(&count)
 
 	return err == nil && count > 0, err
 }
@@ -23,12 +24,12 @@ func verifyReadSpec(db DBConn, userID uint, specID int64) (bool, error) {
 func verifyWriteSpec(db DBConn, userID uint, specID int64) (bool, error) {
 
 	var count uint
-	err := db.QueryRow(`
-		SELECT COUNT(*) FROM spec
+	err := db.QueryRow(
+		`SELECT COUNT(*) FROM spec
 		WHERE id = $1
-		AND owner_type = $2
-		AND owner_id = $3
-		`, specID, OwnerTypeUser, userID).Scan(&count)
+			AND owner_type = $2
+			AND owner_id = $3`,
+		specID, OwnerTypeUser, userID).Scan(&count)
 
 	return err == nil && count > 0, err
 }
@@ -36,13 +37,15 @@ func verifyWriteSpec(db DBConn, userID uint, specID int64) (bool, error) {
 func verifyReadSubspec(db DBConn, userID uint, subspecID int64) (bool, error) {
 
 	var count uint
-	err := db.QueryRow(`
-		SELECT COUNT(*) FROM spec_subspec
-		INNER JOIN spec ON spec.id = spec_subspec.spec_id
+	err := db.QueryRow(
+		`SELECT COUNT(*) FROM spec_subspec
+		INNER JOIN spec
+			ON spec.id = spec_subspec.spec_id
 		WHERE spec_subspec.id = $1
-		AND (spec.is_public OR (
-			spec.owner_type = $2 AND spec.owner_id = $3
-		))`, subspecID, OwnerTypeUser, userID).Scan(&count)
+			AND (spec.is_public OR
+				(spec.owner_type = $2 AND spec.owner_id = $3)
+			)`,
+		subspecID, OwnerTypeUser, userID).Scan(&count)
 
 	return err == nil && count > 0, err
 }
@@ -50,13 +53,14 @@ func verifyReadSubspec(db DBConn, userID uint, subspecID int64) (bool, error) {
 func verifyWriteSubspec(db DBConn, userID uint, subspecID int64) (bool, error) {
 
 	var count uint
-	err := db.QueryRow(`
-		SELECT COUNT(*) FROM spec_subspec
-		INNER JOIN spec ON spec.id = spec_subspec.spec_id
+	err := db.QueryRow(
+		`SELECT COUNT(*) FROM spec_subspec
+		INNER JOIN spec
+			ON spec.id = spec_subspec.spec_id
 		WHERE spec_subspec.id = $1
-		AND spec.owner_type = $2
-		AND spec.owner_id = $3
-		`, subspecID, OwnerTypeUser, userID).Scan(&count)
+			AND spec.owner_type = $2
+			AND spec.owner_id = $3`,
+		subspecID, OwnerTypeUser, userID).Scan(&count)
 
 	return err == nil && count > 0, err
 }
@@ -64,28 +68,32 @@ func verifyWriteSubspec(db DBConn, userID uint, subspecID int64) (bool, error) {
 func verifyWriteURL(db DBConn, userID uint, urlID int64) (bool, error) {
 
 	var count uint
-	err := db.QueryRow(`
-		SELECT COUNT(*) FROM spec_url
-		INNER JOIN spec ON spec.id = spec_url.spec_id
+	err := db.QueryRow(
+		`SELECT COUNT(*) FROM spec_url
+		INNER JOIN spec
+			ON spec.id = spec_url.spec_id
 		WHERE spec_url.id = $1
-		AND spec.owner_type = $2
-		AND spec.owner_id = $3
-		`, urlID, OwnerTypeUser, userID).Scan(&count)
+			AND spec.owner_type = $2
+			AND spec.owner_id = $3`,
+		urlID, OwnerTypeUser, userID).Scan(&count)
 
 	return err == nil && count > 0, err
 }
 
-func verifyReadBlock(db DBConn, userID uint, blockID int64) (bool, error) {
+func verifyReadBlock(db DBConn, userID uint, specID, blockID int64) (bool, error) {
 
 	var count uint
-	err := db.QueryRow(`
-		SELECT COUNT(*) FROM spec_block
-		INNER JOIN spec ON spec.id = spec_block.spec_id
-		WHERE spec_block.id = $1
-		AND (spec.is_public OR (
-			spec.owner_type = $2 AND spec.owner_id = $3
-		))
-		`, blockID, OwnerTypeUser, userID).Scan(&count)
+	err := db.QueryRow(
+		`SELECT COUNT(*) FROM spec_block
+		INNER JOIN spec
+			ON spec.id = spec_block.spec_id
+		WHERE
+			spec_block.id = $2
+			AND spec.id = $1
+			AND (spec.is_public OR
+				(spec.owner_type = $3 AND spec.owner_id = $4)
+			)`,
+		specID, blockID, OwnerTypeUser, userID).Scan(&count)
 
 	return err == nil && count > 0, err
 }
@@ -93,13 +101,13 @@ func verifyReadBlock(db DBConn, userID uint, blockID int64) (bool, error) {
 func verifyWriteBlock(db DBConn, userID uint, blockID int64) (bool, error) {
 
 	var count uint
-	err := db.QueryRow(`
-		SELECT COUNT(*) FROM spec_block
+	err := db.QueryRow(
+		`SELECT COUNT(*) FROM spec_block
 		INNER JOIN spec ON spec.id = spec_block.spec_id
 		WHERE spec_block.id = $1
 		AND spec.owner_type = $2
-		AND spec.owner_id = $3
-		`, blockID, OwnerTypeUser, userID).Scan(&count)
+		AND spec.owner_id = $3`,
+		blockID, OwnerTypeUser, userID).Scan(&count)
 
 	return err == nil && count > 0, err
 }
@@ -119,8 +127,8 @@ func verifyWriteSpecSubspecBlocks(db DBConn, userID uint, specID int64, subspecI
 	if subspecID != nil {
 		subspecJoin = `
 			INNER JOIN spec_subspec
-			ON spec_subspec.id = ` + argPlaceholder(*subspecID, &args) + `
-			AND spec_subspec.spec_id = spec.id
+				ON spec_subspec.id = ` + argPlaceholder(*subspecID, &args) + `
+				AND spec_subspec.spec_id = spec.id
 			`
 	}
 
@@ -130,20 +138,20 @@ func verifyWriteSpecSubspecBlocks(db DBConn, userID uint, specID int64, subspecI
 			tableName := "block_" + IntToA(i)
 			blockJoins = append(blockJoins, `
 				INNER JOIN spec_block AS `+tableName+`
-				ON `+tableName+`.id = `+argPlaceholder(*id, &args)+`
-				AND `+tableName+`.spec_id = spec.id
+					ON `+tableName+`.id = `+argPlaceholder(*id, &args)+`
+					AND `+tableName+`.spec_id = spec.id
 				`)
 		}
 	}
 
 	var count uint
-	err := db.QueryRow(`
-		SELECT COUNT(*) FROM spec`+
-		subspecJoin+
-		strings.Join(blockJoins, "")+`
+	err := db.QueryRow(
+		`SELECT COUNT(*) FROM spec`+
+			subspecJoin+
+			strings.Join(blockJoins, "")+`
 		WHERE spec.owner_type = `+argPlaceholder(OwnerTypeUser, &args)+`
-		AND spec.owner_id = `+argPlaceholder(userID, &args)+`
-		AND spec.id = `+argPlaceholder(specID, &args),
+			AND spec.owner_id = `+argPlaceholder(userID, &args)+`
+			AND spec.id = `+argPlaceholder(specID, &args),
 		args...).Scan(&count)
 
 	return err == nil && count > 0, err
@@ -164,16 +172,16 @@ func verifyRefAccess(db DBConn, specID int64, refType *string, refID *int64) (bo
 	switch *refType {
 
 	case BlockRefURL:
-		err = db.QueryRow(`
-			SELECT COUNT(*) FROM spec_url
-			WHERE id = $1 AND spec_id = $2
-			`, *refID, specID).Scan(&count)
+		err = db.QueryRow(
+			`SELECT COUNT(*) FROM spec_url
+			WHERE id = $1 AND spec_id = $2`,
+			*refID, specID).Scan(&count)
 
 	case BlockRefSubspec:
-		err = db.QueryRow(`
-			SELECT COUNT(*) FROM spec_subspec
-			WHERE id = $1 AND spec_id = $2
-			`, *refID, specID).Scan(&count)
+		err = db.QueryRow(
+			`SELECT COUNT(*) FROM spec_subspec
+			WHERE id = $1 AND spec_id = $2`,
+			*refID, specID).Scan(&count)
 
 	default:
 		return false, fmt.Errorf("unsupported refType: %s", *refType)

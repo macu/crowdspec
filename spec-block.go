@@ -160,6 +160,7 @@ func loadBlock(c DBConn, blockID int64) (*SpecBlock, error) {
 	return blocksByID[blockID], nil
 }
 
+// load the blocks in a spec or subspec
 func loadBlocks(db *sql.DB, specID int64, subspecID *int64) ([]*SpecBlock, error) {
 
 	// Ref items are only loaded if belonging to the same spec.
