@@ -22,3 +22,10 @@ html, body {
 	// Fix message box mobile viewport overflow
 	max-width: 100%;
 }
+
+.el-dialog__footer {
+	padding-top: 5px;
+	.el-button {
+		margin-top: 10px;
+	}
+}

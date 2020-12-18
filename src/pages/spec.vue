@@ -3,7 +3,7 @@
 
 	<header v-if="spec">
 
-		<div v-if="onSpecRoute && !loading" class="right">
+		<div v-if="!loading" class="right">
 
 			<span v-if="currentUserOwns">You own this</span>
 			<span v-else>
@@ -12,21 +12,25 @@
 				<template v-else>{{spec.ownerType}} {{spec.ownerId}}</template>
 			</span>
 
-			<template v-if="enableEditing">
-				<span v-if="spec.public">
-					Public
-				</span>
+			<template v-if="onSpecRoute">
+				<template v-if="enableEditing">
+					<span v-if="spec.public">
+						Public
+					</span>
+					<span v-else>
+						<el-tooltip content="Unpublished" placement="left">
+							<i class="el-icon-lock"></i>
+						</el-tooltip>
+					</span>
+					<el-button @click="openManageSpec()" size="mini" icon="el-icon-setting"/>
+				</template>
+
 				<span v-else>
-					<el-tooltip content="Unpublished" placement="left">
-						<i class="el-icon-lock"></i>
-					</el-tooltip>
+					Last modified <moment :datetime="spec.updated" :offset="true"/>
 				</span>
-				<el-button @click="openManageSpec()" size="mini" icon="el-icon-setting"/>
 			</template>
 
-			<span v-else>
-				Last modified <moment :datetime="spec.updated" :offset="true"/>
-			</span>
+			<el-button @click="promptNavSpec()" size="mini" icon="el-icon-folder"/>
 
 		</div>
 
@@ -177,10 +181,10 @@ export default {
 </script>
 
 <style lang="scss">
-@import '../styles/_breakpoints.scss';
-@import '../styles/_colours.scss';
-@import '../styles/_spec-view.scss';
-@import '../styles/_app.scss';
+@import '../_styles/_breakpoints.scss';
+@import '../_styles/_colours.scss';
+@import '../_styles/_spec-view.scss';
+@import '../_styles/_app.scss';
 
 .spec-page {
 
