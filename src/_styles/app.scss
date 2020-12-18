@@ -23,7 +23,17 @@ html, body {
 	max-width: 100%;
 }
 
+.el-dialog__title::before {
+	// Don't overlap X with text
+	display: block;
+	float: right;
+	width: 44px;
+	content: " ";
+	white-space: pre;
+}
+
 .el-dialog__footer {
+	// Footers contain only buttons
 	padding-top: 5px;
 	.el-button {
 		margin-top: 10px;
