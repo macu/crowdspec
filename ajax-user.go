@@ -25,7 +25,6 @@ func ajaxUserChangePassword(db *sql.DB, userID uint, w http.ResponseWriter, r *h
 	newPasswordConfirm := r.Form.Get("new2")
 
 	if len(strings.TrimSpace(newPassword)) < 5 || newPassword != newPasswordConfirm {
-		logError(r, userID, fmt.Errorf("invalid new password"))
 		return nil, http.StatusBadRequest
 	}
 

@@ -1,6 +1,6 @@
 <template>
 <el-dialog
-	:title="'Your username is ' + username"
+	:title="'Account options for ' + username"
 	:visible.sync="showing"
 	:width="$store.getters.dialogTinyWidth"
 	:close-on-click-modal="false"
@@ -47,7 +47,7 @@
 				<p>
 					For your security, you should not use the same passwords that you use for important services such as email and online banking on other websites.
 					If one website gets hacked, you can lose access to every other site where you use the same password.
-					The best setup is to use a password manager with two-factor authentication and distinct long random passwords for every important service.
+					Is is wise to use a password manager with two-factor authentication and distinct long random passwords for every important service.
 				</p>
 			</el-alert>
 		</el-form-item>
@@ -68,13 +68,11 @@
 		label-position="top">
 		<el-form-item>
 			<strong slot="label" class="section-heading">Block editing</strong>
-			<el-form-item label="Delete button">
-				<el-select v-model="settingsForm.blockEditing.deleteButton">
-					<el-option label="Show delete button only in edit block modal" value="modal"/>
-					<el-option label="Only show delete button on newly added blocks" value="recent"/>
-					<el-option label="Show delete button on all blocks" value="all"/>
-				</el-select>
-			</el-form-item>
+			<el-select v-model="settingsForm.blockEditing.deleteButton">
+				<el-option label="Show delete button only in edit block modal" value="modal"/>
+				<el-option label="Show delete button on newly added blocks" value="recent"/>
+				<el-option label="Show delete button on all blocks" value="all"/>
+			</el-select>
 		</el-form-item>
 		<el-form-item>
 			<el-button type="primary" @click="submitSettings()">

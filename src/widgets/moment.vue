@@ -17,7 +17,8 @@ export default {
 	},
 	computed: {
 		moment() {
-			return moment.parseZone(this.datetime);
+			// Parse with timezone and convert to local time
+			return moment.parseZone(this.datetime).local();
 		},
 		currentTime() {
 			return this.$store.state.currentTime;
