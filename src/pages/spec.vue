@@ -8,7 +8,11 @@
 			<span v-if="currentUserOwns">You own this</span>
 			<span v-else>
 				Owned by
-				<template v-if="spec.username">{{spec.username}}</template>
+				<username
+					v-if="spec.username"
+					:username="spec.username"
+					:highlight="spec.highlight"
+					/>
 				<template v-else>{{spec.ownerType}} {{spec.ownerId}}</template>
 			</span>
 
@@ -64,6 +68,7 @@
 
 <script>
 import $ from 'jquery';
+import Username from '../widgets/username.vue';
 import Moment from '../widgets/moment.vue';
 import EditSpecModal from '../spec/edit-spec-modal.vue';
 import NavSpecModal from '../spec/nav-spec-modal.vue';
@@ -73,6 +78,7 @@ import {setWindowSubtitle, idsEq} from '../utils.js';
 
 export default {
 	components: {
+		Username,
 		Moment,
 		EditSpecModal,
 		NavSpecModal,
@@ -204,6 +210,11 @@ export default {
 
 			>*+* {
 				margin-left: 15px;
+			}
+
+			.username {
+				display: inline-block;
+				margin-left: $icon-spacing;
 			}
 		}
 

@@ -4,9 +4,12 @@
 	<header>
 		<h1 @click="gotoIndex()">CrowdSpec</h1>
 		<div>
-			<span @click="openEditProfile()" class="username">
-				{{username}}
-			</span>
+			<el-button @click="openEditProfile()" type="text" size="mini" class="username-button">
+				<username
+					:username="username"
+					:highlight="$store.getters.userSettings.userProfile.highlightUsername"
+					/>
+			</el-button>
 			<el-button @click="logout()" size="mini">Log out</el-button>
 		</div>
 	</header>
@@ -22,12 +25,14 @@
 import $ from 'jquery';
 import store from './store.js';
 import router from './router.js';
+import Username from './widgets/username.vue';
 import EditProfileModal from './widgets/edit-profile-modal.vue';
 
 export default {
 	store,
 	router,
 	components: {
+		Username,
 		EditProfileModal,
 	},
 	computed: {
@@ -61,8 +66,9 @@ export default {
 
 	>header {
 		display: flex;
-		align-items: center;
-		justify-content: flex-end;
+		flex-direction: row; // horizontal
+		align-items: center; // vertical align
+		justify-content: flex-end; // align right
 		flex-wrap: wrap;
 		background-color: $app-bg;
 		color: white;
@@ -73,7 +79,7 @@ export default {
 		}
 
 		>h1 {
-			flex: 1;
+			flex: 1; // claim all extra horizontal space on line
 			margin: 0 0 10px;
 			padding-right: 20px;
 			cursor: pointer;
@@ -81,8 +87,11 @@ export default {
 
 		>div {
 			margin: 0 0 10px;
-			>.username {
-				cursor: pointer;
+			>.username-button {
+				color: white;
+				padding-left: 5px;
+				padding-right: 5px;
+				border-bottom: 1px solid white;
 			}
 			>*:not(:first-child) {
 				margin-left: 20px;

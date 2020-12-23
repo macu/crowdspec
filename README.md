@@ -87,6 +87,8 @@ postgres=#
 - [x] Freely move blocks between spec/subspec contexts
 - [x] Change routes structure
 - [x] Add loading messages when navigating specs
+- [x] Case insensitive username login
+- [x] Add username highlight
 
 ### 2020-08-31
 

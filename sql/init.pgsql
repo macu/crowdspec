@@ -33,7 +33,7 @@ CREATE COLLATION case_insensitive (
 -- Create minimal tables for user authentication and session management
 CREATE TABLE user_account (
 	id SERIAL PRIMARY KEY,
-	username VARCHAR(25) UNIQUE NOT NULL,
+	username VARCHAR(25) UNIQUE NOT NULL COLLATE case_insensitive,
 	email VARCHAR(50) UNIQUE NOT NULL,
 	auth_hash VARCHAR(60) NOT NULL,
 	user_settings JSON,

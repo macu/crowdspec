@@ -39,6 +39,7 @@ func ajaxUserHome(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 	rows, err = db.Query(`
 		SELECT spec.id, owner_type, owner_id, spec_name, spec_desc,
 		user_account.username,
+		user_account.user_settings::json#>>'{userProfile,highlightUsername}' AS highlight,
 		GREATEST(spec.updated_at, spec.blocks_updated_at) AS last_updated
 		FROM spec
 		LEFT JOIN user_account
@@ -55,7 +56,7 @@ func ajaxUserHome(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 	for rows.Next() {
 		s := Spec{}
 		err = rows.Scan(&s.ID, &s.OwnerType, &s.OwnerID, &s.Name, &s.Desc,
-			&s.Username, &s.Updated)
+			&s.Username, &s.Highlight, &s.Updated)
 		if err != nil {
 			if err2 := rows.Close(); err2 != nil { // TODO Add everywhere
 				logError(r, userID, fmt.Errorf("closing rows: %s; on scan error: %w", err2, err))

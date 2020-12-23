@@ -177,7 +177,7 @@ export default {
 			>*+* {
 				margin-top: 20px;
 			}
-			>label {
+			>label:not(.el-checkbox) {
 				display: block;
 				input, textarea {
 					display: block;

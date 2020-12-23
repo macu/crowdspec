@@ -1,11 +1,18 @@
 <template>
 <el-dialog
-	:title="'Account options for ' + username"
 	:visible.sync="showing"
 	:width="$store.getters.dialogTinyWidth"
-	:close-on-click-modal="false"
+	:close-on-click-modal="mode === null"
 	@closed="clearMode()"
 	class="edit-profile-modal">
+
+	<span slot="title">
+		Account options for
+		<username
+			:username="username"
+			:highlight="$store.getters.userSettings.userProfile.highlightUsername"
+			/>
+	</span>
 
 	<el-form v-if="changePasswordMode"
 		ref="changePasswordForm"
@@ -67,6 +74,26 @@
 		v-loading="waiting"
 		label-position="top">
 		<el-form-item>
+			<strong slot="label" class="section-heading">Profile</strong>
+			<div class="flex-input">
+				<el-color-picker
+					v-model="settingsForm.userProfile.highlightUsername"
+					:predefine="predefinedUsernameHighlights"
+					color-format="rgb"
+					/>
+				<el-button
+					v-if="settingsForm.userProfile.highlightUsername"
+					@click="settingsForm.userProfile.highlightUsername = null"
+					size="mini"
+					icon="el-icon-close"
+					/>
+				<username
+					username="Username colour"
+					:highlight="settingsForm.userProfile.highlightUsername"
+					/>
+			</div>
+		</el-form-item>
+		<el-form-item>
 			<strong slot="label" class="section-heading">Block editing</strong>
 			<el-select v-model="settingsForm.blockEditing.deleteButton">
 				<el-option label="Show delete button only in edit block modal" value="modal"/>
@@ -102,6 +129,7 @@
 
 <script>
 import $ from 'jquery';
+import Username from './username.vue';
 import {alertError, defaultUserSettings} from '../utils.js';
 
 const MODE_CHANGE_PASSWORD = 1;
@@ -111,6 +139,9 @@ const SUCCESS_MESSAGE_TIMEOUT = 1200;
 const ERROR_MESSAGE_TIMEOUT = 4000;
 
 export default {
+	components: {
+		Username,
+	},
 	data() {
 		return {
 			showing: false,
@@ -175,6 +206,15 @@ export default {
 					trigger: 'blur',
 				}],
 			};
+		},
+		predefinedUsernameHighlights() {
+			return [
+				'rgb(50, 205, 50)', // limegreen
+				'rgb(255, 192, 203)', // pink
+				'rgb(240, 255, 255)', // azure
+				'rgb(255, 255, 0)', // yellow
+				'rgb(255, 250, 250)', // snow
+			];
 		},
 	},
 	methods: {
@@ -301,7 +341,34 @@ export default {
 </script>
 
 <style lang="scss">
+@import '../_styles/_app.scss';
+
 .edit-profile-modal {
+
+	.flex-input {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+
+		>:not(:first-child) {
+			margin-left: 10px;
+		}
+		>:last-child {
+			margin-left: 20px;
+			flex: 1;
+		}
+		span {
+			line-height: 1.2;
+		}
+	}
+
+	.el-dialog__header {
+		.username {
+			display: inline-block;
+			margin-left: $icon-spacing;
+		}
+	}
+
 	.el-form {
 		.el-form-item {
 			margin-bottom: 30px;
@@ -340,6 +407,7 @@ export default {
 			}
 		}
 	}
+
 	.options {
 		.el-button {
 			display: block;
@@ -349,5 +417,6 @@ export default {
 			}
 		}
 	}
+
 }
 </style>

@@ -20,7 +20,8 @@ type Spec struct {
 	RenderTime time.Time `json:"renderTime,omitempty"`
 
 	// Joined from owner if owner is user
-	Username string `json:"username,omitempty"`
+	Username  string  `json:"username,omitempty"`
+	Highlight *string `json:"highlight,omitempty"`
 
 	// Root level blocks in this spec
 	Blocks []*SpecBlock `json:"blocks,omitempty"`

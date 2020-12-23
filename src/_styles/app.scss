@@ -8,9 +8,28 @@ html, body {
 	padding: 0;
 }
 
-.el-dialog__body, .el-checkbox__label, .el-popover {
+.el-dialog__body, .el-popover {
 	// Apply normal word-break (Element is from China)
 	word-break: normal;
+	white-space: normal;
+}
+
+.el-checkbox {
+	// Apply normal English behaviour
+	display: flex;
+	flex-direction: row;
+	align-items: center; // vertical align
+	>.el-checkbox__label {
+		flex: 1;
+		word-break: normal;
+		white-space: normal;
+	}
+}
+
+.el-message {
+	// Better behaviour on mobile
+	min-width: 200px;
+	max-width: 100vw;
 }
 
 .el-select-dropdown__item {
