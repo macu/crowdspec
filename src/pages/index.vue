@@ -38,10 +38,12 @@
 				tag="li"
 				:to="{name: 'spec', params: {specId: s.id}}">
 				<div class="info">
-					<span class="username">
-						<i class="el-icon-user"></i>
-						{{s.username}}
-					</span>
+					<username
+						:username="s.username"
+						:highlight="s.username === $store.getters.username
+							? $store.getters.userSettings.userProfile.highlightUsername
+							: s.highlight"
+						/>
 				</div>
 				<router-link :to="{name: 'spec', params: {specId: s.id}}" class="name">{{s.name}}</router-link>
 				<div class="info">
@@ -69,12 +71,14 @@
 <script>
 import $ from 'jquery';
 import Moment from '../widgets/moment.vue';
+import Username from '../widgets/username.vue';
 import EditSpecModal from '../spec/edit-spec-modal.vue';
 import {alertError} from '../utils.js';
 
 export default {
 	components: {
 		Moment,
+		Username,
 		EditSpecModal,
 	},
 	data() {
@@ -113,9 +117,9 @@ export default {
 </script>
 
 <style lang="scss">
-@import '../styles/_breakpoints.scss';
-@import '../styles/_colours.scss';
-@import '../styles/_app.scss';
+@import '../_styles/_breakpoints.scss';
+@import '../_styles/_colours.scss';
+@import '../_styles/_app.scss';
 
 .index-page {
 
@@ -163,6 +167,12 @@ export default {
 						&.public {
 							color: green;
 							font-weight: green;
+						}
+
+						>i {
+							display: inline-block;
+							font-weight: bold;
+							margin-right: $icon-spacing;
 						}
 					}
 				}

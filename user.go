@@ -22,7 +22,13 @@ type UserAccount struct {
 
 // UserSettings represents a user's configurable settings.
 type UserSettings struct {
+	UserProfile  UserProfileSettings  `json:"userProfile"`
 	BlockEditing BlockEditingSettings `json:"blockEditing"`
+}
+
+// UserProfileSettings holds user settings regarding the user's own profile.
+type UserProfileSettings struct {
+	HighlightUsername *string `json:"highlightUsername"`
 }
 
 // BlockEditingSettings holds user settings regarding blocks they can edit.
@@ -120,10 +126,7 @@ func loadUserSettings(c DBConn, userID uint) (*UserSettings, error) {
 		}
 	}
 
-	// Apply defaults
-	if settings.BlockEditing.DeleteButton == "" {
-		settings.BlockEditing.DeleteButton = "all"
-	}
+	sanitizeSettings(&settings)
 
 	return &settings, nil
 }
@@ -142,6 +145,8 @@ func saveUserSettings(c DBConn, userID uint, settings *UserSettings) error {
 
 	} else {
 
+		sanitizeSettings(settings)
+
 		settingsBytes, err := json.Marshal(settings)
 		if err != nil {
 			return fmt.Errorf("marshalling settings: %w", err)
@@ -158,4 +163,23 @@ func saveUserSettings(c DBConn, userID uint, settings *UserSettings) error {
 	}
 
 	return nil
+}
+
+func sanitizeSettings(settings *UserSettings) {
+
+	if settings == nil {
+		return
+	}
+
+	// Sanitize values
+	if settings.UserProfile.HighlightUsername != nil &&
+		!isValidColour(*settings.UserProfile.HighlightUsername) {
+		settings.UserProfile.HighlightUsername = nil
+	}
+
+	// Apply defaults
+	if settings.BlockEditing.DeleteButton == "" {
+		settings.BlockEditing.DeleteButton = "all"
+	}
+
 }

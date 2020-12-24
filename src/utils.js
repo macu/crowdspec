@@ -35,6 +35,9 @@ export function alertError(error) {
 
 export function defaultUserSettings() {
 	return {
+		userProfile: {
+			highlightUsername: null,
+		},
 		blockEditing: {
 			deleteButton: 'all',
 		},

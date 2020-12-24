@@ -133,10 +133,10 @@ export default {
 </script>
 
 <style lang="scss">
-@import '../styles/_breakpoints.scss';
-@import '../styles/_colours.scss';
-@import '../styles/_spec-view.scss';
-@import '../styles/_app.scss';
+@import '../_styles/_breakpoints.scss';
+@import '../_styles/_colours.scss';
+@import '../_styles/_spec-view.scss';
+@import '../_styles/_app.scss';
 
 .subspec-page {
 

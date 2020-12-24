@@ -1,0 +1,60 @@
+* {
+	box-sizing: border-box;
+}
+
+html, body {
+	height: 100%;
+	margin: 0;
+	padding: 0;
+}
+
+.el-dialog__body, .el-popover {
+	// Apply normal word-break (Element is from China)
+	word-break: normal;
+	white-space: normal;
+}
+
+.el-checkbox {
+	// Apply normal English behaviour
+	display: flex;
+	flex-direction: row;
+	align-items: center; // vertical align
+	>.el-checkbox__label {
+		flex: 1;
+		word-break: normal;
+		white-space: normal;
+	}
+}
+
+.el-message {
+	// Better behaviour on mobile
+	min-width: 200px;
+	max-width: 100vw;
+}
+
+.el-select-dropdown__item {
+	// Fix viewport overflow on long option labels
+	max-width: 100vw;
+}
+
+.el-message-box {
+	// Fix message box mobile viewport overflow
+	max-width: 100%;
+}
+
+.el-dialog__title::before {
+	// Don't overlap X with text
+	display: block;
+	float: right;
+	width: 44px;
+	content: " ";
+	white-space: pre;
+}
+
+.el-dialog__footer {
+	// Footers contain only buttons
+	padding-top: 5px;
+	.el-button {
+		margin-top: 10px;
+	}
+}

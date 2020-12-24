@@ -41,8 +41,8 @@ export default {
 </script>
 
 <style lang="scss">
-@import '../styles/_app.scss';
-@import '../styles/_breakpoints.scss';
+@import '../_styles/_app.scss';
+@import '../_styles/_breakpoints.scss';
 
 .spec-view-page {
 	padding: $content-area-padding;

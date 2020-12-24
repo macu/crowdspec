@@ -70,7 +70,7 @@ export default {
 </script>
 
 <style lang="scss">
-@import '../styles/_colours.scss';
+@import '../_styles/_colours.scss';
 
 .spec-block-preview {
 	padding: 20px;

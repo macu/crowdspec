@@ -214,7 +214,7 @@ func makeResetPasswordHandler(db *sql.DB) func(w http.ResponseWriter, r *http.Re
 			newpass := r.FormValue("newpass")
 			newpass2 := r.FormValue("newpass2")
 
-			if strings.TrimSpace(newpass) == "" {
+			if len(strings.TrimSpace(newpass)) < 5 {
 				executeTemplate(w, r, token, http.StatusBadRequest, nil)
 				return
 			} else if newpass != newpass2 {

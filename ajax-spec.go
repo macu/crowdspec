@@ -35,7 +35,8 @@ func ajaxSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (
 	}
 	err = db.QueryRow(`
 		SELECT spec.id, spec.owner_type, spec.owner_id, user_account.username,
-		spec.spec_name, spec.spec_desc, spec.is_public,
+		user_account.user_settings::json#>>'{userProfile,highlightUsername}' AS highlight,
+		spec.spec_name, spec.spec_desc, spec.is_public, spec.created_at,
 		CASE
 			-- when editor
 			WHEN spec.owner_type = $2 AND spec.owner_id = $3
@@ -49,8 +50,8 @@ func ajaxSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (
 		AND user_account.id=spec.owner_id
 		WHERE spec.id=$1
 		`, specID, OwnerTypeUser, userID,
-	).Scan(&s.ID, &s.OwnerType, &s.OwnerID, &s.Username,
-		&s.Name, &s.Desc, &s.Public, &s.Updated)
+	).Scan(&s.ID, &s.OwnerType, &s.OwnerID, &s.Username, &s.Highlight,
+		&s.Name, &s.Desc, &s.Public, &s.Created, &s.Updated)
 	if err != nil {
 		logError(r, userID, fmt.Errorf("reading spec: %w", err))
 		return nil, http.StatusInternalServerError
