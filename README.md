@@ -89,6 +89,7 @@ postgres=#
 - [x] Add loading messages when navigating specs
 - [x] Case insensitive username login
 - [x] Add username highlight
+- [x] Allow moving blocks into empty contexts
 
 ### 2020-08-31
 
