@@ -7,7 +7,17 @@
 
 	<template v-if="enableEditing">
 
-		<el-button @click="promptAddBlock()" size="small" type="primary">Add block</el-button>
+		<el-button
+			v-if="choosingAddPosition"
+			@click="placeBlockBottom()"
+			size="small"
+			type="success"
+			icon="el-icon-top">Move block here</el-button>
+		<el-button
+			v-else
+			@click="promptAddBlock()"
+			size="small"
+			type="primary">Add block</el-button>
 
 		<ul ref="mirrorList" class="mirror-list">
 			<!-- holds mirror element when dragging block -->
@@ -84,6 +94,9 @@ export default {
 		},
 		subspecId() {
 			return this.subspec ? this.subspec.id : null;
+		},
+		choosingAddPosition() {
+			return !!this.$store.state.movingBlockId;
 		},
 	},
 	watch: {
@@ -278,6 +291,27 @@ export default {
 		startMovingBlock(blockId) {
 			this.$store.commit('startMovingBlock', blockId);
 			this.transitRelativeScroll(blockId);
+		},
+		placeBlockBottom() {
+			let movingId = this.$store.state.movingBlockId;
+			if (!movingId) {
+				return;
+			}
+			ajaxMoveBlock(movingId, this.subspecId, null, null).then((block = null) => {
+				if (block) {
+					// moved here from another context
+					this.insertBlock(block, true, false);
+				} else {
+					// moved within current context
+					let $moving = $('[data-spec-block="'+movingId+'"]');
+					let $sourceParentBlock = $moving.closest('.spec-block-list').closest('[data-spec-block]');
+					$moving.appendTo(this.$refs.list);
+					if ($sourceParentBlock.length) {
+						$sourceParentBlock.data('vc').updateHasSubblocks();
+					}
+				}
+				this.$store.commit('endMovingBlock');
+			});
 		},
 		endMovingBlock(endFromBlockId) {
 			this.$store.commit('endMovingBlock');

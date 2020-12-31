@@ -32,9 +32,9 @@
 					</template>
 					<template v-else-if="movingAnother">
 						<el-button @click="cancelMoving()" type="warning" size="mini" icon="el-icon-close" circle/>
-						<el-button @click="moveBeforeThis()" type="primary" size="mini" icon="el-icon-top" circle/>
-						<el-button @click="moveIntoThis()" type="primary" size="mini" icon="el-icon-bottom-right" circle/>
-						<el-button @click="moveAfterThis()" type="primary" size="mini" icon="el-icon-bottom" circle/>
+						<el-button @click="moveBeforeThis()" type="success" size="mini" icon="el-icon-top" circle/>
+						<el-button @click="moveIntoThis()" type="success" size="mini" icon="el-icon-bottom-right" circle/>
+						<el-button @click="moveAfterThis()" type="success" size="mini" icon="el-icon-bottom" circle/>
 					</template>
 					<template v-else>
 						<el-button @click="openCommunity()"
@@ -265,15 +265,18 @@ export default {
 			let insertBeforeId = this.block.id; // Add before this
 			ajaxMoveBlock(movingId, this.subspecId, parentId, insertBeforeId).then((block = null) => {
 				if (block) {
+					// moved here from another context
 					let $block = this.$parent.insertBlock(block, false, true);
 					$block.insertBefore(this.$el);
 				} else {
+					// moved within current context
 					let $moving = $('[data-spec-block="'+movingId+'"]');
 					let $sourceParentBlock = $moving.closest('.spec-block-list').closest('[data-spec-block]');
 					$moving.insertBefore(this.$el);
 					if ($sourceParentBlock.length) {
 						$sourceParentBlock.data('vc').updateHasSubblocks();
 					}
+					// this block's parent already has subblocks so no need to update
 				}
 				this.$store.commit('endMovingBlock');
 			});
