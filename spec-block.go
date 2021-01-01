@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+const blockTitleMaxLen = 255
+
 // SpecBlock represents a section within a spec or spec subspec.
 type SpecBlock struct {
 	ID          int64     `json:"id"`

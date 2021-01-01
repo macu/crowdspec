@@ -8,9 +8,15 @@
 
 	<p v-if="loading">Loading...</p>
 
-	<el-select v-else-if="subspecs.length" v-model="selectedSubspecId" placeholder="Choose subspec">
-		<el-option v-for="s in subspecs" :key="s.id" :value="s.id" :label="s.name"/>
-	</el-select>
+	<template v-else-if="subspecs.length">
+
+		<el-select v-model="selectedSubspecId" placeholder="Choose subspec">
+			<el-option v-for="s in subspecs" :key="s.id" :value="s.id" :label="s.name"/>
+		</el-select>
+
+		<ref-subspec v-if="selectedSubspec" :item="selectedSubspec"/>
+
+	</template>
 
 	<p v-else>No subspecs.</p>
 
@@ -35,9 +41,13 @@
 </template>
 
 <script>
-import {alertError} from '../utils.js';
+import RefSubspec from './ref-subspec.vue';
+import {alertError, idsEq} from '../utils.js';
 
 export default {
+	components: {
+		RefSubspec,
+	},
 	props: {
 		specId: Number,
 		subspecId: Number,
@@ -53,6 +63,16 @@ export default {
 	computed: {
 		disableGoToSubspec() {
 			return this.loading || !this.subspecs.length || !this.selectedSubspecId;
+		},
+		selectedSubspec() {
+			if (this.selectedSubspecId) {
+				for (var i = 0; i < this.subspecs.length; i++) {
+					if (this.subspecs[i].id === this.selectedSubspecId) {
+						return this.subspecs[i];
+					}
+				}
+			}
+			return null;
 		},
 	},
 	methods: {
@@ -71,22 +91,31 @@ export default {
 			})
 		},
 		goToSpec() {
-			this.$router.push({
-				name: 'spec',
-				params: {
-					specId: this.specId,
-				},
-			});
+			if (
+				this.$route.name !== 'spec'
+			) {
+				this.$router.push({
+					name: 'spec',
+					params: {
+						specId: this.specId,
+					},
+				});
+			}
 			this.showing = false;
 		},
 		goToSubspec() {
-			this.$router.push({
-				name: 'subspec',
-				params: {
-					specId: this.specId,
-					subspecId: this.selectedSubspecId,
-				},
-			});
+			if (
+				this.$route.name !== 'subspec' ||
+				!idsEq(this.$route.params.subspecId, this.selectedSubspecId)
+			) {
+				this.$router.push({
+					name: 'subspec',
+					params: {
+						specId: this.specId,
+						subspecId: this.selectedSubspecId,
+					},
+				});
+			}
 			this.showing = false;
 		},
 		closed() {
@@ -102,6 +131,9 @@ export default {
 .nav-spec-modal {
 	.el-select {
 		width: 100%;
+	}
+	.ref-subspec {
+		margin-top: 20px;
 	}
 }
 </style>

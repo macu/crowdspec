@@ -147,7 +147,7 @@ func ajaxSpecCreateSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *ht
 		return nil, http.StatusForbidden
 	}
 
-	name := strings.TrimSpace(r.Form.Get("name"))
+	name := Substr(strings.TrimSpace(r.Form.Get("name")), subspecNameMaxLen)
 	if name == "" {
 		logError(r, userID, fmt.Errorf("subspec name required"))
 		return nil, http.StatusBadRequest
@@ -197,7 +197,7 @@ func ajaxSpecSaveSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 		return nil, http.StatusForbidden
 	}
 
-	name := strings.TrimSpace(r.Form.Get("name"))
+	name := Substr(strings.TrimSpace(r.Form.Get("name")), subspecNameMaxLen)
 	if name == "" {
 		logError(r, userID, fmt.Errorf("subspec name required"))
 		return nil, http.StatusBadRequest

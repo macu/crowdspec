@@ -74,6 +74,12 @@ export default {
 			}
 		},
 	},
+	beforeDestroy() {
+		if (this.sendingSpinner) {
+			this.sendingSpinner.close();
+			this.sendingSpinner = null;
+		}
+	},
 	methods: {
 		showCreate(callback) {
 			this.callback = callback;

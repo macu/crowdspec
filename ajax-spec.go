@@ -80,7 +80,7 @@ func ajaxCreateSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Requ
 
 	// TODO ALlow creating within an org
 
-	name := strings.TrimSpace(r.Form.Get("name"))
+	name := Substr(strings.TrimSpace(r.Form.Get("name")), spenNameMaxLen)
 	if name == "" {
 		logError(r, userID, fmt.Errorf("spec name required"))
 		return nil, http.StatusBadRequest
@@ -134,7 +134,7 @@ func ajaxSaveSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 		return nil, http.StatusForbidden
 	}
 
-	name := strings.TrimSpace(r.Form.Get("name"))
+	name := Substr(strings.TrimSpace(r.Form.Get("name")), spenNameMaxLen)
 	if name == "" {
 		logError(r, userID, fmt.Errorf("spec name required"))
 		return nil, http.StatusBadRequest

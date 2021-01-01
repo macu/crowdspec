@@ -26,7 +26,10 @@
 							<i class="el-icon-lock"></i>
 						</el-tooltip>
 					</span>
-					<el-button @click="openManageSpec()" size="mini" icon="el-icon-setting"/>
+					<el-button
+						@click="openManageSpec()"
+						:disabled="choosingAddPosition"
+						size="mini" icon="el-icon-setting"/>
 				</template>
 
 				<span v-else>
@@ -107,6 +110,9 @@ export default {
 		enableEditing() {
 			// Currently users may edit only their own specs
 			return this.currentUserOwns;
+		},
+		choosingAddPosition() {
+			return !!this.$store.state.movingBlockId;
 		},
 	},
 	beforeRouteEnter(to, from, next) {

@@ -8,6 +8,7 @@
 			<el-button
 				v-if="enableEditing"
 				@click="openManageSubspec()"
+				:disabled="choosingAddPosition"
 				size="mini" icon="el-icon-setting"/>
 
 			<span v-else>
@@ -73,6 +74,9 @@ export default {
 		},
 		onSubspecRoute() {
 			return this.$route.name === 'subspec';
+		},
+		choosingAddPosition() {
+			return !!this.$store.state.movingBlockId;
 		},
 	},
 	beforeRouteEnter(to, from, next) {
