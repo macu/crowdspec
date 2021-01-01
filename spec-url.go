@@ -17,6 +17,9 @@ import (
 	"github.com/nfnt/resize"         // (ISC license) https://github.com/nfnt/resize/blob/master/LICENSE
 )
 
+const urlTitleMaxLen = 255
+const urlDescMaxLen = 255
+
 // URLObject contains display information about a URL.
 type URLObject struct {
 	ID        int64     `json:"id"`
@@ -104,12 +107,12 @@ func createURLObject(tx *sql.Tx, specID int64, url string) (*URLObject, error) {
 	}
 
 	if strings.TrimSpace(data.Title) != "" {
-		title := strings.TrimSpace(data.Title)
+		title := Substr(strings.TrimSpace(data.Title), urlTitleMaxLen)
 		urlObject.Title = &title
 	}
 
 	if strings.TrimSpace(data.Description) != "" {
-		desc := strings.TrimSpace(data.Description)
+		desc := Substr(strings.TrimSpace(data.Description), urlDescMaxLen)
 		urlObject.Desc = &desc
 	}
 
@@ -147,12 +150,12 @@ func updateURLObject(tx *sql.Tx, id int64, url string) (*URLObject, error) {
 	}
 
 	if strings.TrimSpace(data.Title) != "" {
-		title := strings.TrimSpace(data.Title)
+		title := Substr(strings.TrimSpace(data.Title), urlTitleMaxLen)
 		urlObject.Title = &title
 	}
 
 	if strings.TrimSpace(data.Description) != "" {
-		desc := strings.TrimSpace(data.Description)
+		desc := Substr(strings.TrimSpace(data.Description), urlDescMaxLen)
 		urlObject.Desc = &desc
 	}
 

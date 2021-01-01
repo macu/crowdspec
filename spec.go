@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+const spenNameMaxLen = 255
+
 // Spec represents a db spec row
 type Spec struct {
 	ID        int64     `json:"id"`

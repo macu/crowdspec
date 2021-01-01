@@ -62,3 +62,11 @@ func UintToA(i uint) string {
 func Uint64ToA(i uint64) string {
 	return strconv.FormatUint(i, 10)
 }
+
+// Substr returns the first n characters from the given string.
+func Substr(s string, n int) string {
+	if n > len(s) {
+		return s
+	}
+	return s[:n]
+}

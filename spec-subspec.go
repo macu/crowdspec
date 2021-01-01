@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+const subspecNameMaxLen = 255
+
 // SpecSubspec represents a portion of the spec that is loaded separately.
 type SpecSubspec struct {
 	ID      int64     `json:"id"`
@@ -30,6 +32,8 @@ func createSubspec(tx *sql.Tx, specID int64, name string, desc *string) (*SpecSu
 	s := &SpecSubspec{
 		SpecID: specID,
 	}
+
+	name = Substr(name, subspecNameMaxLen)
 
 	err := tx.QueryRow(`INSERT INTO spec_subspec (spec_id, created_at, updated_at, subspec_name, subspec_desc)
 		VALUES ($1, $2, $2, $3, $4)

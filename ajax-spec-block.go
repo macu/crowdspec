@@ -81,7 +81,7 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 		return nil, http.StatusForbidden
 	}
 
-	title := AtoPointerNilIfEmpty(strings.TrimSpace(r.Form.Get("title")))
+	title := AtoPointerNilIfEmpty(Substr(strings.TrimSpace(r.Form.Get("title")), blockTitleMaxLen))
 
 	body := AtoPointerNilIfEmpty(strings.TrimSpace(r.Form.Get("body")))
 
@@ -224,7 +224,7 @@ func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 		return nil, http.StatusForbidden
 	}
 
-	title := AtoPointerNilIfEmpty(strings.TrimSpace(r.Form.Get("title")))
+	title := AtoPointerNilIfEmpty(Substr(strings.TrimSpace(r.Form.Get("title")), blockTitleMaxLen))
 
 	body := AtoPointerNilIfEmpty(strings.TrimSpace(r.Form.Get("body")))
 
