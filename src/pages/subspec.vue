@@ -205,10 +205,7 @@ export default {
 				margin-left: 15px;
 			}
 
-			// remove bottom margin from bottom row of buttons
-			margin-bottom: -5px;
-
-			@media screen and (max-width: $max-sm) {
+			@include mobile {
 				>span {
 					display: block;
 					margin-bottom: 10px;
