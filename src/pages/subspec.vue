@@ -158,6 +158,7 @@ export default {
 				this.subspec.updated = updatedSubspec.updated;
 				this.subspec.name = updatedSubspec.name;
 				this.subspec.desc = updatedSubspec.desc;
+				this.unreadCount = updatedSubspec.unreadCount || 0;
 				setWindowSubtitle(updatedSubspec.name);
 			});
 		},

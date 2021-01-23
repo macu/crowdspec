@@ -354,15 +354,16 @@ func verifyReadComment(r *http.Request, db DBConn, userID uint, specID, commentI
 
 	var count uint
 	err := db.QueryRow(
-		`SELECT COUNT(*) FROM spec_community_comment
+		`SELECT COUNT(*)
+		FROM spec_community_comment AS c
 		INNER JOIN spec
-			ON spec.id = spec_community_comment.spec_id
+			ON spec.id = c.spec_id
 		WHERE
-			spec_community_comment.id = $2
+			c.id = $2
 			AND spec.id = $1 -- verify spec association
 			AND (spec.is_public
 				OR (spec.owner_type = $3 AND spec.owner_id = $4) -- allow spec owner
-				OR spec_community_comment.user_id = $4 -- allow comment author
+				OR c.user_id = $4 -- allow comment author
 			)`,
 		specID, commentID, OwnerTypeUser, userID).Scan(&count)
 
@@ -384,13 +385,14 @@ func verifyUpdateComment(r *http.Request, db DBConn, userID uint, specID, commen
 
 	var count uint
 	err := db.QueryRow(
-		`SELECT COUNT(*) FROM spec_community_comment
+		`SELECT COUNT(*)
+		FROM spec_community_comment AS c
 		INNER JOIN spec
-			ON spec.id = spec_community_comment.spec_id
+			ON spec.id = c.spec_id
 		WHERE
-			spec_community_comment.id = $2
+			c.id = $2
 			AND spec.id = $1 -- verify spec association
-			AND spec_community_comment.user_id = $3 -- allow comment author
+			AND c.user_id = $3 -- allow comment author
 		`, specID, commentID, userID).Scan(&count)
 
 	if err != nil {

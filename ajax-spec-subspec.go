@@ -45,8 +45,7 @@ func ajaxSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request
 			ELSE GREATEST(spec_subspec.updated_at, spec_subspec.blocks_updated_at)
 		END AS last_updated,
 		-- select number of unread comments
-		(SELECT COUNT(c.id)
-			FROM spec_community_comment AS c
+		(SELECT COUNT(*) FROM spec_community_comment AS c
 			LEFT JOIN spec_community_read AS r
 				ON r.user_id = $4 AND r.target_type = 'comment' AND r.target_id = c.id
 			WHERE c.target_type = 'subspec' AND c.target_id = $2
@@ -198,7 +197,7 @@ func ajaxSpecSaveSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 
 	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
-		s := &SpecSubspecHeader{
+		s := &SpecSubspec{
 			ID: subspecID,
 		}
 
@@ -207,9 +206,17 @@ func ajaxSpecSaveSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 			`UPDATE spec_subspec
 			SET updated_at = $2, subspec_name = $3, subspec_desc = $4
 			WHERE id = $1
-			RETURNING spec_id, created_at, updated_at, subspec_name, subspec_desc`,
+			RETURNING spec_id, created_at, updated_at, subspec_name, subspec_desc,
+			-- select number of unread comments
+			(SELECT COUNT(*) FROM spec_community_comment AS c
+				LEFT JOIN spec_community_read AS r
+					ON r.user_id = $1 AND r.target_type = 'comment' AND r.target_id = c.id
+				WHERE c.spec_id = spec_subspec.spec_id
+					AND c.target_type = 'subspec' AND c.target_id = spec_subspec.id
+					AND r.user_id IS NULL
+			) AS unread_count`,
 			subspecID, time.Now(), name, desc,
-		).Scan(&s.SpecID, &s.Created, &s.Updated, &s.Name, &s.Desc)
+		).Scan(&s.SpecID, &s.Created, &s.Updated, &s.Name, &s.Desc, &s.UnreadCount)
 
 		if err != nil {
 			logError(r, userID, fmt.Errorf("updating subspec: %w", err))

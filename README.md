@@ -80,6 +80,10 @@ postgres=#
 
 ## Changelog
 
+### 2021-01
+
+- [x] Add community space, comments, sub-comments, read records, and unread counts
+
 ### 2020-12
 
 - [x] Add user settings

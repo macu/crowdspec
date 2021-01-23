@@ -196,6 +196,7 @@ export default {
 				this.spec.name = updatedSpec.name;
 				this.spec.desc = updatedSpec.desc;
 				this.spec.public = updatedSpec.public;
+				this.unreadCount = updatedSpec.unreadCount || 0;
 				setWindowSubtitle(updatedSpec.name);
 			});
 		},

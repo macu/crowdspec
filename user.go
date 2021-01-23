@@ -172,9 +172,10 @@ func sanitizeSettings(settings *UserSettings) {
 	}
 
 	// Sanitize values
-	if settings.UserProfile.HighlightUsername != nil &&
-		!isValidColour(*settings.UserProfile.HighlightUsername) {
-		settings.UserProfile.HighlightUsername = nil
+	if settings.UserProfile.HighlightUsername != nil {
+		if !isValidColour(*settings.UserProfile.HighlightUsername) {
+			settings.UserProfile.HighlightUsername = nil
+		}
 	}
 
 	// Apply defaults

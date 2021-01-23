@@ -407,10 +407,10 @@ func ajaxSpecCommunityAddComment(db *sql.DB, userID uint, w http.ResponseWriter,
 		// Mark new comment read by author
 		_, err = tx.Exec(
 			`INSERT INTO spec_community_read (
-				user_id, target_type, target_id
+				user_id, target_type, target_id, updated_at
 			) VALUES (
-				$1, $2, $3
-			)`, userID, CommunityTargetComment, c.ID,
+				$1, $2, $3, $4
+			)`, userID, CommunityTargetComment, c.ID, time.Now(),
 		)
 		if err != nil {
 			logError(r, userID, fmt.Errorf("marking new comment read: %w", err))
@@ -553,9 +553,9 @@ func ajaxSpecCommunityMarkRead(db *sql.DB, userID uint, w http.ResponseWriter, r
 			// Create read record
 			_, err = db.Exec(
 				`INSERT INTO spec_community_read (
-					user_id, target_type, target_id
-				) VALUES ($1, $2, $3)`,
-				userID, targetType, targetID,
+					user_id, target_type, target_id, updated_at
+				) VALUES ($1, $2, $3, $4)`,
+				userID, targetType, targetID, time.Now(),
 			)
 			if err != nil {
 				logError(r, userID, fmt.Errorf("marking read: %w", err))

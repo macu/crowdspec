@@ -23,7 +23,6 @@ var ajaxHandlers = map[string]map[string]AjaxRoute{
 		"/ajax/spec/urls":           ajaxSpecURLs,
 		"/ajax/spec/community":      ajaxSpecLoadCommunity,
 		"/ajax/spec/community/page": ajaxSpecCommunityLoadCommentsPage,
-		// "/ajax/spec/community/search":  ajaxSpecSearchCommunity,
 	},
 	http.MethodPost: {
 		"/ajax/user/change-password": ajaxUserChangePassword,

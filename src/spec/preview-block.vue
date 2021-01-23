@@ -115,7 +115,7 @@ ul.spec-block-preview {
 	background-color: $shadow-bg;
 
 	>li {
-		padding: 20px;
+		padding: 20px 20px 20px 0; // ul padding-left includes space after bullet
 
 		>.title {
 			font-weight: bold;

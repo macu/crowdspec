@@ -179,9 +179,10 @@ func makeLoginHandler(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 			http.SetCookie(w, &http.Cookie{
 				Name:     sessionTokenCookieName,
 				Value:    token,
-				Path:     "/", // Info: https://stackoverflow.com/a/22432999/1597274
+				Path:     "/", // enable AJAX (Info: https://stackoverflow.com/a/22432999/1597274)
 				Expires:  expires,
-				HttpOnly: true,
+				HttpOnly: true,                    // don't expose cookie to JavaScript
+				SameSite: http.SameSiteStrictMode, // send in first-party contexts only
 			})
 			http.Redirect(w, r, "/", http.StatusSeeOther)
 			log.Printf("user login: %s [%s]", username, ip)
@@ -203,7 +204,8 @@ func logoutHandler(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reque
 		Value:    "",
 		Path:     "/",
 		Expires:  time.Unix(0, 0),
-		HttpOnly: true,
+		HttpOnly: true,                    // don't expose cookie to JavaScript
+		SameSite: http.SameSiteStrictMode, // send in first-party contexts only
 	})
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }

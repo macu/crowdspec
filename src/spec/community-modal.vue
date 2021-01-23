@@ -141,7 +141,6 @@ export default {
 			newCommentBody: '',
 			sendingComment: false, // during POST
 			onAdjustUnread: null,
-			stack: [], // backlinks to parent context
 		};
 	},
 	computed: {
@@ -331,17 +330,17 @@ export default {
 .spec-block-community-modal {
 	>.el-dialog {
 		>.el-dialog__body {
+			>*:not(:last-child) {
+				margin-bottom: 20px;
+			}
 			>.community-context-stack {
-				margin-bottom: 54px;
+				margin-bottom: 25px;
 				&.empty {
 					display: none;
 				}
 			}
-			>.community-target-preview {
-				margin-bottom: 20px;
-			}
 			>.new-comment-area {
-				margin: 40px 0;
+				margin: 45px 0 40px;
 				>.el-textarea {
 					margin-bottom: 10px;
 					max-height: 60vh;

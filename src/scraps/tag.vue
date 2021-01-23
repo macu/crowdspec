@@ -31,9 +31,11 @@ export default {
 		userIsAdmin: Boolean,
 	},
 	data() {
-		adminPinned: this.tag.pinned || false,
-		userVote: this.tag.userVote || null,
-		sending: false,
+		return {
+			adminPinned: this.tag.pinned || false,
+			userVote: this.tag.userVote || null,
+			sending: false,
+		};
 	},
 	computed: {
 		authorClaimed() {

@@ -19,13 +19,15 @@ CREATE TABLE spec_community_comment (
 	user_id INTEGER NOT NULL REFERENCES user_account (id),
 	created_at TIMESTAMPTZ NOT NULL,
 	updated_at TIMESTAMPTZ NOT NULL,
-	comment_body TEXT NOT NULL
+	comment_body TEXT NOT NULL,
+	INDEX updated_by_target (target_type, target_id, updated_at)
 );
 
 CREATE TABLE spec_community_read (
 	user_id INTEGER NOT NULL REFERENCES user_account (id),
 	target_type spec_community_target_type NOT NULL,
 	target_id INTEGER NOT NULL,
+	updated_at TIMESTAMPTZ NOT NULL,
 	/* content_hidden BOOLEAN NOT NULL DEFAULT false, */
 	PRIMARY KEY (user_id, target_type, target_id)
 );
