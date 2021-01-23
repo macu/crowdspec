@@ -57,6 +57,9 @@ import {alertError, startAutoscroll} from '../utils.js';
 
 const SpecBlockClass = Vue.extend(SpecBlock);
 
+const CONTENT_MIN_OFFSET_TOP = 100; // distance top of content should be within window from top
+const CONTENT_MIN_OFFSET_BOTTOM = 200; // distance top of content should be within window from bottom
+
 /*
 transitRelativeScroll
 transit - carry across a transition "in transit"
@@ -230,6 +233,7 @@ export default {
 			vc.$on('end-moving', this.endMovingBlock);
 			vc.$on('play-video', this.playVideo);
 			vc.$on('prompt-nav-spec', this.promptNavSpec);
+			vc.$on('pan-to-block', this.panToBlock);
 
 			let $vc = $(vc.$el).data('vc', vc);
 
@@ -249,7 +253,8 @@ export default {
 		},
 		promptAddBlock() {
 			this.$refs.editBlockModal.showAdd(null, null, newBlock => {
-				this.insertBlock(newBlock, true, true);
+				let $block = this.insertBlock(newBlock, true, true);
+				this.panToBlock($block);
 			});
 		},
 		openBlockCommunity(blockId, onAdjustUnread) {
@@ -260,17 +265,18 @@ export default {
 		},
 		promptAddSubblock(parentId, insertBeforeId) {
 			this.$refs.editBlockModal.showAdd(parentId, insertBeforeId, newBlock => {
-				let $vc = this.insertBlock(newBlock, false, true);
+				let $block = this.insertBlock(newBlock, false, true);
 				// Add to sublist
 				if (insertBeforeId) {
-					$vc.insertBefore('[data-spec-block="'+insertBeforeId+'"]');
+					$block.insertBefore('[data-spec-block="'+insertBeforeId+'"]');
 				} else if (parentId) {
 					let $parentBlock = $('[data-spec-block="'+parentId+'"]');
-					$vc.appendTo($parentBlock.find('>ul.spec-block-list'));
+					$block.appendTo($parentBlock.find('>ul.spec-block-list'));
 					$parentBlock.data('vc').updateHasSubblocks();
 				} else {
-					$vc.appendTo(this.$refs.list);
+					$block.appendTo(this.$refs.list);
 				}
+				this.panToBlock($block);
 			});
 		},
 		promptDeleteBlock(blockId, callback) {
@@ -334,6 +340,26 @@ export default {
 		},
 		promptNavSpec() {
 			this.$emit('prompt-nav-spec');
+		},
+		panToBlock($moving) {
+			let $content = $moving.find('>.content');
+			let offset = $content.offset();
+			let $window = $(window);
+			let windowScrollTop = $window.scrollTop();
+			let windowHeight = $window.height();
+			if (
+				// content top appears before acceptable area
+				offset.top < (windowScrollTop + CONTENT_MIN_OFFSET_TOP)
+			) {
+				// scroll to CONTENT_MIN_OFFSET_TOP before content top
+				$window.scrollTop(offset.top - CONTENT_MIN_OFFSET_TOP);
+			} else if (
+				// content top appears after acceptable area
+				offset.top > ((windowScrollTop + windowHeight) - CONTENT_MIN_OFFSET_BOTTOM)
+			) {
+				// scroll content top CONTENT_MIN_OFFSET_BOTTOM into bottom of viewport
+				$window.scrollTop(offset.top - (windowHeight - CONTENT_MIN_OFFSET_BOTTOM));
+			}
 		},
 	},
 };
@@ -414,8 +440,8 @@ export default {
 			}
 		}
 
-		>li.spec-block.none {
-		}
+		// >li.spec-block.none {
+		// }
 	}
 
 	>ul.mirror-list {

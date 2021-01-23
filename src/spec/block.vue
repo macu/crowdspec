@@ -269,6 +269,7 @@ export default {
 					// moved here from another context
 					let $block = this.$parent.insertBlock(block, false, true);
 					$block.insertBefore(this.$el);
+					this.panToBlock($block);
 				} else {
 					// moved within current context
 					let $moving = $('[data-spec-block="'+movingId+'"]');
@@ -278,6 +279,7 @@ export default {
 						$sourceParentBlock.data('vc').updateHasSubblocks();
 					}
 					// this block's parent already has subblocks so no need to update
+					this.panToBlock($moving);
 				}
 				this.$store.commit('endMovingBlock');
 			});
@@ -290,6 +292,7 @@ export default {
 				if (block) {
 					let $block = this.$parent.insertBlock(block, false, true);
 					$block.appendTo(this.$refs.sublist);
+					this.panToBlock($block);
 				} else {
 					let $moving = $('[data-spec-block="'+movingId+'"]');
 					let $sourceParentBlock = $moving.closest('.spec-block-list').closest('[data-spec-block]');
@@ -297,6 +300,7 @@ export default {
 					if ($sourceParentBlock.length) {
 						$sourceParentBlock.data('vc').updateHasSubblocks();
 					}
+					this.panToBlock($moving);
 				}
 				this.updateHasSubblocks();
 				this.$store.commit('endMovingBlock');
@@ -310,6 +314,7 @@ export default {
 				if (block) {
 					let $block = this.$parent.insertBlock(block, false, true);
 					$block.insertAfter(this.$el);
+					this.panToBlock($block);
 				} else {
 					let $moving = $('[data-spec-block="'+movingId+'"]');
 					let $sourceParentBlock = $moving.closest('.spec-block-list').closest('[data-spec-block]');
@@ -317,9 +322,13 @@ export default {
 					if ($sourceParentBlock.length) {
 						$sourceParentBlock.data('vc').updateHasSubblocks();
 					}
+					this.panToBlock($moving);
 				}
 				this.$store.commit('endMovingBlock');
 			});
+		},
+		panToBlock($moving) {
+			this.$emit('pan-to-block', $moving);
 		},
 		mouseLeaveLayover() {
 			this.choosingAddPosition = false;
