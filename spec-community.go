@@ -15,8 +15,8 @@ type Comment struct {
 	Updated time.Time `json:"updated"`
 	Body    string    `json:"body"`
 
-	Username  string `json:"username"`
-	Highlight string `json:"highlight"`
+	Username  string  `json:"username"`
+	Highlight *string `json:"highlight"`
 
 	// Community attributes
 	UserRead    bool `json:"userRead"`

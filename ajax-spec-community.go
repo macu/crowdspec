@@ -73,9 +73,9 @@ type commentCommunity struct {
 		TargetID   int64     `json:"targetId"`
 		Body       *string   `json:"body"`
 
-		Username  string `json:"username"`  // joined
-		Highlight string `json:"highlight"` // joined
-		UserRead  bool   `json:"userRead"`  // joined
+		Username  string  `json:"username"`  // joined
+		Highlight *string `json:"highlight"` // joined
+		UserRead  bool    `json:"userRead"`  // joined
 	} `json:"comment"`
 
 	Tags          []*Tag     `json:"tags,omitEmpty"`
