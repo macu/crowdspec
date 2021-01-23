@@ -6,7 +6,6 @@
 			<el-input v-model="newUrl" clearable/>
 			<el-alert v-if="newUrl && !isValid" title="Invalid URL" type="error" :closable="false"/>
 			<el-alert v-else-if="newUrlIsVideo" title="Embeddable video detected" type="info" :closable="false"/>
-	  </el-alert>
 		</label>
 		<el-button v-if="selectModeAvailable" @click="() => { creating = false; selecting = true; }" size="small">
 			Select an existing link
