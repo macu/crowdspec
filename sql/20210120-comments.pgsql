@@ -4,6 +4,7 @@ DROP TRIGGER IF EXISTS on_block_delete ON spec_block;
 DROP TRIGGER IF EXISTS on_comment_delete ON spec_community_comment;
 DROP FUNCTION IF EXISTS delete_community_space;
 DROP TABLE IF EXISTS spec_community_read;
+DROP INDEX IF EXISTS comment_updated_by_target;
 DROP TABLE IF EXISTS spec_community_comment;
 DROP TYPE IF EXISTS spec_community_target_type;
 
@@ -19,9 +20,10 @@ CREATE TABLE spec_community_comment (
 	user_id INTEGER NOT NULL REFERENCES user_account (id),
 	created_at TIMESTAMPTZ NOT NULL,
 	updated_at TIMESTAMPTZ NOT NULL,
-	comment_body TEXT NOT NULL,
-	INDEX updated_by_target (target_type, target_id, updated_at)
+	comment_body TEXT NOT NULL
 );
+
+CREATE INDEX comment_updated_by_target ON spec_community_comment (target_type, target_id, updated_at);
 
 CREATE TABLE spec_community_read (
 	user_id INTEGER NOT NULL REFERENCES user_account (id),

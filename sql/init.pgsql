@@ -15,12 +15,16 @@ DROP TRIGGER IF EXISTS on_block_delete ON spec_block;
 DROP TRIGGER IF EXISTS on_comment_delete ON spec_community_comment;
 DROP FUNCTION IF EXISTS delete_community_space;
 DROP TABLE IF EXISTS spec_community_read;
+DROP INDEX IF EXISTS comment_updated_by_target;
 DROP TABLE IF EXISTS spec_community_comment;
 DROP TYPE IF EXISTS spec_community_target_type;
 
+DROP INDEX IF EXISTS spec_url_by_url;
+DROP INDEX IF EXISTS spec_url_by_title;
 DROP TABLE IF EXISTS spec_url;
 DROP TABLE IF EXISTS spec_block;
 DROP TYPE IF EXISTS spec_block_ref_type;
+DROP INDEX IF EXISTS spec_subspec_by_name;
 DROP TABLE IF EXISTS spec_subspec;
 DROP TABLE IF EXISTS spec;
 DROP TYPE IF EXISTS spec_owner_type;
@@ -81,9 +85,9 @@ CREATE TABLE spec_subspec (
 	updated_at TIMESTAMPTZ NOT NULL,
 	subspec_name VARCHAR(255) NOT NULL COLLATE case_insensitive,
 	subspec_desc TEXT,
-	blocks_updated_at TIMESTAMPTZ,
-	INDEX spec_subspec_name (spec_id, subspec_name)
+	blocks_updated_at TIMESTAMPTZ
 );
+CREATE INDEX spec_subspec_by_name ON spec_subspec (spec_id, subspec_name);
 CREATE TYPE list_style_type AS ENUM (
 	'bullet',
 	'numbered',
@@ -127,10 +131,11 @@ CREATE TABLE spec_url (
 	url VARCHAR(1024) NOT NULL,
 	url_title VARCHAR(255) COLLATE case_insensitive,
 	url_desc VARCHAR(255),
-	url_image_data TEXT,
-	INDEX spec_url_url (spec_id, url),
-	INDEX spec_url_title (spec_id, url_title)
+	url_image_data TEXT
 );
+
+CREATE INDEX spec_url_by_url ON spec_url (spec_id, url);
+CREATE INDEX spec_url_by_title ON spec_url (spec_id, url_title);
 
 -- Create community tables
 
@@ -148,9 +153,9 @@ CREATE TABLE spec_community_comment (
 	user_id INTEGER NOT NULL REFERENCES user_account (id),
 	created_at TIMESTAMPTZ NOT NULL,
 	updated_at TIMESTAMPTZ NOT NULL,
-	comment_body TEXT NOT NULL,
-	INDEX updated_by_target (target_type, target_id, updated_at)
+	comment_body TEXT NOT NULL
 );
+CREATE INDEX comment_updated_by_target ON spec_community_comment (target_type, target_id, updated_at);
 CREATE TABLE spec_community_read (
 	user_id INTEGER NOT NULL REFERENCES user_account (id),
 	target_type spec_community_target_type NOT NULL,
