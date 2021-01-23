@@ -246,6 +246,7 @@ export default {
 	>header {
 		background-color: $spec-bg;
 		color: white;
+		overflow: hidden; // keep {float: right} content bounded on mobile
 
 		padding: $page-header-vertical-padding $page-header-horiz-padding;
 		@include mobile {
@@ -256,14 +257,38 @@ export default {
 			float: right;
 			font-size: small;
 			margin-left: 20px;
+			text-align: right;
 
+			>* {
+				// apply for spacing between wrapped elements
+				margin-bottom: 5px;
+			}
 			>*+* {
 				margin-left: 15px;
 			}
 
+			// remove bottom margin from bottom row of buttons
+			margin-bottom: -5px;
+
 			.username {
 				display: inline-block;
 				margin-left: $icon-spacing;
+			}
+
+			@media screen and (max-width: $max-sm) {
+				>span {
+					display: block;
+					margin-bottom: 10px;
+				}
+				>*+* {
+					margin-left: 0;
+				}
+				>.el-button {
+					margin-bottom: 5px;
+				}
+				>.el-button + .el-button {
+					margin-left: 15px;
+				}
 			}
 		}
 

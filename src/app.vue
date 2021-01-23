@@ -87,12 +87,14 @@ export default {
 
 		>div {
 			margin: 0 0 10px;
+
 			>.username-button {
 				color: white;
 				padding-left: 5px;
 				padding-right: 5px;
 				border-bottom: 1px solid white;
 			}
+
 			>*:not(:first-child) {
 				margin-left: 20px;
 			}

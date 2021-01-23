@@ -44,14 +44,14 @@
 				<div class="info">
 					<span class="updated">Last modified <strong><moment :datetime="s.updated" :offset="true"/></strong></span>
 				</div>
-				<div class="tags">
+				<!--<div class="tags">
 					<el-tag size="mini" :closable="false" type="success">dsf</el-tag>
 					<el-tag size="mini" :closable="false" type="primary">d</el-tag>
 					<el-tag size="mini" :closable="false">asdfsadf</el-tag>
 					<el-tag size="mini" :closable="false">asd</el-tag>
 					<el-tag size="mini" :closable="false">fghfdghsdfg</el-tag>
 					<el-tag size="mini" :closable="false">rtrgegrae</el-tag>
-				</div>
+				</div>-->
 				<div v-if="s.desc" class="desc">{{s.desc}}</div>
 			</router-link>
 		</ul>
