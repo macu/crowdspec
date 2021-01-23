@@ -1,0 +1,122 @@
+block 5
+	no policy
+parent block
+	no policy
+spec
+	root policy
+
+root policy
+	no base policy
+	conditional policies (based on tags present on root)
+	policy tags
+
+	subs policy
+		Subs policy A
+		no base policy
+		conditional policies (based on tags present on subs)
+		policy tags
+			Policy tags A
+
+		subs policy
+			Subs policy B
+			based on Subs policy A
+				conditional policies apply to elements at current level
+			conditional policies
+			policy tags
+				Policy tags B
+
+			subs policy
+				null
+			comments policy
+				null
+
+		comments policy
+			null
+
+	comments policy
+		Comments policy A
+
+[ (policy expansion)
+
+	[base policy]
+
+	[this policy]
+
+	[conditional policies]
+]
+
+find policy element ("expand policy"):
+-- looks for the outermost policy that specifies the value for a policy element
+iterate conditional policies from last up
+	if conditions match, expand policy
+if self policy element defined, return
+expand base policy
+
+expand tags ("expand policy"):
+-- travels up inheritance compiling tags
+-- from all inheritance pathways and matching conditional policies
+add base expand policy to return
+add self tags to return
+iterate conditional policies from first down
+	if conditions match, add expand policy to return
+only add tags that haven't already been added
+return
+
+
+group tags with their base policy appended in order of first appearance
+
+
+root policy A
+	conditional policy B
+		based on policy A
+		conditional policy B.a
+	conditional policy C
+		based on policy A
+	subs policy D
+		conditional policy E
+			based on policy A
+		conditional policy F
+
+
+
+subs policy does not inherit parent context unless refers to it as base
+parent context may be vastly expanded before finding subs policy
+
+step up from post to nearest policy
+step down levels finding subs or inheriting parent until reaching post
+
+
+comment policy
+step up to nearest policy (stack)
+step down to comment through subs and comments policies,
+evaluating policy for comments policy at each step,
+carrying parent comments policy from within stack if none defined;
+and output comments policy for comment
+
+block policy
+step up to nearest policy (stack)
+step down to block through subs policies,
+evaluating policy for subs at east step,
+carrying parent policy from within stack if no subs specified at any step;
+and output policy for block
+
+
+-- subspec inherits spec policy by defaults
+-- (spec/subspec container types most likely represented by same root policy)
+-- subs applies to sub blocks
+or
+-- subspec inherts subs policy of spec policy like a block
+-- pinned tags activate different conditional policies for subspecs and blocks
+
+
+
+
+traverse blocks through subs, and then comments through comments;
+subs policy cuts off when entering comments;
+comments policy must be specified on policy applying to last block;
+same occurs at spec/subspec to blocks and to comments boundaries;
+block policy is inherited from parent block if no subs policy specified;
+comments policy is inherited from parent comment if no comments policy specified;
+also supported to refer such policies to themselves,
+and the step routine must be intelligent about not re-evaluating the same policy
+on each step in such scenarios.

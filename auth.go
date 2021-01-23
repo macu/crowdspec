@@ -95,7 +95,8 @@ func makeAuthenticator(db *sql.DB) func(handler AuthenticatedRoute) func(http.Re
 					Value:    sessionTokenCookie.Value,
 					Path:     "/",
 					Expires:  expires,
-					HttpOnly: true,
+					HttpOnly: true,                    // don't expose cookie to JavaScript
+					SameSite: http.SameSiteStrictMode, // send in first-party contexts only
 				})
 			}
 

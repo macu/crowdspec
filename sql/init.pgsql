@@ -1,21 +1,32 @@
 -- Clean up previous instance
+DROP TABLE IF EXISTS text_intern;
 DROP TABLE IF EXISTS org_permission;
 DROP TYPE IF EXISTS org_permission_level;
 DROP TABLE IF EXISTS organisation;
 DROP TABLE IF EXISTS spec_permission;
 DROP TYPE IF EXISTS spec_permission_level;
+DROP TABLE IF EXISTS user_group_member;
+DROP TABLE IF EXISTS user_group;
+DROP TYPE IF EXISTS grant_type;
+
+DROP TRIGGER IF EXISTS on_spec_delete ON spec;
+DROP TRIGGER IF EXISTS on_subspec_delete ON spec_subspec;
+DROP TRIGGER IF EXISTS on_block_delete ON spec_block;
+DROP TRIGGER IF EXISTS on_comment_delete ON spec_community_comment;
+DROP FUNCTION IF EXISTS delete_community_space;
+DROP TABLE IF EXISTS spec_community_read;
+DROP TABLE IF EXISTS spec_community_comment;
+DROP TYPE IF EXISTS spec_community_target_type;
+
 DROP TABLE IF EXISTS spec_url;
 DROP TABLE IF EXISTS spec_block;
 DROP TYPE IF EXISTS spec_block_ref_type;
 DROP TABLE IF EXISTS spec_subspec;
 DROP TABLE IF EXISTS spec;
 DROP TYPE IF EXISTS spec_owner_type;
-DROP TABLE IF EXISTS user_group_member;
-DROP TABLE IF EXISTS user_group;
-DROP TYPE IF EXISTS grant_type;
-DROP TABLE IF EXISTS text_intern;
 DROP TYPE IF EXISTS text_content_type;
 DROP TYPE IF EXISTS list_style_type;
+
 DROP TABLE IF EXISTS user_session;
 DROP TABLE IF EXISTS user_account;
 DROP COLLATION IF EXISTS case_insensitive;
@@ -31,6 +42,7 @@ CREATE COLLATION case_insensitive (
 );
 
 -- Create minimal tables for user authentication and session management
+
 CREATE TABLE user_account (
 	id SERIAL PRIMARY KEY,
 	username VARCHAR(25) UNIQUE NOT NULL COLLATE case_insensitive,
@@ -45,43 +57,8 @@ CREATE TABLE user_session (
 	expires TIMESTAMPTZ NOT NULL
 );
 
-CREATE TABLE user_group (
-	id SERIAL PRIMARY KEY,
-	group_name VARCHAR(50),
-	created_at TIMESTAMPTZ NOT NULL
-);
-CREATE TABLE user_group_member (
-	group_id INTEGER NOT NULL REFERENCES user_group (id) ON DELETE CASCADE,
-	user_id INTEGER NOT NULL REFERENCES user_account (id) ON DELETE CASCADE,
-	PRIMARY KEY (group_id, user_id)
-);
-
-CREATE TYPE grant_type AS ENUM (
-	'user', -- grant applies to user_account
-	'group' -- grant applies to user_group
-);
-
-CREATE TABLE organisation (
-	id SERIAL PRIMARY KEY,
-	org_handle VARCHAR(50) UNIQUE, -- allows nulls
-	org_name VARCHAR(120) NOT NULL,
-	org_intro TEXT
-);
-CREATE TYPE org_permission_level AS ENUM (
-	'owner', -- user or group owns org
-	'admin', -- user or group can administrate org
-	'internal', -- user or group are internal (can manage specs)
-	'external' -- user or group are external (can view and contribute to listed org specs)
-);
-CREATE TABLE org_permission (
-	org_id INTEGER NOT NULL REFERENCES organisation (id) ON DELETE CASCADE,
-	grant_type grant_type NOT NULL,
-	grant_id INTEGER NOT NULL,
-	permission_level org_permission_level NOT NULL,
-	CONSTRAINT user_owns CHECK (grant_type = 'user' OR permission_level != 'owner')
-);
-
 -- Create spec tables
+
 CREATE TYPE spec_owner_type AS ENUM (
 	'user',
 	'org'
@@ -96,18 +73,6 @@ CREATE TABLE spec (
 	spec_desc TEXT,
 	is_public BOOLEAN NOT NULL DEFAULT false,
 	blocks_updated_at TIMESTAMPTZ
-);
-CREATE TYPE spec_permission_level AS ENUM (
-	'admin', -- user or group can administrate spec
-	'editor', -- user or group can manage spec
-	'contributor' -- user or group can view and contribute to spec
-);
-CREATE TABLE spec_permission (
-	spec_id INTEGER NOT NULL REFERENCES spec (id) ON DELETE CASCADE,
-	grant_type grant_type NOT NULL,
-	grant_id INTEGER NOT NULL, -- referrent of type grant_type
-	permission_level spec_permission_level NOT NULL
-	-- TODO add index
 );
 CREATE TABLE spec_subspec (
 	id SERIAL PRIMARY KEY,
@@ -166,6 +131,112 @@ CREATE TABLE spec_url (
 	INDEX spec_url_url (spec_id, url),
 	INDEX spec_url_title (spec_id, url_title)
 );
+
+-- Create community tables
+
+CREATE TYPE spec_community_target_type AS ENUM (
+	'spec',
+	'subspec',
+	'block',
+	'comment'
+);
+CREATE TABLE spec_community_comment (
+	id SERIAL PRIMARY KEY,
+	spec_id INTEGER NOT NULL REFERENCES spec (id) ON DELETE CASCADE,
+	target_type spec_community_target_type NOT NULL,
+	target_id INTEGER NOT NULL,
+	user_id INTEGER NOT NULL REFERENCES user_account (id),
+	created_at TIMESTAMPTZ NOT NULL,
+	updated_at TIMESTAMPTZ NOT NULL,
+	comment_body TEXT NOT NULL
+);
+CREATE TABLE spec_community_read (
+	user_id INTEGER NOT NULL REFERENCES user_account (id),
+	target_type spec_community_target_type NOT NULL,
+	target_id INTEGER NOT NULL,
+	/* content_hidden BOOLEAN NOT NULL DEFAULT false, */
+	PRIMARY KEY (user_id, target_type, target_id)
+);
+
+-- Create triggers to delete community records associated through target_type and target_id
+
+CREATE FUNCTION delete_community_space ()
+RETURNS TRIGGER
+LANGUAGE PLPGSQL
+AS $$
+DECLARE
+	targetType spec_community_target_type;
+BEGIN
+	targetType := TG_ARGV[0];
+	DELETE FROM spec_community_comment
+		WHERE target_type = targetType AND target_id = OLD.id;
+	DELETE FROM spec_community_read
+		WHERE target_type = targetType AND target_id = OLD.id;
+	RETURN NULL;
+END $$;
+
+CREATE TRIGGER on_spec_delete AFTER DELETE ON spec
+	FOR EACH ROW EXECUTE PROCEDURE delete_community_space('spec');
+
+CREATE TRIGGER on_subspec_delete AFTER DELETE ON spec_subspec
+	FOR EACH ROW EXECUTE PROCEDURE delete_community_space('subspec');
+
+CREATE TRIGGER on_block_delete AFTER DELETE ON spec_block
+	FOR EACH ROW EXECUTE PROCEDURE delete_community_space('block');
+
+CREATE TRIGGER on_comment_delete AFTER DELETE ON spec_community_comment
+	FOR EACH ROW EXECUTE PROCEDURE delete_community_space('comment');
+
+-- Create organisation and user group tables
+
+CREATE TABLE user_group (
+	id SERIAL PRIMARY KEY,
+	group_name VARCHAR(50),
+	created_at TIMESTAMPTZ NOT NULL
+);
+CREATE TABLE user_group_member (
+	group_id INTEGER NOT NULL REFERENCES user_group (id) ON DELETE CASCADE,
+	user_id INTEGER NOT NULL REFERENCES user_account (id) ON DELETE CASCADE,
+	PRIMARY KEY (group_id, user_id)
+);
+
+CREATE TYPE grant_type AS ENUM (
+	'user', -- grant applies to user_account
+	'group' -- grant applies to user_group
+);
+
+CREATE TABLE organisation (
+	id SERIAL PRIMARY KEY,
+	org_handle VARCHAR(50) UNIQUE, -- allows nulls
+	org_name VARCHAR(120) NOT NULL,
+	org_intro TEXT
+);
+CREATE TYPE org_permission_level AS ENUM (
+	'owner', -- user or group owns org
+	'admin', -- user or group can administrate org
+	'internal', -- user or group are internal (can manage specs)
+	'external' -- user or group are external (can view and contribute to listed org specs)
+);
+CREATE TABLE org_permission (
+	org_id INTEGER NOT NULL REFERENCES organisation (id) ON DELETE CASCADE,
+	grant_type grant_type NOT NULL,
+	grant_id INTEGER NOT NULL,
+	permission_level org_permission_level NOT NULL,
+	CONSTRAINT user_owns CHECK (grant_type = 'user' OR permission_level != 'owner')
+);
+CREATE TYPE spec_permission_level AS ENUM (
+	'admin', -- user or group can administrate spec
+	'editor', -- user or group can manage spec
+	'contributor' -- user or group can view and contribute to spec
+);
+CREATE TABLE spec_permission (
+	spec_id INTEGER NOT NULL REFERENCES spec (id) ON DELETE CASCADE,
+	grant_type grant_type NOT NULL,
+	grant_id INTEGER NOT NULL, -- referrent of type grant_type
+	permission_level spec_permission_level NOT NULL
+	-- TODO add index
+);
+
 
 CREATE TABLE text_intern (
 	id SERIAL PRIMARY KEY,

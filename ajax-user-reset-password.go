@@ -116,7 +116,7 @@ func makeRequestPasswordResetHandler(db *sql.DB) func(w http.ResponseWriter, r *
 			}
 
 			messagesInfo := []mailjet.InfoMessagesV31{
-				mailjet.InfoMessagesV31{
+				{
 					From: &mailjet.RecipientV31{
 						Email: "matt@crowdspec.dev",
 						Name:  "Matt",

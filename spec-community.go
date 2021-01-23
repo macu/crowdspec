@@ -1,66 +1,169 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"net/http"
+	"time"
 )
 
-func ajaxSpecLoadBlockCommunity(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
-	// GET
+// Comment represents a comment submitted on a spec, subspec, or block.
+// specId, targetType, and targetId are omitted as they are known by the caller.
+type Comment struct {
+	ID      int64     `json:"id"`
+	UserID  uint      `json:"userId"`
+	Created time.Time `json:"created"`
+	Updated time.Time `json:"updated"`
+	Body    string    `json:"body"`
 
-	query := r.URL.Query()
+	Username  string `json:"username"`
+	Highlight string `json:"highlight"`
 
-	specID, err := AtoInt64(query.Get("specId"))
-	if err != nil {
-		logError(r, userID, fmt.Errorf("invalid specId: %w", err))
-		return nil, http.StatusBadRequest
-	}
-
-	blockID, err := AtoInt64(query.Get("blockId"))
-	if err != nil {
-		logError(r, userID, fmt.Errorf("invalid blockId: %w", err))
-		return nil, http.StatusBadRequest
-	}
-
-	if access, err := verifyReadBlock(db, userID, specID, blockID); !access || err != nil {
-		if err != nil {
-			logError(r, userID, fmt.Errorf("validating read block access: %w", err))
-			return nil, http.StatusInternalServerError
-		}
-		logError(r, userID,
-			fmt.Errorf("read block access denied to user %d in spec %d", userID, specID))
-		return nil, http.StatusForbidden
-	}
-
-	block, err := loadBlock(db, blockID)
-	if err != nil {
-		logError(r, userID, fmt.Errorf("loading block: %w", err))
-		return nil, http.StatusInternalServerError
-	}
-
-	payload := struct {
-		Block *SpecBlock `json:"block"`
-	}{block}
-
-	return payload, http.StatusOK
+	// Community attributes
+	UserRead    bool `json:"userRead"`
+	UnreadCount uint `json:"unreadCount"`
 }
 
-// func ajaxSpecBlockLoadComments(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
-// }
-//
-// func ajaxSpecBlockAddComment(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
-// }
-//
-// func ajaxSpecBlockUpdateComment(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
-// }
-//
-// func ajaxSpecBlockCommentVote(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
-// }
-//
-// func ajaxSpecBlockDeleteComment(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
-// }
-//
-// func ajaxAdminSpecBlockCommentTag(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int, error) {
-//
-// }
+// Tag represents a tag associated with an item.
+// specId is omitted as it is known by the caller.
+type Tag struct {
+	TargetType   int64   `json:"targetType"`
+	TargetID     int64   `json:"targetId"`
+	TagID        int64   `json:"tagId"`
+	AssentVotes  uint    `json:"assentVotes"`
+	DissentVotes uint    `json:"dissentVotes"`
+	AdminPin     *string `json:"adminPin"`
+
+	// The current user's own vote.
+	UserVote *string `json:"userVote"`
+}
+
+const (
+	// CommunityTargetSpec associates community features with a spec target.
+	CommunityTargetSpec = "spec"
+	// CommunityTargetSubspec associates community features with a subspec target.
+	CommunityTargetSubspec = "subspec"
+	// CommunityTargetBlock associates community features with a block target.
+	CommunityTargetBlock = "block"
+	// CommunityTargetComment associates community features with a comment target.
+	CommunityTargetComment = "comment"
+)
+
+func loadCommentsPage(r *http.Request, db DBConn, userID uint,
+	targetType string, targetID int64,
+	pageSize uint, updatedBefore *time.Time) ([]*Comment, bool, uint, int) {
+
+	var comments = []*Comment{}
+	var commentsCount uint
+	var hasMore bool
+
+	var unionUsersOwnComments string
+	var updatedBeforeCond string
+
+	var args = []interface{}{targetType, targetID, userID, pageSize}
+
+	var unreadCountField = `(SELECT COUNT(*)
+		FROM spec_community_comment AS subc
+		LEFT JOIN spec_community_read AS subr
+			ON subr.user_id = $3 AND subr.target_type = 'comment' AND subr.target_id = subc.id
+		WHERE subc.target_type = 'comment' AND subc.target_id = c.id
+			AND subr.user_id IS NULL
+		) AS unread_count`
+
+	var userReadField = `(SELECT EXISTS(
+			SELECT *
+			FROM spec_community_read AS r
+			WHERE r.user_id = $3 AND r.target_type = 'comment' AND r.target_id = c.id
+		)) AS user_read`
+
+	if updatedBefore == nil {
+		// Select all of the current user's own comments
+		// TODO unread_count
+		unionUsersOwnComments =
+			`(SELECT c.id, c.user_id, c.created_at, c.updated_at, c.comment_body, u.username,
+				'' AS highlight, -- blank because highlight for current user is already known
+				` + unreadCountField + `,
+				` + userReadField + `
+			FROM spec_community_comment AS c
+			INNER JOIN user_account AS u
+				ON u.id = c.user_id
+			WHERE c.target_type = $1 AND c.target_id = $2
+				AND c.user_id = $3
+			ORDER BY c.updated_at)
+			UNION`
+	} else {
+		updatedBeforeCond = `AND c.updated_at < ` + argPlaceholder(updatedBefore, &args)
+	}
+
+	// Select pageSize community comments (preceeding updatedBefore if given)
+	// Comment count is only returned when requesting first page;
+	// afterward, only whether there are further pages is returned
+	rows, err := db.Query(
+		`SELECT * FROM (
+			`+unionUsersOwnComments+`
+			(SELECT c.id, c.user_id, c.created_at, c.updated_at, c.comment_body, u.username,
+				u.user_settings::json#>>'{userProfile,highlightUsername}' AS highlight,
+				`+unreadCountField+`,
+				`+userReadField+`
+			FROM spec_community_comment AS c
+			INNER JOIN user_account AS u
+				ON u.id = c.user_id
+			WHERE c.target_type = $1 AND c.target_id = $2
+				AND c.user_id != $3
+				`+updatedBeforeCond+`
+			ORDER BY c.updated_at DESC
+			LIMIT $4)
+		) AS c ORDER BY CASE WHEN c.user_id = $3 THEN 0 ELSE 1 END, c.updated_at DESC
+		`, args...)
+	if err != nil {
+		logError(r, userID, fmt.Errorf("reading comments: %w", err))
+		return nil, false, 0, http.StatusInternalServerError
+	}
+
+	for rows.Next() {
+		c := Comment{}
+		err = rows.Scan(&c.ID, &c.UserID, &c.Created, &c.Updated, &c.Body,
+			&c.Username, &c.Highlight, &c.UnreadCount, &c.UserRead)
+		if err != nil {
+			if err2 := rows.Close(); err2 != nil { // TODO Add everywhere
+				logError(r, userID, fmt.Errorf("closing rows: %s; on scan error: %w", err2, err))
+				return nil, false, 0, http.StatusInternalServerError
+			}
+			logError(r, userID, fmt.Errorf("scanning spec: %w", err))
+			return nil, false, 0, http.StatusInternalServerError
+		}
+		comments = append(comments, &c)
+	}
+
+	if updatedBefore == nil {
+		// Count total comments when loading initial page
+		err = db.QueryRow(
+			`SELECT COUNT(c.id)
+			FROM spec_community_comment AS c
+			WHERE c.target_type = $1 AND c.target_id = $2
+			`, targetType, targetID).Scan(&commentsCount)
+		if err != nil {
+			logError(r, userID, fmt.Errorf("reading comment count: %w", err))
+			return nil, false, 0, http.StatusInternalServerError
+		}
+		hasMore = commentsCount > pageSize
+	} else if len(comments) > 0 {
+		// Check whether the query has more results following this page
+		var lastResultUpdatedAt = comments[len(comments)-1].Updated
+		err = db.QueryRow(
+			`SELECT EXISTS(
+				SELECT *
+				FROM spec_community_comment AS c
+				WHERE c.target_type = $1 AND c.target_id = $2
+					AND c.user_id != $3
+					AND c.updated_at < $4
+				LIMIT 1
+			)`, targetType, targetID, userID, lastResultUpdatedAt,
+		).Scan(&hasMore)
+		if err != nil {
+			logError(r, userID, fmt.Errorf("reading has more comments: %w", err))
+			return nil, false, 0, http.StatusInternalServerError
+		}
+	}
+
+	return comments, hasMore, commentsCount, http.StatusOK
+}

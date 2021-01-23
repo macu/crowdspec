@@ -7,6 +7,8 @@
 		:subspec="subspec"
 		:enable-editing="enableEditing"
 		@prompt-nav-spec="promptNavSpec"
+		@open-community="openCommunity"
+		@play-video="playVideo"
 		@rendered="$emit('rendered')"
 		/>
 </div>
@@ -27,6 +29,12 @@ export default {
 	methods: {
 		promptNavSpec() {
 			this.$emit('prompt-nav-spec');
+		},
+		openCommunity(targetType, targetId, onAdjustUnread) {
+			this.$emit('open-community', targetType, targetId, onAdjustUnread);
+		},
+		playVideo(urlObject) {
+			this.$emit('play-video', urlObject);
 		},
 	},
 };

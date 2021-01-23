@@ -24,14 +24,8 @@ func ajaxSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request
 		return nil, http.StatusBadRequest
 	}
 
-	if access, err := verifyReadSubspec(db, userID, subspecID); !access || err != nil {
-		if err != nil {
-			logError(r, userID, fmt.Errorf("validating read subspe accessc: %w", err))
-			return nil, http.StatusInternalServerError
-		}
-		logError(r, userID,
-			fmt.Errorf("read subspec access denied to user %d in subspec %d", userID, subspecID))
-		return nil, http.StatusForbidden
+	if access, status := verifyReadSubspec(r, db, userID, subspecID); !access {
+		return nil, status
 	}
 
 	s := &SpecSubspec{
@@ -49,20 +43,28 @@ func ajaxSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request
 				THEN spec_subspec.updated_at
 			-- when visitor
 			ELSE GREATEST(spec_subspec.updated_at, spec_subspec.blocks_updated_at)
-		END AS last_updated
+		END AS last_updated,
+		-- select number of unread comments
+		(SELECT COUNT(c.id)
+			FROM spec_community_comment AS c
+			LEFT JOIN spec_community_read AS r
+				ON r.user_id = $4 AND r.target_type = 'comment' AND r.target_id = c.id
+			WHERE c.target_type = 'subspec' AND c.target_id = $2
+				AND r.user_id IS NULL
+		) AS unread_count
 		FROM spec_subspec
 		INNER JOIN spec ON spec.id = $1
 		WHERE spec_subspec.id = $2
-		AND spec_subspec.spec_id = $1`,
+			AND spec_subspec.spec_id = $1`,
 		specID, subspecID, OwnerTypeUser, userID,
-	).Scan(&s.Created, &s.Name, &s.Desc, &s.Updated)
+	).Scan(&s.Created, &s.Name, &s.Desc, &s.Updated, &s.UnreadCount)
 	if err != nil {
 		logError(r, userID, fmt.Errorf("reading subspec: %w", err))
 		return nil, http.StatusInternalServerError
 	}
 
 	if AtoBool(query.Get("loadBlocks")) {
-		s.Blocks, err = loadBlocks(db, specID, &subspecID)
+		s.Blocks, err = loadBlocks(db, userID, specID, &subspecID)
 		if err != nil {
 			logError(r, userID, fmt.Errorf("loading subspec blocks: %w", err))
 			return nil, http.StatusInternalServerError
@@ -72,6 +74,7 @@ func ajaxSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request
 	return s, http.StatusOK
 }
 
+// load a list of subspecs for nav or block ref editing
 func ajaxSubspecs(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
 	// GET
 	query := r.URL.Query()
@@ -82,14 +85,8 @@ func ajaxSubspecs(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 		return nil, http.StatusBadRequest
 	}
 
-	if access, err := verifyReadSpec(db, userID, specID); !access || err != nil {
-		if err != nil {
-			logError(r, userID, fmt.Errorf("validating read spec access: %w", err))
-			return nil, http.StatusInternalServerError
-		}
-		logError(r, userID,
-			fmt.Errorf("read spec access denied to user %d in spec %d", userID, specID))
-		return nil, http.StatusForbidden
+	if access, status := verifyReadSpec(r, db, userID, specID); !access {
+		return nil, status
 	}
 
 	rows, err := db.Query(`
@@ -102,10 +99,10 @@ func ajaxSubspecs(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 		return nil, http.StatusInternalServerError
 	}
 
-	subspecs := []*SpecSubspec{}
+	subspecs := []*SpecSubspecHeader{}
 
 	for rows.Next() {
-		s := &SpecSubspec{
+		s := &SpecSubspecHeader{
 			SpecID: specID,
 		}
 		err = rows.Scan(&s.ID, &s.Created, &s.Updated, &s.Name, &s.Desc)
@@ -138,13 +135,8 @@ func ajaxSpecCreateSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *ht
 		return nil, http.StatusBadRequest
 	}
 
-	if access, err := verifyWriteSpec(db, userID, specID); !access || err != nil {
-		if err != nil {
-			logError(r, userID, fmt.Errorf("validating write spec access: %w", err))
-			return nil, http.StatusInternalServerError
-		}
-		logError(r, userID, fmt.Errorf("write spec access denied to user %d in spec %d", userID, specID))
-		return nil, http.StatusForbidden
+	if access, status := verifyWriteSpec(r, db, userID, specID); !access {
+		return nil, status
 	}
 
 	name := Substr(strings.TrimSpace(r.Form.Get("name")), subspecNameMaxLen)
@@ -159,9 +151,14 @@ func ajaxSpecCreateSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *ht
 
 		var subspecID int64
 
-		err = tx.QueryRow(`INSERT INTO spec_subspec (spec_id, created_at, updated_at, subspec_name, subspec_desc)
-			VALUES ($1, $2, $2, $3, $4) RETURNING id`,
-			specID, time.Now(), name, desc).Scan(&subspecID)
+		err = tx.QueryRow(
+			`INSERT INTO spec_subspec (
+				spec_id, created_at, updated_at, subspec_name, subspec_desc
+			) VALUES (
+				$1, $2, $2, $3, $4
+			) RETURNING id`,
+			specID, time.Now(), name, desc,
+		).Scan(&subspecID)
 
 		if err != nil {
 			logError(r, userID, fmt.Errorf("creating subspec: %w", err))
@@ -187,14 +184,8 @@ func ajaxSpecSaveSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 		return nil, http.StatusBadRequest
 	}
 
-	if access, err := verifyWriteSubspec(db, userID, subspecID); !access || err != nil {
-		if err != nil {
-			logError(r, userID, fmt.Errorf("validating write subspec access: %w", err))
-			return nil, http.StatusInternalServerError
-		}
-		logError(r, userID,
-			fmt.Errorf("write subspec access denied to user %d in subspec %d", userID, subspecID))
-		return nil, http.StatusForbidden
+	if access, status := verifyWriteSubspec(r, db, userID, subspecID); !access {
+		return nil, status
 	}
 
 	name := Substr(strings.TrimSpace(r.Form.Get("name")), subspecNameMaxLen)
@@ -207,16 +198,18 @@ func ajaxSpecSaveSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 
 	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
-		s := &SpecSubspec{
+		s := &SpecSubspecHeader{
 			ID: subspecID,
 		}
 
 		// Scan new values as represented in DB for return
-		err = tx.QueryRow(`UPDATE spec_subspec SET updated_at = $2,
-			subspec_name = $3, subspec_desc = $4
+		err = tx.QueryRow(
+			`UPDATE spec_subspec
+			SET updated_at = $2, subspec_name = $3, subspec_desc = $4
 			WHERE id = $1
-			RETURNING spec_id, updated_at, subspec_name, subspec_desc`,
-			subspecID, time.Now(), name, desc).Scan(&s.SpecID, &s.Updated, &s.Name, &s.Desc)
+			RETURNING spec_id, created_at, updated_at, subspec_name, subspec_desc`,
+			subspecID, time.Now(), name, desc,
+		).Scan(&s.SpecID, &s.Created, &s.Updated, &s.Name, &s.Desc)
 
 		if err != nil {
 			logError(r, userID, fmt.Errorf("updating subspec: %w", err))
@@ -242,14 +235,8 @@ func ajaxSpecDeleteSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *ht
 		return nil, http.StatusBadRequest
 	}
 
-	if access, err := verifyWriteSubspec(db, userID, subspecID); !access || err != nil {
-		if err != nil {
-			logError(r, userID, fmt.Errorf("validating write subspec access: %w", err))
-			return nil, http.StatusInternalServerError
-		}
-		logError(r, userID,
-			fmt.Errorf("write subspec access denied to user %d in subspec %d", userID, subspecID))
-		return nil, http.StatusForbidden
+	if access, status := verifyWriteSubspec(r, db, userID, subspecID); !access {
+		return nil, status
 	}
 
 	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {

@@ -19,14 +19,8 @@ func ajaxSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (
 		return nil, http.StatusBadRequest
 	}
 
-	if access, err := verifyReadSpec(db, userID, specID); !access || err != nil {
-		if err != nil {
-			logError(r, userID, fmt.Errorf("validating read spec access: %w", err))
-			return nil, http.StatusInternalServerError
-		}
-		logError(r, userID,
-			fmt.Errorf("read spec access denied to user %d in spec %d", userID, specID))
-		return nil, http.StatusForbidden
+	if access, status := verifyReadSpec(r, db, userID, specID); !access {
+		return nil, status
 	}
 
 	// TODO Finish owner_name, user_is_admin, user_is_contributor
@@ -43,7 +37,16 @@ func ajaxSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (
 				THEN spec.updated_at
 			-- when visitor
 			ELSE GREATEST(spec.updated_at, spec.blocks_updated_at)
-		END AS last_updated
+		END AS last_updated,
+		-- select number of unread comments
+		(SELECT COUNT(c.id)
+			FROM spec_community_comment AS c
+			LEFT JOIN spec_community_read AS r
+				ON r.user_id = $3 AND r.target_type = 'comment' AND r.target_id = c.id
+			WHERE c.spec_id = spec.id
+				AND c.target_type = 'spec' AND c.target_id = spec.id
+				AND r.user_id IS NULL
+				) AS unread_count
 		FROM spec
 		LEFT JOIN user_account
 		ON spec.owner_type=$2
@@ -51,14 +54,14 @@ func ajaxSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (
 		WHERE spec.id=$1
 		`, specID, OwnerTypeUser, userID,
 	).Scan(&s.ID, &s.OwnerType, &s.OwnerID, &s.Username, &s.Highlight,
-		&s.Name, &s.Desc, &s.Public, &s.Created, &s.Updated)
+		&s.Name, &s.Desc, &s.Public, &s.Created, &s.Updated, &s.UnreadCount)
 	if err != nil {
 		logError(r, userID, fmt.Errorf("reading spec: %w", err))
 		return nil, http.StatusInternalServerError
 	}
 
 	if AtoBool(query.Get("loadBlocks")) {
-		s.Blocks, err = loadBlocks(db, specID, nil)
+		s.Blocks, err = loadBlocks(db, userID, specID, nil)
 		if err != nil {
 			logError(r, userID, fmt.Errorf("loading spec blocks: %w", err))
 			return nil, http.StatusInternalServerError
@@ -124,14 +127,8 @@ func ajaxSaveSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 		return nil, http.StatusBadRequest
 	}
 
-	if access, err := verifyWriteSpec(db, userID, specID); !access || err != nil {
-		if err != nil {
-			logError(r, userID, fmt.Errorf("validating write spec access: %w", err))
-			return nil, http.StatusInternalServerError
-		}
-		logError(r, userID,
-			fmt.Errorf("write spec access denied to user %d in spec %d", userID, specID))
-		return nil, http.StatusForbidden
+	if access, status := verifyWriteSpec(r, db, userID, specID); !access {
+		return nil, status
 	}
 
 	name := Substr(strings.TrimSpace(r.Form.Get("name")), spenNameMaxLen)
@@ -182,14 +179,8 @@ func ajaxDeleteSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Requ
 		return nil, http.StatusBadRequest
 	}
 
-	if access, err := verifyWriteSpec(db, userID, specID); !access || err != nil {
-		if err != nil {
-			logError(r, userID, fmt.Errorf("validating write spec access: %w", err))
-			return nil, http.StatusInternalServerError
-		}
-		logError(r, userID,
-			fmt.Errorf("write spec access denied to user %d in spec %d", userID, specID))
-		return nil, http.StatusForbidden
+	if access, status := verifyWriteSpec(r, db, userID, specID); !access {
+		return nil, status
 	}
 
 	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {

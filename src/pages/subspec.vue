@@ -5,15 +5,32 @@
 
 		<div v-if="onSubspecRoute && !loading" class="right">
 
-			<el-button
-				v-if="enableEditing"
-				@click="openManageSubspec()"
-				:disabled="choosingAddPosition"
-				size="mini" icon="el-icon-setting"/>
-
-			<span v-else>
-				Last modified <moment :datetime="subspec.updated" :offset="true"/>
-			</span>
+			<template v-if="enableEditing">
+				<el-button
+					@click="openSubspecCommunity()"
+					:type="unreadCount ? 'primary' : 'default'"
+					:disabled="choosingAddPosition"
+					size="mini" icon="el-icon-chat-dot-square">
+					<template v-if="unreadCount">{{unreadCount}}</template>
+				</el-button>
+				<el-button
+					v-if="enableEditing"
+					@click="openManageSubspec()"
+					:disabled="choosingAddPosition"
+					size="mini" icon="el-icon-setting"
+					/>
+			</template>
+			<template v-else>
+				<span>
+					Last modified <moment :datetime="subspec.updated" :offset="true"/>
+				</span>
+				<el-button
+					@click="openSubspecCommunity()"
+					:type="unreadCount ? 'primary' : 'default'"
+					size="mini" icon="el-icon-chat-dot-square">
+					<template v-if="unreadCount">{{unreadCount}}</template>
+				</el-button>
+			</template>
 
 		</div>
 
@@ -28,7 +45,9 @@
 		:loading="loading"
 		:subspec="subspec"
 		:enable-editing="enableEditing"
-		@prompt-nav-spec="promptNavSpec()"
+		@prompt-nav-spec="promptNavSpec"
+		@open-community="openCommunity"
+		@play-video="playVideo"
 		/>
 
 	<edit-subspec-modal
@@ -46,7 +65,10 @@ import Moment from '../widgets/moment.vue';
 import SpecView from '../spec/view.vue';
 import EditSubspecModal from '../spec/edit-subspec-modal.vue';
 import {ajaxLoadSubspec} from '../spec/ajax.js';
-import {OWNER_TYPE_USER} from '../spec/const.js';
+import {
+	OWNER_TYPE_USER,
+	TARGET_TYPE_SUBSPEC,
+} from '../spec/const.js';
 import {setWindowSubtitle} from '../utils.js';
 
 export default {
@@ -63,6 +85,7 @@ export default {
 		return {
 			loading: true,
 			subspec: null,
+			unreadCount: 0,
 		};
 	},
 	computed: {
@@ -93,6 +116,7 @@ export default {
 	beforeRouteLeave(to, from, next) {
 		console.debug('beforeRouteLeave subspec');
 		this.subspec = null;
+		this.unreadCount = 0;
 		setWindowSubtitle(); // clear
 		next();
 	},
@@ -103,6 +127,7 @@ export default {
 			ajaxLoadSubspec(specId, subspecId, loadBlocks).then(subspec => {
 				console.debug('subspec loaded', subspec);
 				this.subspec = subspec;
+				this.unreadCount = subspec.unreadCount || 0;
 				setWindowSubtitle(subspec.name);
 				this.loading = false;
 				this.$refs.view.$once('rendered', this.restoreScroll);
@@ -116,6 +141,17 @@ export default {
 		},
 		promptNavSpec() {
 			this.$emit('prompt-nav-spec');
+		},
+		openSubspecCommunity() {
+			this.$emit('open-community', TARGET_TYPE_SUBSPEC, this.subspec.id, adjustUnreadCount => {
+				this.unreadCount += adjustUnreadCount;
+			});
+		},
+		openCommunity(targetType, targetId, onAdjustUnread) {
+			this.$emit('open-community', targetType, targetId, onAdjustUnread);
+		},
+		playVideo(urlObject) {
+			this.$emit('play-video', urlObject);
 		},
 		openManageSubspec() {
 			this.$refs.editSubspecModal.showEdit(this.subspec, updatedSubspec => {

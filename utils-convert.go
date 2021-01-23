@@ -1,6 +1,9 @@
 package main
 
-import "strconv"
+import (
+	"strconv"
+	"time"
+)
 
 // AtoInt converts base 10 string to int.
 func AtoInt(s string) (int, error) {
@@ -46,6 +49,20 @@ func AtoPointerNilIfEmpty(s string) *string {
 // AtoBool converts the given string to boolean.
 func AtoBool(a string) bool {
 	return a == "1" || a == "true"
+}
+
+// AtoTimeNilIfEmpty returns a pointer to a time value represented by the given string,
+// or nil if the given string is empty.
+func AtoTimeNilIfEmpty(s string) (*time.Time, error) {
+	if s == "" {
+		return nil, nil
+	}
+	// Parse in default format output by JSON encoding
+	t, err := time.Parse(time.RFC3339Nano, s)
+	if err != nil {
+		return nil, err
+	}
+	return &t, nil
 }
 
 // IntToA converts an int to a base 10 string.

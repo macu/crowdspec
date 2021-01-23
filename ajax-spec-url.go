@@ -29,14 +29,8 @@ func ajaxSpecURLs(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 		return nil, http.StatusBadRequest
 	}
 
-	if access, err := verifyReadSpec(db, userID, specID); !access || err != nil {
-		if err != nil {
-			logError(r, userID, fmt.Errorf("validating read spec access: %w", err))
-			return nil, http.StatusInternalServerError
-		}
-		logError(r, userID,
-			fmt.Errorf("read spec access denied to user %d in spec %d", userID, specID))
-		return nil, http.StatusForbidden
+	if access, status := verifyReadSpec(r, db, userID, specID); !access {
+		return nil, status
 	}
 
 	rows, err := db.Query(`
@@ -85,14 +79,8 @@ func ajaxSpecCreateURL(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 		return nil, http.StatusBadRequest
 	}
 
-	if access, err := verifyWriteSpec(db, userID, specID); !access || err != nil {
-		if err != nil {
-			logError(r, userID, fmt.Errorf("validating write spec access: %w", err))
-			return nil, http.StatusInternalServerError
-		}
-		logError(r, userID,
-			fmt.Errorf("write spec access denied to user %d in spec %d", userID, specID))
-		return nil, http.StatusForbidden
+	if access, status := verifyWriteSpec(r, db, userID, specID); !access {
+		return nil, status
 	}
 
 	url := strings.TrimSpace(r.Form.Get("url"))
@@ -133,13 +121,8 @@ func ajaxSpecRefreshURL(db *sql.DB, userID uint, w http.ResponseWriter, r *http.
 		return nil, http.StatusBadRequest
 	}
 
-	if access, err := verifyWriteURL(db, userID, id); !access || err != nil {
-		if err != nil {
-			logError(r, userID, fmt.Errorf("validating write url access: %w", err))
-			return nil, http.StatusInternalServerError
-		}
-		logError(r, userID, fmt.Errorf("write url access denied to user %d for url %d", userID, id))
-		return nil, http.StatusForbidden
+	if access, status := verifyWriteURL(r, db, userID, id); !access {
+		return nil, status
 	}
 
 	url := strings.TrimSpace(r.Form.Get("url"))
@@ -180,14 +163,8 @@ func ajaxSpecDeleteURL(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 		return nil, http.StatusBadRequest
 	}
 
-	if access, err := verifyWriteURL(db, userID, id); !access || err != nil {
-		if err != nil {
-			logError(r, userID, fmt.Errorf("validating write url access: %w", err))
-			return nil, http.StatusInternalServerError
-		}
-		logError(r, userID,
-			fmt.Errorf("write url access denied to user %d for url %d", userID, id))
-		return nil, http.StatusForbidden
+	if access, status := verifyWriteURL(r, db, userID, id); !access {
+		return nil, status
 	}
 
 	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {

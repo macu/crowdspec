@@ -37,15 +37,15 @@ router.beforeEach((to, from, next) => {
 	// beforeEach is called before navigation is confirmed.
 	if (from) {
 		if (
-			!!store.state.currentSpecId &&
-			(!to.params.specId || !idsEq(to.params.specId, store.state.currentSpecId))
+			!!store.getters.currentSpecId &&
+			(!to.params.specId || !idsEq(to.params.specId, store.getters.currentSpecId))
 		) {
 			// Leaving spec context for another context
 			store.commit('clearCurrentSpec');
 			store.commit('endMovingBlock');
 		} else if (from.name === 'spec') {
 			// Leaving spec page for another page in same spec
-			store.commit('saveCurrentSpecScrollTop', from.params.specId);
+			store.commit('saveCurrentSpecScrollTop');
 		}
 	}
 	next();

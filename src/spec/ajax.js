@@ -140,9 +140,53 @@ export function ajaxDeleteUrl(id) {
 	}).fail(alertError);
 }
 
-export function ajaxLoadBlockCommunity(specId, blockId) {
-	return $.get('/ajax/spec/block-community', {
+export function ajaxLoadCommunity(specId, targetType, targetId) {
+	return $.get('/ajax/spec/community', {
 		specId,
-		blockId,
+		targetType,
+		targetId,
+	}).fail(alertError);
+}
+
+export function ajaxLoadCommentsPage(specId, targetType, targetId, updatedBefore) {
+	// TODO accept filters
+	return $.get('/ajax/spec/community/page', {
+		specId,
+		targetType,
+		targetId,
+		updatedBefore,
+	}).fail(alertError);
+}
+
+export function ajaxMarkRead(specId, targetType, targetId, read) {
+	return $.post('/ajax/spec/community/mark-read', {
+		specId,
+		targetType,
+		targetId,
+		read,
+	}).fail(alertError);
+}
+
+export function ajaxAddComment(specId, targetType, targetId, body) {
+	return $.post('/ajax/spec/community/add-comment', {
+		specId,
+		targetType,
+		targetId,
+		body,
+	}).fail(alertError);
+}
+
+export function ajaxUpdateComment(specId, commentId, body) {
+	return $.post('/ajax/spec/community/update-comment', {
+		specId,
+		commentId,
+		body,
+	}).fail(alertError);
+}
+
+export function ajaxDeleteComment(specId, commentId) {
+	return $.post('/ajax/spec/community/delete-comment', {
+		specId,
+		commentId,
 	}).fail(alertError);
 }

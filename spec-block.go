@@ -26,6 +26,9 @@ type SpecBlock struct {
 
 	RefItem interface{} `json:"refItem,omitempty"`
 
+	// Community attributes
+	UnreadCount uint `json:"unreadCount"`
+
 	SubBlocks []*SpecBlock `json:"subblocks,omitempty"`
 }
 
@@ -114,11 +117,11 @@ func isURLRequiredForRefType(t *string) bool {
 }
 
 // Load a sinle block and subblocks.
-func loadBlock(c DBConn, blockID int64) (*SpecBlock, error) {
+func loadBlock(c DBConn, userID uint, blockID int64) (*SpecBlock, error) {
 
 	// Ref items are only loaded if belonging to the same spec.
 	// TODO Allow linking to any ref item, but verify current user's access when joining info.
-	args := []interface{}{blockID}
+	args := []interface{}{blockID, userID}
 	query := `
 		WITH RECURSIVE block_tree(id) AS (
 			-- Anchor
@@ -137,7 +140,15 @@ func loadBlock(c DBConn, blockID int64) (*SpecBlock, error) {
 		spec_block.block_title, spec_block.block_body,
 		spec_subspec.spec_id AS subspec_spec_id, spec_subspec.subspec_name, spec_subspec.subspec_desc,
 		spec_url.spec_id AS url_spec_id, spec_url.created_at AS url_created, spec_url.updated_at AS url_updated,
-		spec_url.url AS url_url, spec_url.url_title, spec_url.url_desc, spec_url.url_image_data
+		spec_url.url AS url_url, spec_url.url_title, spec_url.url_desc, spec_url.url_image_data,
+		-- select number of unread comments
+		(SELECT COUNT(c.id) FROM spec_community_comment AS c
+			LEFT JOIN spec_community_read AS r
+				ON r.user_id = $2 AND r.target_type = 'comment' AND r.target_id = c.id
+			WHERE c.spec_id = spec_block.spec_id
+				AND c.target_type = 'block' AND c.target_id = spec_block.id
+				AND r.user_id IS NULL
+				) AS unread_count
 		FROM spec_block
 		LEFT JOIN spec_subspec
 		ON spec_block.ref_type = ` + argPlaceholder(BlockRefSubspec, &args) + `
@@ -163,11 +174,11 @@ func loadBlock(c DBConn, blockID int64) (*SpecBlock, error) {
 }
 
 // load the blocks in a spec or subspec
-func loadBlocks(db *sql.DB, specID int64, subspecID *int64) ([]*SpecBlock, error) {
+func loadBlocks(db *sql.DB, userID uint, specID int64, subspecID *int64) ([]*SpecBlock, error) {
 
 	// Ref items are only loaded if belonging to the same spec.
 	// TODO Allow linking to any ref item, but verify current user's access when joining info.
-	args := []interface{}{specID}
+	args := []interface{}{userID, specID}
 	query := `
 		SELECT spec_block.id, spec_block.spec_id, spec_block.created_at, spec_block.updated_at,
 		spec_block.subspec_id, spec_block.parent_id, spec_block.order_number,
@@ -175,7 +186,15 @@ func loadBlocks(db *sql.DB, specID int64, subspecID *int64) ([]*SpecBlock, error
 		spec_block.block_title, spec_block.block_body,
 		spec_subspec.spec_id AS subspec_spec_id, spec_subspec.subspec_name, spec_subspec.subspec_desc,
 		spec_url.spec_id AS url_spec_id, spec_url.created_at AS url_created, spec_url.updated_at AS url_updated,
-		spec_url.url AS url_url, spec_url.url_title, spec_url.url_desc, spec_url.url_image_data
+		spec_url.url AS url_url, spec_url.url_title, spec_url.url_desc, spec_url.url_image_data,
+		-- select number of unread comments
+		(SELECT COUNT(c.id) FROM spec_community_comment AS c
+			LEFT JOIN spec_community_read AS r
+				ON r.user_id = $1 AND r.target_type = 'comment' AND r.target_id = c.id
+			WHERE c.spec_id = spec_block.spec_id
+				AND c.target_type = 'block' AND c.target_id = spec_block.id
+				AND r.user_id IS NULL
+				) AS unread_count
 		FROM spec_block
 		LEFT JOIN spec_subspec
 		ON spec_block.ref_type=` + argPlaceholder(BlockRefSubspec, &args) + `
@@ -185,7 +204,7 @@ func loadBlocks(db *sql.DB, specID int64, subspecID *int64) ([]*SpecBlock, error
 		ON spec_block.ref_type=` + argPlaceholder(BlockRefURL, &args) + `
 		AND spec_url.id=spec_block.ref_id
 		AND spec_url.spec_id = spec_block.spec_id
-		WHERE spec_block.spec_id=$1
+		WHERE spec_block.spec_id=$2
 		AND ` + eqCond("spec_block.subspec_id", subspecID, &args) + `
 		ORDER BY spec_block.parent_id, spec_block.order_number`
 
@@ -221,7 +240,8 @@ func readBlocks(rows *sql.Rows, blocks *[]*SpecBlock, blocksByID *map[int64]*Spe
 			&b.SubspecID, &b.ParentID, &b.OrderNumber,
 			&b.StyleType, &b.ContentType, &b.RefType, &b.RefID, &b.Title, &b.Body,
 			&subspecSpecID, &subspecName, &subspecDesc,
-			&urlSpecID, &urlCreated, &urlUpdated, &urlURL, &urlTitle, &urlDesc, &urlImageData)
+			&urlSpecID, &urlCreated, &urlUpdated, &urlURL, &urlTitle, &urlDesc, &urlImageData,
+			&b.UnreadCount)
 		if err != nil {
 			if err2 := rows.Close(); err2 != nil { // TODO Add everywhere
 				return fmt.Errorf("closing rows: %s; on scan error: %w", err2, err)

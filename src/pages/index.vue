@@ -38,12 +38,7 @@
 				tag="li"
 				:to="{name: 'spec', params: {specId: s.id}}">
 				<div class="info">
-					<username
-						:username="s.username"
-						:highlight="s.username === $store.getters.username
-							? $store.getters.userSettings.userProfile.highlightUsername
-							: s.highlight"
-						/>
+					<username :username="s.username" :highlight="s.highlight"/>
 				</div>
 				<router-link :to="{name: 'spec', params: {specId: s.id}}" class="name">{{s.name}}</router-link>
 				<div class="info">

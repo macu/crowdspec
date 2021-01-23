@@ -12,18 +12,20 @@ import (
 type AjaxRoute func(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int)
 
 var ajaxHandlers = map[string]map[string]AjaxRoute{
-	http.MethodGet: map[string]AjaxRoute{
+	http.MethodGet: {
 		"/ajax/test":     ajaxTest,
 		"/ajax/home":     ajaxUserHome,
 		"/ajax/settings": ajaxUserSettings,
 
-		"/ajax/spec":                 ajaxSpec,
-		"/ajax/spec/subspecs":        ajaxSubspecs,
-		"/ajax/spec/subspec":         ajaxSubspec,
-		"/ajax/spec/urls":            ajaxSpecURLs,
-		"/ajax/spec/block-community": ajaxSpecLoadBlockCommunity,
+		"/ajax/spec":                ajaxSpec,
+		"/ajax/spec/subspecs":       ajaxSubspecs,
+		"/ajax/spec/subspec":        ajaxSubspec,
+		"/ajax/spec/urls":           ajaxSpecURLs,
+		"/ajax/spec/community":      ajaxSpecLoadCommunity,
+		"/ajax/spec/community/page": ajaxSpecCommunityLoadCommentsPage,
+		// "/ajax/spec/community/search":  ajaxSpecSearchCommunity,
 	},
-	http.MethodPost: map[string]AjaxRoute{
+	http.MethodPost: {
 		"/ajax/user/change-password": ajaxUserChangePassword,
 		"/ajax/user/save-settings":   ajaxUserSaveSettings,
 
@@ -41,6 +43,11 @@ var ajaxHandlers = map[string]map[string]AjaxRoute{
 		"/ajax/spec/create-url":     ajaxSpecCreateURL,
 		"/ajax/spec/refresh-url":    ajaxSpecRefreshURL,
 		"/ajax/spec/delete-url":     ajaxSpecDeleteURL,
+
+		"/ajax/spec/community/mark-read":      ajaxSpecCommunityMarkRead,
+		"/ajax/spec/community/add-comment":    ajaxSpecCommunityAddComment,
+		"/ajax/spec/community/update-comment": ajaxSpecCommunityUpdateComment,
+		"/ajax/spec/community/delete-comment": ajaxSpecCommunityDeleteComment,
 	},
 }
 

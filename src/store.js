@@ -2,7 +2,8 @@ import $ from 'jquery';
 import Vue from 'vue';
 import Vuex from 'vuex';
 
-import {defaultUserSettings} from './utils.js';
+import {idsEq, defaultUserSettings} from './utils.js';
+import {OWNER_TYPE_USER} from './spec/const.js';
 
 Vue.use(Vuex);
 
@@ -17,12 +18,12 @@ export const store = new Vuex.Store({
 		dragging: false,
 		movingBlockId: null, // id of block being moved
 		savedScrollPosition: null, // set when returning to routes in history
-		currentSpecId: null,
+		currentSpec: null,
 		currentSpecScrollTop: null, // saved for navigation improvements
 		userSettings: window.user.settings,
 	},
 	getters: {
-		userID(state) {
+		currentUserId(state) {
 			return window.user.id;
 		},
 		username(state) {
@@ -37,7 +38,7 @@ export const store = new Vuex.Store({
 			} else if (state.windowWidth <= MEDIUM_MAX_WIDTH) {
 				return '50%';
 			} else {
-				return '30%';
+				return '30%'; // TODO set pixel width
 			}
 		},
 		dialogSmallWidth(state) {
@@ -46,15 +47,25 @@ export const store = new Vuex.Store({
 			} else if (state.windowWidth <= MEDIUM_MAX_WIDTH) {
 				return '75%';
 			} else {
-				return '50%';
+				return '50%'; // TODO set pixel width
 			}
 		},
 		dialogLargeWidth(state) {
 			if (state.windowWidth <= MEDIUM_MAX_WIDTH) {
 				return '95%';
 			} else {
-				return '90%';
+				return '90%'; // TODO set pixel width
 			}
+		},
+		currentSpecId(state) {
+			return state.currentSpec ? state.currentSpec.id : null;
+		},
+		currentSpecOwnedByUser(state, getters) {
+			if (state.currentSpec) {
+				return state.currentSpec.ownerType === OWNER_TYPE_USER &&
+					idsEq(state.currentSpec.ownerId, getters.currentUserId);
+			}
+			return false;
 		},
 	},
 	mutations: {
@@ -84,13 +95,20 @@ export const store = new Vuex.Store({
 			console.debug('clearSavedScrollPosition');
 			state.savedScrollPosition = null;
 		},
-		saveCurrentSpecScrollTop(state, specId) {
+		saveCurrentSpec(state, spec) {
+			console.debug('saveCurrentSpec');
+			if (state.currentSpec && !idsEq(state.currentSpec.id, spec.id)) {
+				console.debug('saveCurrentSpec clear currentSpecScrollTop');
+				state.currentSpecScrollTop = null;
+			}
+			state.currentSpec = spec;
+		},
+		saveCurrentSpecScrollTop(state) {
 			console.debug('saveCurrentSpecScrollTop');
-			state.currentSpecId = specId;
 			state.currentSpecScrollTop = $window.scrollTop();
 		},
 		clearCurrentSpec(state) {
-			state.currentSpecId = null;
+			state.currentSpec = null;
 			state.currentSpecScrollTop = null;
 		},
 		updateCurrentTime(state) {

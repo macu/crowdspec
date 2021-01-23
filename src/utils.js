@@ -159,3 +159,36 @@ export function extractVid(url) {
 	}
 	return null;
 }
+
+// e1 and e2 must be Element objects
+export function isBefore(e1, e2) {
+	let p1 = $(e1).parents(); // returns a jQuery object
+	let p2 = $(e2).parents(); // ordrered from the immediate parent up
+	for (var i1 = 0; i1 < p1.length; i1++) {
+		let i2 = p2.index(p1[i1]);
+		if (i2 >= 0) {
+			let commonParent = p1[i1];
+			// take e as common sibling if common parent is index 0
+			let common1 = i1 > 0 ? p1[i1 - 1] : e1;
+			let common2 = i2 > 0 ? p2[i2 - 1] : e2;
+			if (common2 === e1) {
+				return true; // parent before child
+			}
+			let $commonSiblings = $(commonParent).find('>*');
+			return $commonSiblings.index(common1) < $commonSiblings.index(common2);
+		}
+	}
+}
+
+export function ucFirst(s) {
+	if (!s) {
+		return '';
+	}
+	// check special cases
+	switch (s) {
+		case 'url':
+			return 'URL';
+	}
+	// convert only the first letter
+	return s.charAt(0).toUpperCase() + s.slice(1);
+}

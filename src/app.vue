@@ -5,10 +5,7 @@
 		<h1 @click="gotoIndex()">CrowdSpec</h1>
 		<div>
 			<el-button @click="openEditProfile()" type="text" size="mini" class="username-button">
-				<username
-					:username="username"
-					:highlight="$store.getters.userSettings.userProfile.highlightUsername"
-					/>
+				<username :username="username" :highlight="highlight"/>
 			</el-button>
 			<el-button @click="logout()" size="mini">Log out</el-button>
 		</div>
@@ -38,6 +35,9 @@ export default {
 	computed: {
 		username() {
 			return this.$store.getters.username;
+		},
+		highlight() {
+			return this.$store.getters.userSettings.userProfile.highlightUsername;
 		},
 	},
 	methods: {

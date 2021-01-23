@@ -8,11 +8,7 @@
 			<span v-if="currentUserOwns">You own this</span>
 			<span v-else>
 				Owned by
-				<username
-					v-if="spec.username"
-					:username="spec.username"
-					:highlight="spec.highlight"
-					/>
+				<username v-if="spec.username" :username="spec.username" :highlight="spec.highlight"/>
 				<template v-else>{{spec.ownerType}} {{spec.ownerId}}</template>
 			</span>
 
@@ -27,14 +23,29 @@
 						</el-tooltip>
 					</span>
 					<el-button
+						@click="openSpecCommunity()"
+						:type="unreadCount ? 'primary' : 'default'"
+						:disabled="choosingAddPosition"
+						size="mini" icon="el-icon-chat-dot-square">
+						<template v-if="unreadCount">{{unreadCount}}</template>
+					</el-button>
+					<el-button
 						@click="openManageSpec()"
 						:disabled="choosingAddPosition"
-						size="mini" icon="el-icon-setting"/>
+						size="mini" icon="el-icon-setting"
+						/>
 				</template>
-
-				<span v-else>
-					Last modified <moment :datetime="spec.updated" :offset="true"/>
-				</span>
+				<template v-else>
+					<span>
+						Last modified <moment :datetime="spec.updated" :offset="true"/>
+					</span>
+					<el-button
+						@click="openSpecCommunity()"
+						:type="unreadCount ? 'primary' : 'default'"
+						size="mini" icon="el-icon-chat-dot-square">
+						<template v-if="unreadCount">{{unreadCount}}</template>
+					</el-button>
+				</template>
 			</template>
 
 			<el-button @click="promptNavSpec()" size="mini" icon="el-icon-folder"/>
@@ -52,7 +63,9 @@
 		:loading="loading"
 		:spec="spec"
 		:enable-editing="enableEditing"
-		@prompt-nav-spec="promptNavSpec()"
+		@prompt-nav-spec="promptNavSpec"
+		@open-community="openCommunity"
+		@play-video="playVideo"
 		/>
 
 	<edit-spec-modal
@@ -66,6 +79,16 @@
 		:subspec-id="subspecId"
 		/>
 
+	<community-modal
+		ref="communityModal"
+		:spec-id="specId"
+		@play-video="playVideo"
+		/>
+
+	<play-video-modal
+		ref="playVideoModal"
+		/>
+
 </section>
 </template>
 
@@ -75,8 +98,10 @@ import Username from '../widgets/username.vue';
 import Moment from '../widgets/moment.vue';
 import EditSpecModal from '../spec/edit-spec-modal.vue';
 import NavSpecModal from '../spec/nav-spec-modal.vue';
+import CommunityModal from '../spec/community-modal.vue';
+import PlayVideoModal from '../widgets/play-video-modal.vue';
 import {ajaxLoadSpec} from '../spec/ajax.js';
-import {OWNER_TYPE_USER} from '../spec/const.js';
+import {OWNER_TYPE_USER, TARGET_TYPE_SPEC} from '../spec/const.js';
 import {setWindowSubtitle, idsEq} from '../utils.js';
 
 export default {
@@ -85,11 +110,14 @@ export default {
 		Moment,
 		EditSpecModal,
 		NavSpecModal,
+		CommunityModal,
+		PlayVideoModal,
 	},
 	data() {
 		return {
 			loading: true,
 			spec: null,
+			unreadCount: 0,
 		};
 	},
 	computed: {
@@ -105,7 +133,7 @@ export default {
 		currentUserOwns() {
 			return this.spec &&
 				this.spec.ownerType === OWNER_TYPE_USER &&
-				this.$store.getters.userID === this.spec.ownerId;
+				this.$store.getters.currentUserId === this.spec.ownerId;
 		},
 		enableEditing() {
 			// Currently users may edit only their own specs
@@ -129,6 +157,7 @@ export default {
 	beforeRouteLeave(to, from, next) {
 		console.debug('beforeRouteLeave spec');
 		this.spec = null;
+		this.unreadCount = 0;
 		setWindowSubtitle(); // clear
 		next();
 	},
@@ -139,9 +168,11 @@ export default {
 			ajaxLoadSpec(specId, loadBlocks).then(spec => {
 				console.debug('spec loaded', spec);
 				this.spec = spec;
+				this.unreadCount = spec.unreadCount || 0;
 				setWindowSubtitle(spec.name);
 				this.loading = false;
 				this.$refs.view.$once('rendered', this.restoreScroll);
+				this.$store.commit('saveCurrentSpec', spec);
 			}).fail(jqXHR => {
 				this.$router.replace({
 					name: 'ajax-error',
@@ -168,6 +199,17 @@ export default {
 				setWindowSubtitle(updatedSpec.name);
 			});
 		},
+		openSpecCommunity() {
+			this.$refs.communityModal.openCommunity(TARGET_TYPE_SPEC, this.spec.id, adjustUnreadCount => {
+				this.unreadCount += adjustUnreadCount;
+			});
+		},
+		openCommunity(targetType, targetId, onAdjustUnread) {
+			this.$refs.communityModal.openCommunity(targetType, targetId, onAdjustUnread);
+		},
+		playVideo(urlObject) {
+			this.$refs.playVideoModal.show(urlObject);
+		},
 		promptNavSpec() {
 			this.$refs.navSpecModal.show();
 		},
@@ -179,7 +221,7 @@ export default {
 					// Restore scroll position from history
 					$(window).scrollTop(position.y).scrollLeft(position.x);
 				} else if (
-					idsEq(this.$store.state.currentSpecId, this.spec.id) &&
+					idsEq(this.$store.getters.currentSpecId, this.spec.id) &&
 					!!this.$store.state.currentSpecScrollTop
 				) {
 					console.debug('restoreScroll spec from currentSpecScrollTop');

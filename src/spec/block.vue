@@ -1,7 +1,7 @@
 <template>
-<li :data-spec-block="block.id" class="spec-block" :class="classes">
+<li :data-spec-block="block.id" class="spec-block" :class="classes" @click.stop.prevent="clearSelection()">
 
-	<div class="content" :class="{'mobile-adjust': showActions}">
+	<div class="content" :class="{'mobile-adjust': mobileAdjust}">
 
 		<div class="bg"></div>
 
@@ -10,12 +10,12 @@
 				<div class="expand-control" :class="{hide: showActions}">
 					<!-- only show community button to admins in collapsed mobile menu when there are unread submissions -->
 					<!-- always show community button to guests, who only make community interactions -->
-					<el-button v-if="unreadSubmissionsCount"
+					<el-button v-if="unreadCount"
 						@click="openCommunity()"
-						:type="submissionsCount ? 'primary' : 'default'"
+						type="primary"
 						size="mini"
 						icon="el-icon-chat-dot-square">
-						{{submissionsCount}}
+						{{unreadCount}}
 					</el-button>
 					<el-button @click="focusActions = true" type="default" size="mini" icon="el-icon-more" circle/>
 				</div>
@@ -38,10 +38,10 @@
 					</template>
 					<template v-else>
 						<el-button @click="openCommunity()"
-							:type="submissionsCount ? 'primary' : 'default'"
+							:type="unreadCount ? 'primary' : 'default'"
 							size="mini"
 							icon="el-icon-chat-dot-square">
-							{{submissionsCount}}
+							<template v-if="unreadCount">{{unreadCount}}</template>
 						</el-button>
 						<el-button @click="editBlock()" type="default" size="mini" icon="el-icon-edit" circle/>
 						<el-button v-if="showDeleteButton" @click="promptDeleteBlock()" type="warning" size="mini" icon="el-icon-delete" circle/>
@@ -54,10 +54,10 @@
 			<div v-else class="visitor-actions">
 				<el-button
 					@click="openCommunity()"
-					:type="submissionsCount ? 'primary' : 'default'"
+					:type="unreadCount ? 'primary' : 'default'"
 					size="mini"
 					icon="el-icon-chat-dot-square">
-					{{submissionsCount}}
+					<template v-if="unreadCount">{{unreadCount}}</template>
 				</el-button>
 			</div>
 		</div>
@@ -115,6 +115,7 @@ export default {
 			title: this.block.title,
 			body: this.block.body,
 			refItem: this.block.refItem,
+			unreadCount: this.block.unreadCount || 0,
 			subblocks: this.block.subblocks ? this.block.subblocks.slice() : [],
 
 			// Dynamic
@@ -168,11 +169,10 @@ export default {
 		showActions() {
 			return this.focusActions || this.movingThis || this.movingAnother;
 		},
-		unreadSubmissionsCount() {
-			return 0;
-		},
-		submissionsCount() {
-			return 0;
+		mobileAdjust() {
+			// whether to add {clear: both} to ref item area
+			// (show layover above rather than to right of ref item)
+			return this.showActions || !!this.unreadCount;
 		},
 	},
 	mounted() {
@@ -216,6 +216,7 @@ export default {
 				this.refItem = updatedBlock.refItem;
 				this.title = updatedBlock.title;
 				this.body = updatedBlock.body;
+				this.unreadCount = updatedBlock.unreadCount || 0;
 			});
 		},
 		raiseOpenEdit(block, callback) {
@@ -338,10 +339,23 @@ export default {
 			this.$emit('play-video', urlObject);
 		},
 		openCommunity() {
-			this.$emit('open-block-community', this.block.id);
+			this.$emit('open-community', this.block.id, adjustUnreadCount => {
+				this.unreadCount += adjustUnreadCount;
+			});
 		},
 		updateHasSubblocks() {
 			this.hasSubblocks = this.$refs.sublist.childElementCount > 0;
+		},
+		clearSelection() {
+			// @click.stop.prevent should prevent selections on tap on mobile;
+			// text selection should still be possible through long press;
+			// clear selection if any
+			let s = window.getSelection(); // IE9+
+			if (s) {
+				this.$nextTick(() => {
+					s.removeAllRanges();
+				});
+			}
 		},
 	},
 };
@@ -486,6 +500,14 @@ export default {
 			margin-top: 10px;
 		}
 	} // .content
+
+	// &:hover {
+	// 	>.content {
+	// 		>.bg {
+	// 			display: block;
+	// 		}
+	// 	}
+	// }
 
 	>ul.spec-block-list {
 		margin-top: $spec-block-margin;

@@ -131,5 +131,7 @@ CREATE FUNCTION delete_comment_tags () RETURNS TRIGGER AS $$
 	END;
 $$ LANGUAGE PLPGSQL;
 
+-- FOR EACH ROW specifies to run delete_comment_tags for each affected row
+-- automatically passing OLD to the trigger function holding the old row for each invocation
 CREATE TRIGGER on_comment_delete AFTER DELETE ON spec_comment
 FOR EACH ROW EXECUTE PROCEDURE delete_comment_tags();

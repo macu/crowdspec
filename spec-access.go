@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 )
 
 // Current policy is that only the user who owns the spec may write to it.
 
-func verifyReadSpec(db DBConn, userID uint, specID int64) (bool, error) {
+func verifyReadSpec(r *http.Request, db DBConn, userID uint, specID int64) (bool, int) {
 
 	var count uint
 	err := db.QueryRow(
@@ -18,10 +19,20 @@ func verifyReadSpec(db DBConn, userID uint, specID int64) (bool, error) {
 			)`,
 		specID, OwnerTypeUser, userID).Scan(&count)
 
-	return err == nil && count > 0, err
+	if err != nil {
+		logError(r, userID, fmt.Errorf("validating read spec access: %w", err))
+		return false, http.StatusInternalServerError
+	}
+
+	if count == 0 {
+		logError(r, userID, fmt.Errorf("read spec access denied to user %d in spec %d", userID, specID))
+		return false, http.StatusForbidden
+	}
+
+	return true, http.StatusOK
 }
 
-func verifyWriteSpec(db DBConn, userID uint, specID int64) (bool, error) {
+func verifyWriteSpec(r *http.Request, db DBConn, userID uint, specID int64) (bool, int) {
 
 	var count uint
 	err := db.QueryRow(
@@ -31,10 +42,20 @@ func verifyWriteSpec(db DBConn, userID uint, specID int64) (bool, error) {
 			AND owner_id = $3`,
 		specID, OwnerTypeUser, userID).Scan(&count)
 
-	return err == nil && count > 0, err
+	if err != nil {
+		logError(r, userID, fmt.Errorf("validating write spec access: %w", err))
+		return false, http.StatusInternalServerError
+	}
+
+	if count == 0 {
+		logError(r, userID, fmt.Errorf("write spec access denied to user %d in spec %d", userID, specID))
+		return false, http.StatusForbidden
+	}
+
+	return true, http.StatusOK
 }
 
-func verifyReadSubspec(db DBConn, userID uint, subspecID int64) (bool, error) {
+func verifyReadSubspec(r *http.Request, db DBConn, userID uint, subspecID int64) (bool, int) {
 
 	var count uint
 	err := db.QueryRow(
@@ -47,10 +68,20 @@ func verifyReadSubspec(db DBConn, userID uint, subspecID int64) (bool, error) {
 			)`,
 		subspecID, OwnerTypeUser, userID).Scan(&count)
 
-	return err == nil && count > 0, err
+	if err != nil {
+		logError(r, userID, fmt.Errorf("validating read subspec access: %w", err))
+		return false, http.StatusInternalServerError
+	}
+
+	if count == 0 {
+		logError(r, userID, fmt.Errorf("read subspec access denied to user %d in subspec %d", userID, subspecID))
+		return false, http.StatusForbidden
+	}
+
+	return true, http.StatusOK
 }
 
-func verifyWriteSubspec(db DBConn, userID uint, subspecID int64) (bool, error) {
+func verifyWriteSubspec(r *http.Request, db DBConn, userID uint, subspecID int64) (bool, int) {
 
 	var count uint
 	err := db.QueryRow(
@@ -62,10 +93,20 @@ func verifyWriteSubspec(db DBConn, userID uint, subspecID int64) (bool, error) {
 			AND spec.owner_id = $3`,
 		subspecID, OwnerTypeUser, userID).Scan(&count)
 
-	return err == nil && count > 0, err
+	if err != nil {
+		logError(r, userID, fmt.Errorf("validating write subspec access: %w", err))
+		return false, http.StatusInternalServerError
+	}
+
+	if count == 0 {
+		logError(r, userID, fmt.Errorf("write subspec access denied to user %d in subspec %d", userID, subspecID))
+		return false, http.StatusForbidden
+	}
+
+	return true, http.StatusOK
 }
 
-func verifyWriteURL(db DBConn, userID uint, urlID int64) (bool, error) {
+func verifyWriteURL(r *http.Request, db DBConn, userID uint, urlID int64) (bool, int) {
 
 	var count uint
 	err := db.QueryRow(
@@ -77,10 +118,20 @@ func verifyWriteURL(db DBConn, userID uint, urlID int64) (bool, error) {
 			AND spec.owner_id = $3`,
 		urlID, OwnerTypeUser, userID).Scan(&count)
 
-	return err == nil && count > 0, err
+	if err != nil {
+		logError(r, userID, fmt.Errorf("validating write url access: %w", err))
+		return false, http.StatusInternalServerError
+	}
+
+	if count == 0 {
+		logError(r, userID, fmt.Errorf("write url access denied to user %d for url %d", userID, urlID))
+		return false, http.StatusForbidden
+	}
+
+	return true, http.StatusOK
 }
 
-func verifyReadBlock(db DBConn, userID uint, specID, blockID int64) (bool, error) {
+func verifyReadBlock(r *http.Request, db DBConn, userID uint, specID, blockID int64) (bool, int) {
 
 	var count uint
 	err := db.QueryRow(
@@ -95,10 +146,20 @@ func verifyReadBlock(db DBConn, userID uint, specID, blockID int64) (bool, error
 			)`,
 		specID, blockID, OwnerTypeUser, userID).Scan(&count)
 
-	return err == nil && count > 0, err
+	if err != nil {
+		logError(r, userID, fmt.Errorf("validating read block access: %w", err))
+		return false, http.StatusInternalServerError
+	}
+
+	if count == 0 {
+		logError(r, userID, fmt.Errorf("read block access denied to user %d in spec %d", userID, specID))
+		return false, http.StatusForbidden
+	}
+
+	return true, http.StatusOK
 }
 
-func verifyWriteBlock(db DBConn, userID uint, blockID int64) (bool, error) {
+func verifyWriteBlock(r *http.Request, db DBConn, userID uint, blockID int64) (bool, int) {
 
 	var count uint
 	err := db.QueryRow(
@@ -109,17 +170,29 @@ func verifyWriteBlock(db DBConn, userID uint, blockID int64) (bool, error) {
 		AND spec.owner_id = $3`,
 		blockID, OwnerTypeUser, userID).Scan(&count)
 
-	return err == nil && count > 0, err
+	if err != nil {
+		logError(r, userID, fmt.Errorf("validating write block access: %w", err))
+		return false, http.StatusInternalServerError
+	}
+
+	if count == 0 {
+		logError(r, userID, fmt.Errorf("write block access denied to user %d to block %d", userID, blockID))
+		return false, http.StatusForbidden
+	}
+
+	return true, http.StatusOK
 }
 
 // - verifies the given block belongs to the given spec
-func verifyWriteSpecBlock(db DBConn, userID uint, specID int64, blockID int64) (bool, error) {
-	return verifyWriteSpecSubspecBlocks(db, userID, specID, nil, &blockID)
+func verifyWriteSpecBlock(r *http.Request, db DBConn, userID uint,
+	specID int64, blockID int64) (bool, int) {
+	return verifyWriteSpecSubspecBlocks(r, db, userID, specID, nil, &blockID)
 }
 
 // - verifies given subspec belongs to spec
 // - verifies all given blocks belong to spec
-func verifyWriteSpecSubspecBlocks(db DBConn, userID uint, specID int64, subspecID *int64, blockIDs ...*int64) (bool, error) {
+func verifyWriteSpecSubspecBlocks(r *http.Request, db DBConn, userID uint,
+	specID int64, subspecID *int64, blockIDs ...*int64) (bool, int) {
 
 	args := []interface{}{}
 
@@ -154,16 +227,27 @@ func verifyWriteSpecSubspecBlocks(db DBConn, userID uint, specID int64, subspecI
 			AND spec.id = `+argPlaceholder(specID, &args),
 		args...).Scan(&count)
 
-	return err == nil && count > 0, err
+	if err != nil {
+		logError(r, userID, fmt.Errorf("validating write blocks access: %w", err))
+		return false, http.StatusInternalServerError
+	}
+
+	if count == 0 {
+		logError(r, userID, fmt.Errorf("write blocks access denied to user %d in spec %d", userID, specID))
+		return false, http.StatusForbidden
+	}
+
+	return true, http.StatusOK
 }
 
 // Current policy is that the ref item must belong to the spec it is referenced in.
-func verifyRefAccess(db DBConn, specID int64, refType *string, refID *int64) (bool, error) {
+func verifyRefAccess(r *http.Request, db DBConn, userID uint,
+	specID int64, refType *string, refID *int64) (bool, int) {
 
 	// Function is used when checking request parameters,
 	// which are valid when nil
 	if refType == nil || refID == nil {
-		return true, nil
+		return true, http.StatusOK
 	}
 
 	var count uint
@@ -184,8 +268,189 @@ func verifyRefAccess(db DBConn, specID int64, refType *string, refID *int64) (bo
 			*refID, specID).Scan(&count)
 
 	default:
-		return false, fmt.Errorf("unsupported refType: %s", *refType)
+		logError(r, userID, fmt.Errorf("unsupported refType: %s", *refType))
+		return false, http.StatusBadRequest
 	}
 
-	return err == nil && count > 0, err
+	if err != nil {
+		logError(r, userID, fmt.Errorf("validating read ref access: %w", err))
+		return false, http.StatusInternalServerError
+	}
+
+	if count == 0 {
+		logError(r, userID,
+			fmt.Errorf("read ref access denied to user %d in spec %d, refType %s refID %d",
+				userID, specID, *refType, *refID))
+		return false, http.StatusForbidden
+	}
+
+	return true, http.StatusOK
+}
+
+// Community access
+
+func verifyAddComment(r *http.Request, db DBConn, userID uint,
+	specID int64, targetType string, targetID int64) (bool, int) {
+
+	var count uint
+	var err error
+
+	var queryCount = func(tableName string) {
+		err = db.QueryRow(
+			`SELECT COUNT(*) FROM `+tableName+`
+				INNER JOIN spec
+					ON spec.id = `+tableName+`.spec_id
+				WHERE
+					`+tableName+`.id = $2
+					AND spec.id = $1 -- verify spec association
+					AND (spec.is_public
+						OR (spec.owner_type = $3 AND spec.owner_id = $4) -- allow spec owner
+					)`,
+			specID, targetID, OwnerTypeUser, userID).Scan(&count)
+	}
+
+	switch targetType {
+
+	case "spec":
+		err = db.QueryRow(
+			`SELECT COUNT(*) FROM spec
+				WHERE
+					spec.id = $1
+					AND (spec.is_public
+						OR (spec.owner_type = $2 AND spec.owner_id = $3) -- allow spec owner
+					)`,
+			specID, OwnerTypeUser, userID).Scan(&count)
+
+	case "subspec":
+		queryCount("spec_subspec")
+
+	case "block":
+		queryCount("spec_block")
+
+	case "comment":
+		queryCount("spec_community_comment")
+
+	default:
+		return false, http.StatusBadRequest
+
+	}
+
+	if err != nil {
+		logError(r, userID, fmt.Errorf("validating add comment access: %w", err))
+		return false, http.StatusInternalServerError
+	}
+
+	if count == 0 {
+		logError(r, userID, fmt.Errorf("add comment access denied to user %d in spec %d", userID, specID))
+		return false, http.StatusForbidden
+	}
+
+	return true, http.StatusOK
+}
+
+// allow all in public specs
+// allow comment author or spec owner in private specs
+func verifyReadComment(r *http.Request, db DBConn, userID uint, specID, commentID int64) (bool, int) {
+
+	var count uint
+	err := db.QueryRow(
+		`SELECT COUNT(*) FROM spec_community_comment
+		INNER JOIN spec
+			ON spec.id = spec_community_comment.spec_id
+		WHERE
+			spec_community_comment.id = $2
+			AND spec.id = $1 -- verify spec association
+			AND (spec.is_public
+				OR (spec.owner_type = $3 AND spec.owner_id = $4) -- allow spec owner
+				OR spec_community_comment.user_id = $4 -- allow comment author
+			)`,
+		specID, commentID, OwnerTypeUser, userID).Scan(&count)
+
+	if err != nil {
+		logError(r, userID, fmt.Errorf("validating read comment access: %w", err))
+		return false, http.StatusInternalServerError
+	}
+
+	if count == 0 {
+		logError(r, userID, fmt.Errorf("read comment access denied to user %d in spec %d", userID, specID))
+		return false, http.StatusForbidden
+	}
+
+	return true, http.StatusOK
+}
+
+// allow comment author only
+func verifyUpdateComment(r *http.Request, db DBConn, userID uint, specID, commentID int64) (bool, int) {
+
+	var count uint
+	err := db.QueryRow(
+		`SELECT COUNT(*) FROM spec_community_comment
+		INNER JOIN spec
+			ON spec.id = spec_community_comment.spec_id
+		WHERE
+			spec_community_comment.id = $2
+			AND spec.id = $1 -- verify spec association
+			AND spec_community_comment.user_id = $3 -- allow comment author
+		`, specID, commentID, userID).Scan(&count)
+
+	if err != nil {
+		logError(r, userID, fmt.Errorf("validating write comment access: %w", err))
+		return false, http.StatusInternalServerError
+	}
+
+	if count == 0 {
+		logError(r, userID, fmt.Errorf("write comment access denied to user %d in spec %d", userID, specID))
+		return false, http.StatusForbidden
+	}
+
+	return true, http.StatusOK
+}
+
+// allow comment author or spec owner
+func verifyDeleteComment(r *http.Request, db DBConn, userID uint, specID, commentID int64) (bool, int) {
+
+	var count uint
+	err := db.QueryRow(
+		`SELECT COUNT(*)
+		FROM spec_community_comment AS c
+		INNER JOIN spec
+			ON spec.id = c.spec_id
+		WHERE
+			c.id = $2
+			AND c.spec_id = $1 -- verify spec association
+			AND (
+				(spec.owner_type = $3 AND spec.owner_id = $4) -- allow spec owner
+				OR c.user_id = $4 -- allow comment author
+			)
+		`, specID, commentID, OwnerTypeUser, userID,
+	).Scan(&count)
+
+	if err != nil {
+		logError(r, userID, fmt.Errorf("validating delete comment access: %w", err))
+		return false, http.StatusInternalServerError
+	}
+
+	if count == 0 {
+		logError(r, userID, fmt.Errorf("delete comment access denied to user %d in spec %d", userID, specID))
+		return false, http.StatusForbidden
+	}
+
+	return true, http.StatusOK
+}
+
+func verifyReadCommunityTarget(r *http.Request, db DBConn, userID uint,
+	specID int64, targetType string, targetID int64) (bool, int) {
+	switch targetType {
+	case CommunityTargetSpec:
+		return verifyReadSpec(r, db, userID, specID)
+	case CommunityTargetSubspec:
+		return verifyReadSubspec(r, db, userID, targetID)
+	case CommunityTargetBlock:
+		return verifyReadBlock(r, db, userID, specID, targetID)
+	case CommunityTargetComment:
+		return verifyReadComment(r, db, userID, specID, targetID)
+	default:
+		logError(r, userID, fmt.Errorf("unrecognized target type: %s", targetType))
+		return false, http.StatusBadRequest
+	}
 }

@@ -9,9 +9,9 @@ import (
 func ajaxUserHome(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
 	// GET
 
-	rows, err := db.Query(`
-		SELECT id, owner_type, owner_id, spec_name, spec_desc, is_public,
-		GREATEST(spec.updated_at, spec.blocks_updated_at) AS last_updated
+	rows, err := db.Query(
+		`SELECT id, owner_type, owner_id, spec_name, spec_desc, is_public,
+			GREATEST(spec.updated_at, spec.blocks_updated_at) AS last_updated
 		FROM spec
 		WHERE owner_type=$1 AND owner_id=$2
 		ORDER BY created_at ASC
@@ -36,10 +36,10 @@ func ajaxUserHome(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 		userSpecs = append(userSpecs, s)
 	}
 
-	rows, err = db.Query(`
-		SELECT spec.id, owner_type, owner_id, spec_name, spec_desc,
-		user_account.username,
-		user_account.user_settings::json#>>'{userProfile,highlightUsername}' AS highlight,
+	rows, err = db.Query(
+		`SELECT spec.id, owner_type, owner_id, spec_name, spec_desc,
+			user_account.username,
+			user_account.user_settings::json#>>'{userProfile,highlightUsername}' AS highlight,
 		GREATEST(spec.updated_at, spec.blocks_updated_at) AS last_updated
 		FROM spec
 		LEFT JOIN user_account

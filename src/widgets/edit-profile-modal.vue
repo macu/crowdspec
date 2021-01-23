@@ -8,10 +8,7 @@
 
 	<span slot="title">
 		Account options for
-		<username
-			:username="username"
-			:highlight="$store.getters.userSettings.userProfile.highlightUsername"
-			/>
+		<username :username="username" :highlight="highlight"/>
 	</span>
 
 	<el-form v-if="changePasswordMode"
@@ -87,10 +84,7 @@
 					size="mini"
 					icon="el-icon-close"
 					/>
-				<username
-					username="Username colour"
-					:highlight="settingsForm.userProfile.highlightUsername"
-					/>
+				<username username="Username colour" :highlight="settingsForm.userProfile.highlightUsername"/>
 			</div>
 		</el-form-item>
 		<el-form-item>
@@ -156,11 +150,11 @@ export default {
 		};
 	},
 	computed: {
-		userID() {
-			return this.$store.getters.userID;
-		},
 		username() {
 			return this.$store.getters.username;
+		},
+		highlight() {
+			return this.$store.getters.userSettings.userProfile.highlightUsername;
 		},
 		changePasswordMode() {
 			return this.mode === MODE_CHANGE_PASSWORD;

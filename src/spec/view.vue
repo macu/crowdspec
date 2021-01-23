@@ -39,16 +39,6 @@
 
 	</template>
 
-	<block-community-modal
-		ref="blockCommunityModal"
-		:spec-id="specId"
-		@play-video="playVideo"
-		/>
-
-	<play-video-modal
-		ref="playVideoModal"
-		/>
-
 </div>
 </template>
 
@@ -57,11 +47,10 @@ import $ from 'jquery';
 import Vue from 'vue';
 import Dragula from 'dragula';
 import SpecBlock from './block.vue';
-import BlockCommunityModal from './block-community-modal.vue';
 import EditBlockModal from './edit-block-modal.vue';
 import EditUrlModal from './edit-url-modal.vue';
-import PlayVideoModal from './play-video-modal.vue';
 import {ajaxDeleteBlock, ajaxMoveBlock} from './ajax.js';
+import {TARGET_TYPE_BLOCK} from './const.js';
 import store from '../store.js';
 import router from '../router.js';
 import {alertError, startAutoscroll} from '../utils.js';
@@ -76,10 +65,8 @@ apply same relative condition from present to next state
 
 export default {
 	components: {
-		BlockCommunityModal,
 		EditBlockModal,
 		EditUrlModal,
-		PlayVideoModal,
 	},
 	props: {
 		spec: Object,
@@ -235,7 +222,7 @@ export default {
 				},
 			}).$mount();
 
-			vc.$on('open-block-community', this.openBlockCommunity);
+			vc.$on('open-community', this.openBlockCommunity);
 			vc.$on('open-edit', this.openEdit);
 			vc.$on('prompt-add-subblock', this.promptAddSubblock);
 			vc.$on('prompt-delete', this.promptDeleteBlock);
@@ -265,8 +252,8 @@ export default {
 				this.insertBlock(newBlock, true, true);
 			});
 		},
-		openBlockCommunity(blockId) {
-			this.$refs.blockCommunityModal.show(blockId);
+		openBlockCommunity(blockId, onAdjustUnread) {
+			this.$emit('open-community', TARGET_TYPE_BLOCK, blockId, onAdjustUnread);
 		},
 		openEdit(block, callback) {
 			this.$refs.editBlockModal.showEdit(block, callback);
@@ -343,7 +330,7 @@ export default {
 			});
 		},
 		playVideo(urlObject) {
-			this.$refs.playVideoModal.show(urlObject);
+			this.$emit('play-video', urlObject);
 		},
 		promptNavSpec() {
 			this.$emit('prompt-nav-spec');

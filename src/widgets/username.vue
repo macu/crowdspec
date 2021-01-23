@@ -18,17 +18,26 @@ export default {
 	},
 	computed: {
 		style() {
-			if (!this.highlight) {
+
+			// Use current setting value if current user (in case updated)
+			let highlight = this.username === this.$store.getters.username
+				? this.$store.getters.userSettings.userProfile.highlightUsername
+				: this.highlight;
+
+			if (!highlight) {
 				return null;
 			}
-			let inverted = encodeRgb(invertHsl(this.highlight));
+
+			let color = encodeRgb(highlight);
+			let inverted = encodeRgb(invertHsl(highlight));
 			return {
-				'color': encodeRgb(this.highlight),
+				'color': color,
 				'text-shadow': '-1px -1px 0 ' + inverted + ', ' +
 					'1px -1px 0 ' + inverted + ', ' +
 					'-1px 1px 0 ' + inverted + ', ' +
 					'1px 1px 0 ' + inverted,
 			};
+
 		},
 	},
 };
