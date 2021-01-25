@@ -12,6 +12,16 @@ import (
 
 func verifyRecaptcha(r *http.Request) (bool, error) {
 
+	var token = r.FormValue("g-recaptcha-response")
+
+	if token == "" {
+		if isLocal() {
+			// Allow bypass on local
+			return true, nil
+		}
+		return false, fmt.Errorf("reCAPTCHA token undefined")
+	}
+
 	var err error
 
 	if recaptchaSecretKey == "" {
@@ -29,7 +39,7 @@ func verifyRecaptcha(r *http.Request) (bool, error) {
 
 	form := url.Values{}
 	form.Set("secret", recaptchaSecretKey)
-	form.Set("response", r.FormValue("g-recaptcha-response"))
+	form.Set("response", token)
 	form.Set("remoteip", ip)
 
 	client := http.Client{

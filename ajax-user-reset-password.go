@@ -28,10 +28,18 @@ func makeRequestPasswordResetHandler(db *sql.DB) func(w http.ResponseWriter, r *
 		}
 		w.WriteHeader(errcode)
 		requestPasswordResetPageTemplate.Execute(w, struct {
-			Mode    string
-			Error   int
-			SiteKey string
-		}{"request", errcode, recaptchaSiteKey})
+			Mode         string
+			Error        int
+			SiteKey      string
+			Verify       bool // reCAPTCHA required
+			VersionStamp string
+		}{
+			"request",
+			errcode,
+			recaptchaSiteKey,
+			isAppEngine(),
+			cacheControlVersionStamp,
+		})
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -39,10 +47,18 @@ func makeRequestPasswordResetHandler(db *sql.DB) func(w http.ResponseWriter, r *
 		if r.Method == http.MethodGet {
 
 			requestPasswordResetPageTemplate.Execute(w, struct {
-				Mode    string
-				Error   int
-				SiteKey string
-			}{"request", 0, recaptchaSiteKey})
+				Mode         string
+				Error        int
+				SiteKey      string
+				Verify       bool // reCAPTCHA required
+				VersionStamp string
+			}{
+				"request",
+				0,
+				recaptchaSiteKey,
+				isAppEngine(),
+				cacheControlVersionStamp,
+			})
 
 		} else if r.Method == http.MethodPost {
 
@@ -145,7 +161,10 @@ func makeRequestPasswordResetHandler(db *sql.DB) func(w http.ResponseWriter, r *
 			requestPasswordResetPageTemplate.Execute(w, struct {
 				Mode  string
 				Email string
-			}{"sent", email})
+			}{
+				"sent",
+				email,
+			})
 
 		}
 
@@ -162,11 +181,20 @@ func makeResetPasswordHandler(db *sql.DB) func(w http.ResponseWriter, r *http.Re
 			w.WriteHeader(errcode)
 		}
 		resetPasswordPageTemplate.Execute(w, struct {
-			Mode    string
-			Token   string
-			Error   int
-			SiteKey string
-		}{"reset", token, errcode, recaptchaSiteKey})
+			Mode         string
+			Token        string
+			Error        int
+			SiteKey      string
+			Verify       bool // reCAPTCHA required
+			VersionStamp string
+		}{
+			"reset",
+			token,
+			errcode,
+			recaptchaSiteKey,
+			isAppEngine(),
+			cacheControlVersionStamp,
+		})
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -279,7 +307,10 @@ func makeResetPasswordHandler(db *sql.DB) func(w http.ResponseWriter, r *http.Re
 			resetPasswordPageTemplate.Execute(w, struct {
 				Mode     string
 				Username string
-			}{"success", username})
+			}{
+				"success",
+				username,
+			})
 
 		}
 

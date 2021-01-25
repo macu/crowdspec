@@ -118,9 +118,11 @@ func makeLoginHandler(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 
 	var executeLoginTemplate = func(w http.ResponseWriter, errcode int) {
 		loginPageTemplate.Execute(w, struct {
-			Error   int
-			SiteKey string
-		}{errcode, recaptchaSiteKey})
+			Error        int
+			SiteKey      string
+			Verify       bool // require reCAPTCHA
+			VersionStamp string
+		}{errcode, recaptchaSiteKey, isAppEngine(), cacheControlVersionStamp})
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {

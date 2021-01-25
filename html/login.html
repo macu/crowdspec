@@ -7,7 +7,7 @@
 <title>CrowdSpec</title>
 
 <link rel="shortcut icon" href="/img/favicon.ico"/>
-<link rel="stylesheet" href="/css/login.css"/>
+<link rel="stylesheet" href="/css/login.css?v={{.VersionStamp}}"/>
 
 <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
@@ -49,7 +49,9 @@
 				</tr>
 				<tr>
 					<td></td>
-					<td><button id="submitButton" type="submit" disabled>Log in</button></td>
+					<td>
+						<button id="submitButton" type="submit" {{if .Verify}}disabled{{end}}>Log in</button>
+					</td>
 				</tr>
 			</table>
 		</form>
@@ -58,7 +60,8 @@
 
 	</div>
 
-	<script src="/js/login.js"></script>
+	<script>window.verifyRequired = {{.Verify}};</script>
+	<script src="/js/login.js?v={{.VersionStamp}}"></script>
 
 </body>
 </html>

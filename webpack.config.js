@@ -16,8 +16,8 @@ module.exports = {
 	},
 	performance: {
 		hints: 'warning',
-		maxEntrypointSize: 250000, // 250 kB
-		maxAssetSize: 0, // no assets expected
+		maxEntrypointSize: 250000, // JS output 250 kB
+		maxAssetSize: 250000, // CSS output 250 kB
 	},
 	externals: {
 		'jquery': 'jQuery',

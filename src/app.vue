@@ -40,6 +40,37 @@ export default {
 			return this.$store.getters.userSettings.userProfile.highlightUsername;
 		},
 	},
+	// mounted() {
+	// 	let $dialog = null;
+	// 	let $scrollTo = null;
+	// 	$(document).on('selectionchange focusin mouseup', () => {
+	// 		let e = document.activeElement;
+	// 		if (e && e.tagName === 'INPUT' || e.tagName === 'TEXTAREA') {
+	// 			let $e = $(e);
+	// 			$dialog = $e.closest('.el-dialog__wrapper');
+	// 			if ($dialog.length) {
+	// 				// Work around keyboard scroll jump bug in dialogs on mobile
+	// 				// .el-textarea defines {position: relative;} take parent
+	// 				$scrollTo = $e.parent();
+	// 				// Don't handle scroll event after a period
+	// 				setTimeout(() => {
+	// 					$$dialog = null;
+	// 					$scrollTo = null;
+	// 				}, 500);
+	// 			}
+	// 		}
+	// 	});
+	// 	document.addEventListener('scroll', () => {
+	// 		if ($scrollTo) {
+	// 			let position = $scrollTo.position();
+	// 			if (position.top < $dialog.scrollTop()) {
+	// 				$dialog.scrollTop(position.top - 20);
+	// 			}
+	// 			$$dialog = null;
+	// 			scrollTo = null;
+	// 		}
+	// 	}, /* capture */ true);
+	// },
 	methods: {
 		gotoIndex() {
 			if (this.$route.name !== 'index') {

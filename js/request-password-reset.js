@@ -8,7 +8,7 @@ emailInput.addEventListener('keydown', function(e) {
 	if (e.keyCode === 13) {
 		e.preventDefault();
 		if (emailInput.value.trim() !== '') {
-			if (reCAPTCHA_ok) {
+			if (reCAPTCHA_ok || !window.verifyRequired) {
 				form.submit();
 			}
 		}
@@ -29,12 +29,16 @@ function recaptchaSuccess() {
 
 function recaptchaExpired() {
 	reCAPTCHA_ok = false;
-	submitButton.disabled = true;
+	if (window.verifyRequired) {
+		submitButton.disabled = true;
+	}
 }
 
 function recaptchaError() {
 	reCAPTCHA_ok = false;
-	submitButton.disabled = true;
+	if (window.verifyRequired) {
+		submitButton.disabled = true;
+	}
 }
 
 document.addEventListener('DOMContentLoaded', function() {

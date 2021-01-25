@@ -51,6 +51,15 @@ html, body {
 	white-space: pre;
 }
 
+.el-dialog__body {
+	.el-textarea {
+		>textarea {
+			// keep textarea scrollable within viewport
+			max-height: 75vh;
+		}
+	}
+}
+
 .el-dialog__footer {
 	// Footers contain only buttons
 	padding-top: 5px;
