@@ -12,15 +12,18 @@ const MOBILE_MAX_WIDTH = 767;
 const MEDIUM_MAX_WIDTH = 991;
 
 export const store = new Vuex.Store({
-	state: {
-		currentTime: Date.now(), // updated every minute
-		windowWidth: $window.width(),
-		dragging: false,
-		movingBlockId: null, // id of block being moved
-		savedScrollPosition: null, // set when returning to routes in history
-		currentSpec: null,
-		currentSpecScrollTop: null, // saved for navigation improvements
-		userSettings: window.user.settings,
+	state() {
+		return {
+			currentTime: Date.now(), // updated every minute
+			windowWidth: $window.width(),
+			dragging: false, // drag operation in progress; lock down interface
+			movingBlockIds: [], // ids of blocks being moved
+			movingBlocksSourceSubspecId: null, // id of source subspec if any for current move operation
+			savedScrollPosition: null, // set momentarily when returning to routes in history
+			currentSpec: null,
+			currentSpecScrollTop: null, // saved when leaving spec view for navigation improvements
+			userSettings: window.user.settings,
+		};
 	},
 	getters: {
 		currentUserId(state) {
@@ -31,6 +34,9 @@ export const store = new Vuex.Store({
 		},
 		userSettings(state) {
 			return $.extend(true, defaultUserSettings(), state.userSettings);
+		},
+		mobileViewport(state) {
+			return state.windowWidth <= MOBILE_MAX_WIDTH;
 		},
 		dialogTinyWidth(state) {
 			if (state.windowWidth <= MOBILE_MAX_WIDTH) {
@@ -57,6 +63,14 @@ export const store = new Vuex.Store({
 				return '90%'; // TODO set pixel width
 			}
 		},
+		currentlyMovingBlocks(state) {
+			return state.movingBlockIds.length > 0;
+		},
+		currentlyMovingBlock(state) {
+			return (blockId) => {
+				return state.movingBlockIds.indexOf(blockId) >= 0;
+			};
+		},
 		currentSpecId(state) {
 			return state.currentSpec ? state.currentSpec.id : null;
 		},
@@ -81,11 +95,13 @@ export const store = new Vuex.Store({
 		endDragging(state) {
 			state.dragging = false;
 		},
-		startMovingBlock(state, blockId) {
-			state.movingBlockId = blockId;
+		setMovingBlocks(state, payload) {
+			state.movingBlocksSourceSubspecId = payload.subspecId;
+			state.movingBlockIds = payload.blockIds;
 		},
-		endMovingBlock(state) {
-			state.movingBlockId = null;
+		endMovingBlocks(state) {
+			state.movingBlocksSourceSubspecId = null;
+			state.movingBlockIds = [];
 		},
 		setSavedScrollPosition(state, position) {
 			console.debug('setSavedScrollPosition', position);

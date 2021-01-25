@@ -11,6 +11,9 @@ module.exports = {
 		filename: 'compiled.js',
 		path: __dirname + '/js',
 	},
+	optimization: {
+		minimize: true,
+	},
 	externals: {
 		'jquery': 'jQuery',
 		'vue': 'Vue',

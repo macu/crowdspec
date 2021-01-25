@@ -34,7 +34,7 @@ var ajaxHandlers = map[string]map[string]AjaxRoute{
 		"/ajax/spec/delete-spec":    ajaxDeleteSpec,
 		"/ajax/spec/create-block":   ajaxSpecCreateBlock,
 		"/ajax/spec/save-block":     ajaxSpecSaveBlock,
-		"/ajax/spec/move-block":     ajaxSpecMoveBlock,
+		"/ajax/spec/move-blocks":    ajaxSpecMoveBlocks,
 		"/ajax/spec/delete-block":   ajaxSpecDeleteBlock,
 		"/ajax/spec/create-subspec": ajaxSpecCreateSubspec,
 		"/ajax/spec/save-subspec":   ajaxSpecSaveSubspec,

@@ -41,3 +41,48 @@ func eqCondIndexed(col string, arg interface{}, index int) string {
 	}
 	return col + " = $" + strconv.Itoa(index)
 }
+
+func createArgsList(args *[]interface{}, values ...interface{}) string {
+	out := ``
+	for i := 0; i < len(values); i++ {
+		if i > 0 {
+			out += `,`
+		}
+		out += argPlaceholder(values[i], args)
+	}
+	return out
+}
+
+func createArgsListInt64s(args *[]interface{}, values ...int64) string {
+	out := ``
+	for i := 0; i < len(values); i++ {
+		if i > 0 {
+			out += `,`
+		}
+		out += argPlaceholder(values[i], args)
+	}
+	return out
+}
+
+func createIDsValuesMap(args *[]interface{}, ids []int64, values ...[]interface{}) string {
+	out := `VALUES `
+
+	for i := 0; i < len(ids); i++ {
+		if i > 0 {
+			out += `,`
+		}
+		// include types with placeholders to be clear
+		out += `(` + argPlaceholder(ids[i], args) + `::int`
+		for j := 0; j < len(values); j++ {
+			v := values[j][i]
+			out += `,` + argPlaceholder(v, args)
+			switch v.(type) {
+			case int, uint, int64:
+				out += `::int`
+			}
+		}
+		out += `)`
+	}
+
+	return out
+}

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"strconv"
 	"time"
 )
@@ -63,6 +65,16 @@ func AtoTimeNilIfEmpty(s string) (*time.Time, error) {
 		return nil, err
 	}
 	return &t, nil
+}
+
+// AtoInt64Array is for parsing ID lists where the input is a JSON encoded array of ints.
+func AtoInt64Array(s string) ([]int64, error) {
+	var out []int64
+	err := json.Unmarshal([]byte(s), &out)
+	if err != nil {
+		return []int64{}, fmt.Errorf("parsing int array: %w", err)
+	}
+	return out, nil
 }
 
 // IntToA converts an int to a base 10 string.

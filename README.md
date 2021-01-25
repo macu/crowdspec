@@ -83,6 +83,8 @@ postgres=#
 ### 2021-01
 
 - [x] Add community space, comments, sub-comments, read records, and unread counts
+- [x] Scroll viewport as needed after move or insert block
+- [x] Multiselect bulk block move (within or across contexts)
 
 ### 2020-12
 

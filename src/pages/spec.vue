@@ -140,7 +140,7 @@ export default {
 			return this.currentUserOwns;
 		},
 		choosingAddPosition() {
-			return !!this.$store.state.movingBlockId;
+			return this.$store.getters.currentlyMovingBlocks;
 		},
 	},
 	beforeRouteEnter(to, from, next) {

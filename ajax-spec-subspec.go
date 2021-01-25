@@ -63,7 +63,7 @@ func ajaxSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request
 	}
 
 	if AtoBool(query.Get("loadBlocks")) {
-		s.Blocks, err = loadBlocks(db, userID, specID, &subspecID)
+		s.Blocks, err = loadContextBlocks(db, userID, specID, &subspecID)
 		if err != nil {
 			logError(r, userID, fmt.Errorf("loading subspec blocks: %w", err))
 			return nil, http.StatusInternalServerError

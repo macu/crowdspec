@@ -186,13 +186,13 @@ func verifyWriteBlock(r *http.Request, db DBConn, userID uint, blockID int64) (b
 // - verifies the given block belongs to the given spec
 func verifyWriteSpecBlock(r *http.Request, db DBConn, userID uint,
 	specID int64, blockID int64) (bool, int) {
-	return verifyWriteSpecSubspecBlocks(r, db, userID, specID, nil, &blockID)
+	return verifyWriteSpecSubspecBlocks(r, db, userID, specID, nil, blockID)
 }
 
 // - verifies given subspec belongs to spec
 // - verifies all given blocks belong to spec
 func verifyWriteSpecSubspecBlocks(r *http.Request, db DBConn, userID uint,
-	specID int64, subspecID *int64, blockIDs ...*int64) (bool, int) {
+	specID int64, subspecID *int64, blockIDs ...int64) (bool, int) {
 
 	args := []interface{}{}
 
@@ -207,14 +207,12 @@ func verifyWriteSpecSubspecBlocks(r *http.Request, db DBConn, userID uint,
 
 	blockJoins := []string{}
 	for i, id := range blockIDs {
-		if id != nil {
-			tableName := "block_" + IntToA(i)
-			blockJoins = append(blockJoins, `
-				INNER JOIN spec_block AS `+tableName+`
-					ON `+tableName+`.id = `+argPlaceholder(*id, &args)+`
-					AND `+tableName+`.spec_id = spec.id
-				`)
-		}
+		tableName := "block_" + IntToA(i)
+		blockJoins = append(blockJoins, `
+			INNER JOIN spec_block AS `+tableName+`
+				ON `+tableName+`.id = `+argPlaceholder(id, &args)+`
+				AND `+tableName+`.spec_id = spec.id
+			`)
 	}
 
 	var count uint

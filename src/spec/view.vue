@@ -9,7 +9,7 @@
 
 		<el-button
 			v-if="choosingAddPosition"
-			@click="placeBlockBottom()"
+			@click="moveBlocksToBottom()"
 			size="small"
 			type="success"
 			icon="el-icon-top">Move block here</el-button>
@@ -49,11 +49,11 @@ import Dragula from 'dragula';
 import SpecBlock from './block.vue';
 import EditBlockModal from './edit-block-modal.vue';
 import EditUrlModal from './edit-url-modal.vue';
-import {ajaxDeleteBlock, ajaxMoveBlock} from './ajax.js';
+import {ajaxDeleteBlock, ajaxMoveBlocks} from './ajax.js';
 import {TARGET_TYPE_BLOCK} from './const.js';
 import store from '../store.js';
 import router from '../router.js';
-import {alertError, startAutoscroll} from '../utils.js';
+import {idsEq, startAutoscroll} from '../utils.js';
 
 const SpecBlockClass = Vue.extend(SpecBlock);
 
@@ -94,15 +94,27 @@ export default {
 			return this.subspec ? this.subspec.id : null;
 		},
 		choosingAddPosition() {
-			return !!this.$store.state.movingBlockId;
+			return this.$store.getters.currentlyMovingBlocks;
+		},
+		dragAndDropEnabled() { // drag-and-drop blocks
+			return this.enableEditing && !this.$store.getters.mobileViewport;
 		},
 	},
 	watch: {
+		dragAndDropEnabled(enabled) {
+			if (enabled) {
+				this.mountDragAndDrop();
+			} else if (this.drake) {
+				this.drake.destroy();
+				this.drake = null;
+			}
+		},
 		dragging(moving) {
 			if (moving) {
 				this.autoscroller = startAutoscroll();
 			} else if (this.autoscroller) {
 				this.autoscroller.stop();
+				this.autoscroller = null;
 			}
 		},
 	},
@@ -132,53 +144,35 @@ export default {
 			this.$emit('rendered');
 		});
 
-		if (this.enableEditing) {
-			this.drake = Dragula({
-				isContainer(el) {
-					return $(el).is('.spec-block-list');
-				},
-				accepts(el, target, source, sibling) {
-					// Don't allow dropping in the transit node
-					return !$(target).closest('.gu-transit').length;
-				},
-				moves(el, source, handle, sibling) {
-					return $(handle).is('.drag-handle');
-				},
-				// revertOnSpill: true,
-				mirrorContainer: this.$refs.mirrorList,
-			}).on('drag', (el, source) => {
-				this.$store.commit('startDragging');
-				this.transitRelativeScroll($(el).attr('data-spec-block'));
-			}).on('dragend', (el) => {
-				this.$store.commit('endDragging');
-				this.transitRelativeScroll($(el).attr('data-spec-block'));
-			}).on('drop', (el, target, source, sibling) => {
-				let $sourceParentBlock = $(source).closest('[data-spec-block]');
-				if ($sourceParentBlock.length) {
-					$sourceParentBlock.data('vc').updateHasSubblocks();
-				}
-				let parentId = null;
-				let $parentBlock = $(target).closest('[data-spec-block]');
-				if ($parentBlock.length) {
-					let parentVc = $parentBlock.data('vc');
-					parentId = parentVc.getBlockId();
-					parentVc.updateHasSubblocks();
-				}
-				let insertBeforeId = sibling ? $(sibling).data('vc').getBlockId() : null;
-				// TODO Revert on error?
-				ajaxMoveBlock($(el).data('vc').getBlockId(), this.subspecId, parentId, insertBeforeId);
-
-			});
-		}
+		this.mountDragAndDrop();
 	},
 	beforeDestroy() {
 		if (this.drake) {
 			this.drake.destroy();
 			this.drake = null;
 		}
+
+		if (this.autoscroller) {
+			this.autoscroller.stop();
+			this.autoscroller = null;
+		}
+
+		// If moving blocks carries to another context,
+		// ensure only parent IDs appear in the correct order.
+		if (
+			this.$store.getters.currentlyMovingBlocks &&
+			this.$store.state.movingBlocksSourceSubspecId === this.subspecId
+		) {
+			this.$store.commit('setMovingBlocks', {
+				subspecId: this.subspecId,
+				blockIds: this.getFinalMovingBlockIds(),
+			});
+		}
+
 		// Destroy bus
 		this.eventBus.$destroy();
 		this.eventBus = null;
+
 		// Clean up all independent block component VMs
 		$('[data-spec-block]', this.$refs.list).each((i, e) => {
 			$(e).data('vc').$destroy();
@@ -189,12 +183,13 @@ export default {
 			// Retain scroll position relative to first visible block
 			let windowTop = $(window).scrollTop();
 			$('[data-spec-block]', this.$refs.list).each((i, e) => {
-				let offset = $(e).offset();
+				let $e = $(e);
+				let offset = $e.offset(); // offset before DOM update
 				if (offset.top > windowTop) {
 					let diff = offset.top - windowTop;
 					this.$nextTick(() => {
 						// Restore relative scroll position after interface transition
-						$(window).scrollTop($(e).offset().top - diff);
+						$(window).scrollTop($e.offset().top - diff);
 					});
 					return false; // exit loop
 				}
@@ -204,7 +199,7 @@ export default {
 			// Retain scroll position relative to specified block
 			let windowTop = $(window).scrollTop();
 			let $block = $('[data-spec-block="' + blockId + '"]', this.$refs.list);
-			let offset = $block.offset();
+			let offset = $block.offset(); // offset before DOM update
 			let diff = offset.top - windowTop;
 			this.$nextTick(() => {
 				// Restore relative scroll position after interface transition
@@ -229,11 +224,15 @@ export default {
 			vc.$on('open-edit', this.openEdit);
 			vc.$on('prompt-add-subblock', this.promptAddSubblock);
 			vc.$on('prompt-delete', this.promptDeleteBlock);
-			vc.$on('start-moving', this.startMovingBlock);
-			vc.$on('end-moving', this.endMovingBlock);
-			vc.$on('play-video', this.playVideo);
+			vc.$on('start-moving', this.startMovingBlocks);
+			vc.$on('add-to-moving', this.addToMovingBlocks);
+			vc.$on('remove-from-moving', this.removeFromMovingBlocks);
 			vc.$on('prompt-nav-spec', this.promptNavSpec);
-			vc.$on('pan-to-block', this.panToBlock);
+			vc.$on('move-before', this.moveBeforeBlock);
+			vc.$on('move-into', this.moveIntoBlock);
+			vc.$on('move-after', this.moveAfterBlock);
+			vc.$on('cancel-moving', this.cancelMovingBlocks);
+			vc.$on('play-video', this.playVideo);
 
 			let $vc = $(vc.$el).data('vc', vc);
 
@@ -250,6 +249,51 @@ export default {
 			}
 
 			return $vc;
+		},
+		mountDragAndDrop() {
+			if (!this.dragAndDropEnabled) {
+				return;
+			}
+			if (this.drake) {
+				return;
+			}
+			console.debug('create drake');
+			this.drake = Dragula({
+				isContainer(el) {
+					return $(el).is('.spec-block-list');
+				},
+				accepts(el, target, source, sibling) {
+					// Don't allow dropping in the transit node
+					return !$(target).closest('.gu-transit').length;
+				},
+				moves(el, source, handle, sibling) {
+					return $(handle).is('.drag-handle');
+				},
+				// revertOnSpill: true,
+				mirrorContainer: this.$refs.mirrorList,
+			}).on('drag', (el, source) => {
+				this.$store.commit('startDragging');
+				this.transitRelativeScroll($(el).attr('data-spec-block'));
+			}).on('dragend', (el) => {
+				this.$store.commit('endDragging');
+				this.transitRelativeScroll($(el).attr('data-spec-block'));
+			}).on('drop', (el, target, source, sibling) => {
+				let blockId = $(el).data('vc').getBlockId();
+				let $sourceParentBlock = $(source).closest('[data-spec-block]');
+				if ($sourceParentBlock.length) {
+					$sourceParentBlock.data('vc').updateHasSubblocks();
+				}
+				let parentId = null;
+				let $parentBlock = $(target).closest('[data-spec-block]');
+				if ($parentBlock.length) {
+					let parentVc = $parentBlock.data('vc');
+					parentId = parentVc.getBlockId();
+					parentVc.updateHasSubblocks();
+				}
+				let insertBeforeId = sibling ? $(sibling).data('vc').getBlockId() : null;
+				// TODO Revert on error?
+				ajaxMoveBlocks([blockId], this.subspecId, parentId, insertBeforeId);
+			});
 		},
 		promptAddBlock() {
 			this.$refs.editBlockModal.showAdd(null, null, newBlock => {
@@ -290,36 +334,131 @@ export default {
 					if (callback) {
 						callback();
 					}
-				}).fail(alertError);
+				});
 			}).catch(() => { /* Cancelled */ });
 		},
-		startMovingBlock(blockId) {
-			this.$store.commit('startMovingBlock', blockId);
+		startMovingBlocks(blockId) {
+			this.$store.commit('setMovingBlocks', {
+				subspecId: this.subspecId,
+				blockIds: [blockId],
+			});
 			this.transitRelativeScroll(blockId);
 		},
-		placeBlockBottom() {
-			let movingId = this.$store.state.movingBlockId;
-			if (!movingId) {
-				return;
-			}
-			ajaxMoveBlock(movingId, this.subspecId, null, null).then((block = null) => {
-				if (block) {
-					// moved here from another context
-					this.insertBlock(block, true, false);
-				} else {
-					// moved within current context
-					let $moving = $('[data-spec-block="'+movingId+'"]');
-					let $sourceParentBlock = $moving.closest('.spec-block-list').closest('[data-spec-block]');
-					$moving.appendTo(this.$refs.list);
-					if ($sourceParentBlock.length) {
-						$sourceParentBlock.data('vc').updateHasSubblocks();
-					}
-				}
-				this.$store.commit('endMovingBlock');
+		addToMovingBlocks(blockId) {
+			this.$store.commit('setMovingBlocks', {
+				subspecId: this.subspecId,
+				blockIds: this.$store.state.movingBlockIds.concat([blockId]),
 			});
 		},
-		endMovingBlock(endFromBlockId) {
-			this.$store.commit('endMovingBlock');
+		removeFromMovingBlocks(blockId) {
+			this.$store.commit('setMovingBlocks', {
+				subspecId: this.subspecId,
+				blockIds: this.$store.state.movingBlockIds.filter(v => !idsEq(v, blockId)),
+			});
+		},
+		moveBeforeBlock(blockId) {
+			let $target = $('[data-spec-block="'+blockId+'"]', this.$refs.list);
+			let $parent = $target.parent().closest('[data-spec-block]');
+			let parentId = $parent.length ? $parent.attr('data-spec-block') : null;
+			let insertBeforeId = blockId;
+
+			this.moveBlocks(parentId, insertBeforeId, $block => {
+				$block.insertBefore($target);
+			});
+
+			// this block's parent already has subblocks so no need to update
+		},
+		moveIntoBlock(blockId) {
+			let $target = $('[data-spec-block="'+blockId+'"]', this.$refs.list);
+			let parentId = $target.attr('data-spec-block'); // Add under this
+			let insertBeforeId = null; // Add at end
+
+			let $targetSublist = $target.find('>ul.spec-block-list');
+			this.moveBlocks(parentId, insertBeforeId, $block => {
+				$block.appendTo($targetSublist);
+			});
+
+			$target.data('vc').updateHasSubblocks();
+		},
+		moveAfterBlock(blockId) {
+			let $target = $('[data-spec-block="'+blockId+'"]', this.$refs.list);
+			let $parent = $target.parent().closest('[data-spec-block]');
+			let parentId = $parent.length ? $parent.attr('data-spec-block') : null;
+			let $nextBlock = $target.next('[data-spec-block]');
+			let insertBeforeId = $nextBlock.length ? $nextBlock.attr('data-spec-block') : null;
+
+			let $preceedingBlock = $target;
+			this.moveBlocks(parentId, insertBeforeId, $block => {
+				$block.insertAfter($preceedingBlock);
+				$preceedingBlock = $block;
+			});
+
+			// this block's parent already has subblocks so no need to update
+		},
+		moveBlocksToBottom() {
+			this.moveBlocks(null, null, $block => {
+				$block.appendTo(this.$refs.list);
+			});
+		},
+		getFinalMovingBlockIds() {
+			if (!this.$store.getters.currentlyMovingBlocks) {
+				return [];
+			}
+			if (!idsEq(this.$store.state.movingBlocksSourceSubspecId, this.subspecId)) {
+				// Final block IDs were set before leaving the original context
+				return this.$store.state.movingBlockIds;
+			}
+			let ids = [];
+			// Query blocks checked for move in order of appearance in DOM
+			$('[data-moving-block-id]', this.$refs.list).each((i, e) => {
+				let $e = $(e);
+				// Skip checked sub blocks of checked parents
+				if (!$e.closest('.spec-block-list.moving').length) {
+					ids.push($e.attr('data-moving-block-id'));
+				}
+			});
+			return ids;
+		},
+		moveBlocks(parentId, insertBeforeId, placementFunction) {
+			let movingIds = this.getFinalMovingBlockIds();
+			if (!movingIds.length) {
+				return;
+			}
+			ajaxMoveBlocks(movingIds, this.subspecId, parentId, insertBeforeId).then((blocks = null) => {
+				let $firstBlock = null;
+				if (blocks) {
+					// moved here from another context
+					for (var i = 0; i < blocks.length; i++) {
+						let $block = this.insertBlock(blocks[i], false, true);
+						placementFunction($block);
+						if (!$firstBlock) {
+							$firstBlock = $block;
+						}
+					}
+				} else {
+					// moved within current context
+					let parentVcs = {};
+					for (let i = 0; i < movingIds.length; i++) {
+						let $moving = $('[data-spec-block="'+movingIds[i]+'"]', this.$refs.list);
+						let $sourceParentBlock = $moving.parent().closest('[data-spec-block]');
+						placementFunction($moving);
+						if ($sourceParentBlock.length) {
+							parentVcs[$sourceParentBlock.attr('data-spec-block')] = $sourceParentBlock.data('vc');
+						}
+						if (!$firstBlock) {
+							$firstBlock = $moving;
+						}
+					}
+					for (let id in parentVcs) {
+						parentVcs[id].updateHasSubblocks();
+					}
+				}
+				this.$store.commit('endMovingBlocks');
+				this.panToBlock($firstBlock);
+			});
+		},
+		cancelMovingBlocks(endFromBlockId) {
+			this.$store.commit('endMovingBlocks');
 			this.transitRelativeScroll(endFromBlockId);
 		},
 		openEditUrl(urlObject, updated, deleted) {

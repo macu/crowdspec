@@ -64,7 +64,9 @@ func loadCommentsPage(r *http.Request, db DBConn, userID uint,
 	var unreadCountField = `(SELECT COUNT(*)
 		FROM spec_community_comment AS subc
 		LEFT JOIN spec_community_read AS subr
-			ON subr.user_id = $3 AND subr.target_type = 'comment' AND subr.target_id = subc.id
+			ON subr.user_id = $3
+			AND subr.target_type = 'comment'
+			AND subr.target_id = subc.id
 		WHERE subc.target_type = 'comment' AND subc.target_id = c.id
 			AND subr.user_id IS NULL
 		) AS unread_count`

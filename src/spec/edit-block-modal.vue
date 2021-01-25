@@ -195,6 +195,7 @@ export default {
 			let sending = this.createSendingSpinner();
 			let callback = this.callback; // in case modal is closed before complete
 			if (this.block) {
+				// TODO only send title and body if changed
 				ajaxSaveBlock(
 					this.specId,
 					this.block.id,
@@ -243,6 +244,8 @@ export default {
 			this.parentId = null;
 			this.insertBeforeId = null;
 			this.callback = null;
+			// leave styleTyle set to the last value to appear
+			// TODO initialize upon modal open according to sibling blocks
 			this.title = '';
 			this.body = '';
 			this.refType = null;

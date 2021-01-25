@@ -99,7 +99,7 @@ export default {
 			return this.$route.name === 'subspec';
 		},
 		choosingAddPosition() {
-			return !!this.$store.state.movingBlockId;
+			return this.$store.getters.currentlyMovingBlocks;
 		},
 	},
 	beforeRouteEnter(to, from, next) {

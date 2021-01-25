@@ -17,6 +17,15 @@ func stringInSlice(a string, list []string) bool {
 	return false
 }
 
+func int64InSlice(i int64, list []int64) bool {
+	for _, v := range list {
+		if v == i {
+			return true
+		}
+	}
+	return false
+}
+
 // https://mangatmodi.medium.com/go-check-nil-interface-the-right-way-d142776edef1
 func isNil(a interface{}) bool {
 	if a == nil {

@@ -61,7 +61,7 @@ func ajaxSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (
 	}
 
 	if AtoBool(query.Get("loadBlocks")) {
-		s.Blocks, err = loadBlocks(db, userID, specID, nil)
+		s.Blocks, err = loadContextBlocks(db, userID, specID, nil)
 		if err != nil {
 			logError(r, userID, fmt.Errorf("loading spec blocks: %w", err))
 			return nil, http.StatusInternalServerError

@@ -27,14 +27,22 @@
 						<el-button @click="addAfterThis()" type="primary" size="mini" icon="el-icon-bottom" circle/>
 					</template>
 					<template v-else-if="movingThis">
-						<el-button @click="promptNavSpec()" size="mini" icon="el-icon-folder-add">Change context</el-button>
-						<el-button @click="cancelMoving()" type="warning" size="mini" icon="el-icon-close">Cancel move</el-button>
+						<el-button @click="cancelMoving()" type="warning" size="mini" icon="el-icon-close">
+							<template v-if="$store.getters.mobileViewport">Cancel</template>
+							<template v-else>Cancel move</template>
+						</el-button>
+						<el-button @click="promptNavSpec()" size="mini" icon="el-icon-folder-add">
+							<template v-if="$store.getters.mobileViewport">Context</template>
+							<template v-else>Change context</template>
+						</el-button>
+						<el-checkbox :data-moving-block-id="block.id" :value="true" @click.native="removeThisFromMovingBlocks()" size="mini"/>
 					</template>
-					<template v-else-if="movingAnother">
+					<template v-else-if="movingOtherBlocks">
 						<el-button @click="cancelMoving()" type="warning" size="mini" icon="el-icon-close" circle/>
 						<el-button @click="moveBeforeThis()" type="success" size="mini" icon="el-icon-top" circle/>
 						<el-button @click="moveIntoThis()" type="success" size="mini" icon="el-icon-bottom-right" circle/>
 						<el-button @click="moveAfterThis()" type="success" size="mini" icon="el-icon-bottom" circle/>
+						<el-checkbox v-if="showAddToMoving" :value="false" @click.native="addThisToMovingBlocks()" size="mini"/>
 					</template>
 					<template v-else>
 						<el-button @click="openCommunity()"
@@ -60,6 +68,9 @@
 					<template v-if="unreadCount">{{unreadCount}}</template>
 				</el-button>
 			</div>
+		</div>
+		<div v-if="currentlyMovingBlocks" class="layover parent-moving-layover">
+			<el-checkbox :value="true" disabled size="mini"/>
 		</div>
 
 		<div v-if="hasTitle" class="title">{{title}}</div>
@@ -89,8 +100,8 @@
 import $ from 'jquery';
 import RefUrl from './ref-url.vue';
 import RefSubspec from './ref-subspec.vue';
-import {ajaxMoveBlock} from './ajax.js';
 import {REF_TYPE_URL, REF_TYPE_SUBSPEC} from './const.js';
+import {idsEq} from '../utils.js';
 
 export default {
 	components: {
@@ -160,14 +171,21 @@ export default {
 				'ref-item-only': this.hasRefItem && !this.hasTitle && !this.hasBody && !this.hasSubblocks,
 			};
 		},
-		movingThis() {
-			return this.$store.state.movingBlockId === this.block.id;
+		currentlyMovingBlocks() {
+			return this.$store.getters.currentlyMovingBlocks;
 		},
-		movingAnother() {
-			return this.$store.state.movingBlockId && !this.movingThis;
+		movingThis() {
+			return this.$store.getters.currentlyMovingBlock(this.block.id);
+		},
+		movingOtherBlocks() {
+			return this.currentlyMovingBlocks && !this.movingThis;
+		},
+		showAddToMoving() {
+			return this.movingOtherBlocks &&
+				idsEq(this.$store.state.movingBlocksSourceSubspecId, this.subspecId);
 		},
 		showActions() {
-			return this.focusActions || this.movingThis || this.movingAnother;
+			return this.focusActions || this.currentlyMovingBlocks;
 		},
 		mobileAdjust() {
 			// whether to add {clear: both} to ref item area
@@ -254,81 +272,26 @@ export default {
 			// Mouseover state is lost without triggering mouseleave
 			this.focusActions = false;
 		},
-		cancelMoving() {
-			this.$emit('end-moving', this.block.id);
+		addThisToMovingBlocks() {
+			this.$emit('add-to-moving', this.block.id);
+		},
+		removeThisFromMovingBlocks() {
+			this.$emit('remove-from-moving', this.block.id);
 		},
 		promptNavSpec() {
 			this.$emit('prompt-nav-spec');
 		},
+		cancelMoving() {
+			this.$emit('cancel-moving', this.block.id);
+		},
 		moveBeforeThis() {
-			let movingId = this.$store.state.movingBlockId;
-			let parentId = this.getParentId();
-			let insertBeforeId = this.block.id; // Add before this
-			ajaxMoveBlock(movingId, this.subspecId, parentId, insertBeforeId).then((block = null) => {
-				if (block) {
-					// moved here from another context
-					let $block = this.$parent.insertBlock(block, false, true);
-					$block.insertBefore(this.$el);
-					this.panToBlock($block);
-				} else {
-					// moved within current context
-					let $moving = $('[data-spec-block="'+movingId+'"]');
-					let $sourceParentBlock = $moving.closest('.spec-block-list').closest('[data-spec-block]');
-					$moving.insertBefore(this.$el);
-					if ($sourceParentBlock.length) {
-						$sourceParentBlock.data('vc').updateHasSubblocks();
-					}
-					// this block's parent already has subblocks so no need to update
-					this.panToBlock($moving);
-				}
-				this.$store.commit('endMovingBlock');
-			});
+			this.$emit('move-before', this.block.id);
 		},
 		moveIntoThis() {
-			let movingId = this.$store.state.movingBlockId;
-			let parentId = this.block.id; // Add under this
-			let insertBeforeId = null; // Add at end
-			ajaxMoveBlock(movingId, this.subspecId, parentId, insertBeforeId).then((block = null) => {
-				if (block) {
-					let $block = this.$parent.insertBlock(block, false, true);
-					$block.appendTo(this.$refs.sublist);
-					this.panToBlock($block);
-				} else {
-					let $moving = $('[data-spec-block="'+movingId+'"]');
-					let $sourceParentBlock = $moving.closest('.spec-block-list').closest('[data-spec-block]');
-					$moving.appendTo(this.$refs.sublist);
-					if ($sourceParentBlock.length) {
-						$sourceParentBlock.data('vc').updateHasSubblocks();
-					}
-					this.panToBlock($moving);
-				}
-				this.updateHasSubblocks();
-				this.$store.commit('endMovingBlock');
-			});
+			this.$emit('move-into', this.block.id);
 		},
 		moveAfterThis() {
-			let movingId = this.$store.state.movingBlockId;
-			let parentId = this.getParentId();
-			let insertBeforeId = this.getFollowingBlockId();
-			ajaxMoveBlock(movingId, this.subspecId, parentId, insertBeforeId).then((block = null) => {
-				if (block) {
-					let $block = this.$parent.insertBlock(block, false, true);
-					$block.insertAfter(this.$el);
-					this.panToBlock($block);
-				} else {
-					let $moving = $('[data-spec-block="'+movingId+'"]');
-					let $sourceParentBlock = $moving.closest('.spec-block-list').closest('[data-spec-block]');
-					$moving.insertAfter(this.$el);
-					if ($sourceParentBlock.length) {
-						$sourceParentBlock.data('vc').updateHasSubblocks();
-					}
-					this.panToBlock($moving);
-				}
-				this.$store.commit('endMovingBlock');
-			});
-		},
-		panToBlock($moving) {
-			this.$emit('pan-to-block', $moving);
+			this.$emit('move-after', this.block.id);
 		},
 		mouseLeaveLayover() {
 			this.choosingAddPosition = false;
@@ -481,6 +444,11 @@ export default {
 					margin-left: 5px;
 				}
 
+				>.el-checkbox {
+					display: inline-block;
+					margin-left: 10px; // distance from adjacent button
+				}
+
 				>.drag-handle {
 					display: inline-block;
 					padding: 3px;
@@ -492,6 +460,10 @@ export default {
 				}
 			}
 		} // .layover
+
+		>.parent-moving-layover {
+			display: none;
+		}
 
 		>.title {
 			font-weight: bold;
@@ -525,6 +497,10 @@ export default {
 			.layover {
 				// Hide controls on subblocks of block being moved
 				display: none;
+			}
+			.parent-moving-layover {
+				// show this layover when a parent is selected for move
+				display: block;
 			}
 		}
 	}

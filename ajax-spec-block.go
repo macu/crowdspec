@@ -42,8 +42,15 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 		return nil, http.StatusBadRequest
 	}
 
+	var verifyBlockIds = []int64{}
+	if parentID != nil {
+		verifyBlockIds = append(verifyBlockIds, *parentID)
+	}
+	if insertBeforeID != nil {
+		verifyBlockIds = append(verifyBlockIds, *insertBeforeID)
+	}
 	if access, status := verifyWriteSpecSubspecBlocks(r, db, userID, specID, subspecID,
-		parentID, insertBeforeID); !access {
+		verifyBlockIds...); !access {
 		return nil, status
 	}
 
@@ -103,7 +110,7 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 		}
 
 		// Prepare insert position
-		insertAt, code, err := makeInsertAt(tx, specID, subspecID, parentID, insertBeforeID)
+		insertAt, code, err := makeInsertAt(tx, specID, subspecID, parentID, insertBeforeID, 1)
 		if err != nil {
 			logError(r, userID, fmt.Errorf("making insert position: %w", err))
 			return nil, code
@@ -273,7 +280,7 @@ func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 	})
 }
 
-func ajaxSpecMoveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
+func ajaxSpecMoveBlocks(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
 	// POST
 
 	err := r.ParseForm()
@@ -282,25 +289,31 @@ func ajaxSpecMoveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 		return nil, http.StatusInternalServerError
 	}
 
-	blockID, err := AtoInt64(r.Form.Get("blockId"))
+	blockIDs, err := AtoInt64Array(r.Form.Get("blockIds"))
 	if err != nil {
-		logError(r, userID, fmt.Errorf("parsing blockId: %w", err))
+		logError(r, userID, fmt.Errorf("parsing blockIds: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
+	if len(blockIDs) == 0 {
+		logError(r, userID, fmt.Errorf("blank blockIds: %w", err))
+		return nil, http.StatusBadRequest
+	}
+
+	// all the blocks should come from the same spec and subspec.
+	// currnently multiselect move is supported from only a single source context.
+	// spec membership is verified by verifyWriteSpecSubspecBlocks.
 	var specID int64
 	var sourceSubspecID *int64
-	err = db.QueryRow(`
-		SELECT spec_id, subspec_id
-		FROM spec_block
-		WHERE id = $1
-		`, blockID).Scan(&specID, &sourceSubspecID)
+	err = db.QueryRow(
+		`SELECT spec_id, subspec_id FROM spec_block WHERE id = $1`,
+		blockIDs[0]).Scan(&specID, &sourceSubspecID)
 	if err != nil {
-		logError(r, userID, fmt.Errorf("loading specID for block %d: %w", blockID, err))
+		logError(r, userID, fmt.Errorf("loading specID for block %d: %w", blockIDs[0], err))
 		return nil, http.StatusInternalServerError
 	}
 
-	subspecID, err := AtoInt64NilIfEmpty(r.Form.Get("subspecId"))
+	targetSubspecID, err := AtoInt64NilIfEmpty(r.Form.Get("subspecId"))
 	if err != nil {
 		logError(r, userID, fmt.Errorf("parsing subsapceId: %w", err))
 		return nil, http.StatusBadRequest
@@ -318,41 +331,59 @@ func ajaxSpecMoveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 		return nil, http.StatusBadRequest
 	}
 
-	if access, status := verifyWriteSpecSubspecBlocks(r, db, userID, specID, subspecID,
-		parentID, insertBeforeID, &blockID); !access {
+	var verifyBlockIds = blockIDs[:]
+	if parentID != nil {
+		verifyBlockIds = append(verifyBlockIds, *parentID)
+	}
+	if insertBeforeID != nil {
+		verifyBlockIds = append(verifyBlockIds, *insertBeforeID)
+	}
+	if access, status := verifyWriteSpecSubspecBlocks(r, db, userID, specID, targetSubspecID,
+		verifyBlockIds...); !access {
 		return nil, status
 	}
 
 	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
-		insertAt, code, err := makeInsertAt(tx, specID, subspecID, parentID, insertBeforeID)
+		insertAt, code, err := makeInsertAt(tx, specID, targetSubspecID, parentID, insertBeforeID, len(blockIDs))
 		if err != nil {
 			logError(r, userID, fmt.Errorf("making insert position: %w", err))
 			return 0, code
 		}
 
-		_, err = tx.Exec(`
-			UPDATE spec_block
-			SET subspec_id = $2, parent_id = $3, order_number = $4
-			WHERE id = $1
-			`, blockID, subspecID, parentID, insertAt)
+		var args = []interface{}{parentID}
+
+		var orderNumbers []interface{}
+		for i := 0; i < len(blockIDs); i++ {
+			orderNumbers = append(orderNumbers, insertAt+i)
+		}
+
+		var values = createIDsValuesMap(&args, blockIDs, orderNumbers)
+
+		_, err = tx.Query(
+			`UPDATE spec_block
+			SET parent_id = $1, order_number = v.order_number
+			FROM (`+values+`) AS v(id, order_number)
+			WHERE spec_block.id = v.id`, args...)
 		if err != nil {
-			logError(r, userID, fmt.Errorf("moving block: %w", err))
+			logError(r, userID, fmt.Errorf("moving blocks: %w", err))
 			return nil, http.StatusInternalServerError
 		}
 
-		subspecChanged := (sourceSubspecID == nil && subspecID != nil) ||
-			(sourceSubspecID != nil && subspecID == nil) ||
-			(sourceSubspecID != nil && subspecID != nil && *sourceSubspecID != *subspecID)
+		subspecChanged := (sourceSubspecID == nil && targetSubspecID != nil) ||
+			(sourceSubspecID != nil && targetSubspecID == nil) ||
+			(sourceSubspecID != nil && targetSubspecID != nil && *sourceSubspecID != *targetSubspecID)
 
 		if subspecChanged {
 			// Recursively set subspec_id
+			var args = []interface{}{targetSubspecID}
+			var placeholders = createArgsListInt64s(&args, blockIDs...)
 			_, err = tx.Exec(`
 				WITH RECURSIVE block_tree(id) AS (
 					-- Anchor
 					SELECT id
 					FROM spec_block
-					WHERE id = $1
+					WHERE id IN (`+placeholders+`)
 					UNION ALL
 					-- Recursive Member
 					SELECT spec_block.id
@@ -361,9 +392,9 @@ func ajaxSpecMoveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 				)
 				-- Update original table
 				UPDATE spec_block
-				SET subspec_id = $2
+				SET subspec_id = $1
 				WHERE spec_block.id IN (SELECT id FROM block_tree)
-				`, blockID, subspecID)
+				`, args...)
 			if err != nil {
 				logError(r, userID, fmt.Errorf("moving block tree to subspec: %w", err))
 				return nil, http.StatusInternalServerError
@@ -374,8 +405,8 @@ func ajaxSpecMoveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 			return nil, status
 		}
 
-		if subspecID != nil {
-			if status := recordSubspecBlocksUpdated(db, r, userID, *subspecID); status != http.StatusOK {
+		if targetSubspecID != nil {
+			if status := recordSubspecBlocksUpdated(db, r, userID, *targetSubspecID); status != http.StatusOK {
 				return nil, status
 			}
 		}
@@ -387,83 +418,16 @@ func ajaxSpecMoveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 		}
 
 		if subspecChanged {
-			block, err := loadBlock(tx, userID, blockID)
+			blocks, err := loadBlocksByID(tx, userID, specID, blockIDs...)
 			if err != nil {
 				logError(r, userID, fmt.Errorf("loading blocks: %w", err))
 				return nil, http.StatusInternalServerError
 			}
-			return block, http.StatusOK
+			return blocks, http.StatusOK
 		}
 
 		return nil, http.StatusOK
 	})
-}
-
-// Increments order numbers of blocks starting at the specified block,
-// and returns the order number preceeding that block.
-// If insertBeforeID is nil, returns the order number at the end of the list.
-func makeInsertAt(tx *sql.Tx, specID int64, subspecID *int64, parentID *int64, insertBeforeID *int64) (int, int, error) {
-	var insertAt int
-
-	if insertBeforeID == nil {
-		// Insert at end - get next order_number
-
-		args := []interface{}{specID}
-
-		query := `
-			SELECT COALESCE(MAX(order_number), -1) + 1 AS insert_at FROM spec_block
-			WHERE spec_id = $1
-			AND ` + eqCond("subspec_id", subspecID, &args) + `
-			AND ` + eqCond("parent_id", parentID, &args)
-
-		err := tx.QueryRow(query, args...).Scan(&insertAt)
-		if err != nil {
-			return 0, http.StatusInternalServerError, fmt.Errorf("selecting next order number: %w", err)
-		}
-
-		return insertAt, http.StatusOK, nil
-	}
-
-	// Increase order numbers of following blocks
-
-	args := []interface{}{specID}
-
-	query := `UPDATE spec_block
-		SET order_number = order_number + 1
-		WHERE spec_id = $1
-		AND ` + eqCond("subspec_id", subspecID, &args) + `
-		AND ` + eqCond("parent_id", parentID, &args) + `
-		AND order_number >= (
-			SELECT insert_before_block.order_number
-			FROM spec_block AS insert_before_block
-			WHERE insert_before_block.id = ` + argPlaceholder(*insertBeforeID, &args) + `
-		)`
-
-	_, err := tx.Exec(query, args...)
-	if err != nil {
-		return 0, http.StatusInternalServerError, fmt.Errorf("incrementing order numbers: %w", err)
-	}
-
-	// Get order number after preceeding block
-
-	args = []interface{}{specID}
-
-	query = `SELECT COALESCE(MAX(order_number), -1) + 1 FROM spec_block
-		WHERE spec_id = $1
-		AND ` + eqCond("subspec_id", subspecID, &args) + `
-		AND ` + eqCond("parent_id", parentID, &args) + `
-		AND order_number < (
-			SELECT insert_before_block.order_number
-			FROM spec_block AS insert_before_block
-			WHERE insert_before_block.id = ` + argPlaceholder(*insertBeforeID, &args) + `
-		)`
-
-	err = tx.QueryRow(query, args...).Scan(&insertAt)
-	if err != nil {
-		return 0, http.StatusInternalServerError, fmt.Errorf("selecting preceeding order number: %w", err)
-	}
-
-	return insertAt, http.StatusOK, nil
 }
 
 func ajaxSpecDeleteBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
@@ -493,7 +457,7 @@ func ajaxSpecDeleteBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 		return nil, http.StatusInternalServerError
 	}
 
-	if access, status := verifyWriteSpecSubspecBlocks(r, db, userID, specID, subspecID, &blockID); !access {
+	if access, status := verifyWriteSpecSubspecBlocks(r, db, userID, specID, subspecID, blockID); !access {
 		return nil, status
 	}
 

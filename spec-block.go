@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"net/http"
 	"time"
 )
 
@@ -116,31 +117,42 @@ func isURLRequiredForRefType(t *string) bool {
 	})
 }
 
-// Load a sinle block and subblocks.
-func loadBlock(c DBConn, userID uint, blockID int64) (*SpecBlock, error) {
+func loadBlocksByID(db DBConn, userID uint, specID int64, blockIDs ...int64) ([]*SpecBlock, error) {
+
+	var args = []interface{}{specID, userID}
+
+	var orderNumbers []interface{}
+	for i := 0; i < len(blockIDs); i++ {
+		orderNumbers = append(orderNumbers, i)
+	}
+
+	// Used to sort blocks by order requested
+	var values = createIDsValuesMap(&args, blockIDs, orderNumbers)
 
 	// Ref items are only loaded if belonging to the same spec.
 	// TODO Allow linking to any ref item, but verify current user's access when joining info.
-	args := []interface{}{blockID, userID}
 	query := `
 		WITH RECURSIVE block_tree(id) AS (
 			-- Anchor
-			SELECT id
+			SELECT spec_block.id, selected.order_number
 			FROM spec_block
-			WHERE id = $1
+			INNER JOIN (` + values + `) AS selected(id, order_number)
+				ON selected.id = spec_block.id
+			WHERE spec_id = $1
 			UNION ALL
 			-- Recursive Member
-			SELECT spec_block.id
+			SELECT spec_block.id, spec_block.order_number
 			FROM spec_block, block_tree
-			WHERE spec_block.parent_id = block_tree.id
+			WHERE spec_block.spec_id = $1
+				AND spec_block.parent_id = block_tree.id
 		)
 		SELECT spec_block.id, spec_block.spec_id, spec_block.created_at, spec_block.updated_at,
 		spec_block.subspec_id, spec_block.parent_id, spec_block.order_number,
 		spec_block.style_type, spec_block.content_type, spec_block.ref_type, spec_block.ref_id,
 		spec_block.block_title, spec_block.block_body,
-		spec_subspec.spec_id AS subspec_spec_id, spec_subspec.subspec_name, spec_subspec.subspec_desc,
-		spec_url.spec_id AS url_spec_id, spec_url.created_at AS url_created, spec_url.updated_at AS url_updated,
-		spec_url.url AS url_url, spec_url.url_title, spec_url.url_desc, spec_url.url_image_data,
+		ref_subspec.spec_id AS subspec_spec_id, ref_subspec.subspec_name, ref_subspec.subspec_desc,
+		ref_url.spec_id AS url_spec_id, ref_url.created_at AS url_created, ref_url.updated_at AS url_updated,
+		ref_url.url AS url_url, ref_url.url_title, ref_url.url_desc, ref_url.url_image_data,
 		-- select number of unread comments
 		(SELECT COUNT(c.id) FROM spec_community_comment AS c
 			LEFT JOIN spec_community_read AS r
@@ -150,18 +162,19 @@ func loadBlock(c DBConn, userID uint, blockID int64) (*SpecBlock, error) {
 				AND r.user_id IS NULL
 				) AS unread_count
 		FROM spec_block
-		LEFT JOIN spec_subspec
-		ON spec_block.ref_type = ` + argPlaceholder(BlockRefSubspec, &args) + `
-		AND spec_subspec.id = spec_block.ref_id
-		AND spec_subspec.spec_id = spec_block.spec_id
-		LEFT JOIN spec_url
-		ON spec_block.ref_type = ` + argPlaceholder(BlockRefURL, &args) + `
-		AND spec_url.id = spec_block.ref_id
-		AND spec_url.spec_id = spec_block.spec_id
-		WHERE spec_block.id IN (SELECT id FROM block_tree)
-		ORDER BY spec_block.parent_id, spec_block.order_number`
+		INNER JOIN block_tree
+			ON block_tree.id = spec_block.id
+		LEFT JOIN spec_subspec AS ref_subspec
+			ON spec_block.ref_type = ` + argPlaceholder(BlockRefSubspec, &args) + `
+			AND ref_subspec.id = spec_block.ref_id
+			AND ref_subspec.spec_id = spec_block.spec_id
+		LEFT JOIN spec_url AS ref_url
+			ON spec_block.ref_type = ` + argPlaceholder(BlockRefURL, &args) + `
+			AND ref_url.id = spec_block.ref_id
+			AND ref_url.spec_id = spec_block.spec_id
+		ORDER BY spec_block.parent_id, block_tree.order_number`
 
-	rows, err := c.Query(query, args...)
+	rows, err := db.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("querying blocks: %w", err)
 	}
@@ -170,11 +183,18 @@ func loadBlock(c DBConn, userID uint, blockID int64) (*SpecBlock, error) {
 	blocksByID := map[int64]*SpecBlock{}
 	readBlocks(rows, &blocks, &blocksByID)
 
-	return blocksByID[blockID], nil
+	requestedBlocks := []*SpecBlock{}
+	for _, b := range blocks {
+		if int64InSlice(b.ID, blockIDs) {
+			requestedBlocks = append(requestedBlocks, b)
+		}
+	}
+
+	return requestedBlocks, nil
 }
 
 // load the blocks in a spec or subspec
-func loadBlocks(db *sql.DB, userID uint, specID int64, subspecID *int64) ([]*SpecBlock, error) {
+func loadContextBlocks(db *sql.DB, userID uint, specID int64, subspecID *int64) ([]*SpecBlock, error) {
 
 	// Ref items are only loaded if belonging to the same spec.
 	// TODO Allow linking to any ref item, but verify current user's access when joining info.
@@ -184,9 +204,9 @@ func loadBlocks(db *sql.DB, userID uint, specID int64, subspecID *int64) ([]*Spe
 		spec_block.subspec_id, spec_block.parent_id, spec_block.order_number,
 		spec_block.style_type, spec_block.content_type, spec_block.ref_type, spec_block.ref_id,
 		spec_block.block_title, spec_block.block_body,
-		spec_subspec.spec_id AS subspec_spec_id, spec_subspec.subspec_name, spec_subspec.subspec_desc,
-		spec_url.spec_id AS url_spec_id, spec_url.created_at AS url_created, spec_url.updated_at AS url_updated,
-		spec_url.url AS url_url, spec_url.url_title, spec_url.url_desc, spec_url.url_image_data,
+		ref_subspec.spec_id AS subspec_spec_id, ref_subspec.subspec_name, ref_subspec.subspec_desc,
+		ref_url.spec_id AS url_spec_id, ref_url.created_at AS url_created, ref_url.updated_at AS url_updated,
+		ref_url.url AS url_url, ref_url.url_title, ref_url.url_desc, ref_url.url_image_data,
 		-- select number of unread comments
 		(SELECT COUNT(c.id) FROM spec_community_comment AS c
 			LEFT JOIN spec_community_read AS r
@@ -196,16 +216,16 @@ func loadBlocks(db *sql.DB, userID uint, specID int64, subspecID *int64) ([]*Spe
 				AND r.user_id IS NULL
 				) AS unread_count
 		FROM spec_block
-		LEFT JOIN spec_subspec
-		ON spec_block.ref_type=` + argPlaceholder(BlockRefSubspec, &args) + `
-		AND spec_subspec.id=spec_block.ref_id
-		AND spec_subspec.spec_id = spec_block.spec_id
-		LEFT JOIN spec_url
-		ON spec_block.ref_type=` + argPlaceholder(BlockRefURL, &args) + `
-		AND spec_url.id=spec_block.ref_id
-		AND spec_url.spec_id = spec_block.spec_id
+		LEFT JOIN spec_subspec AS ref_subspec
+			ON spec_block.ref_type=` + argPlaceholder(BlockRefSubspec, &args) + `
+			AND ref_subspec.id=spec_block.ref_id
+			AND ref_subspec.spec_id = spec_block.spec_id
+		LEFT JOIN spec_url AS ref_url
+			ON spec_block.ref_type=` + argPlaceholder(BlockRefURL, &args) + `
+			AND ref_url.id=spec_block.ref_id
+			AND ref_url.spec_id = spec_block.spec_id
 		WHERE spec_block.spec_id=$2
-		AND ` + eqCond("spec_block.subspec_id", subspecID, &args) + `
+			AND ` + eqCond("spec_block.subspec_id", subspecID, &args) + `
 		ORDER BY spec_block.parent_id, spec_block.order_number`
 
 	rows, err := db.Query(query, args...)
@@ -291,4 +311,78 @@ func readBlocks(rows *sql.Rows, blocks *[]*SpecBlock, blocksByID *map[int64]*Spe
 	}
 
 	return nil
+}
+
+// Increments order numbers of blocks starting at the specified block,
+// and returns the order number preceeding that block.
+// If insertBeforeID is nil, returns the order number at the end of the list.
+func makeInsertAt(tx *sql.Tx,
+	specID int64, subspecID *int64, parentID *int64, insertBeforeID *int64,
+	requiredPositions int) (int, int, error) {
+
+	if requiredPositions <= 0 {
+		return 0, 0, fmt.Errorf("invalid requiredPositions: %d", requiredPositions)
+	}
+
+	var insertAt int
+
+	if insertBeforeID == nil {
+		// Insert at end - get next order_number
+
+		args := []interface{}{specID}
+
+		query := `
+			SELECT COALESCE(MAX(order_number), -1) + 1 AS insert_at FROM spec_block
+			WHERE spec_id = $1
+			AND ` + eqCond("subspec_id", subspecID, &args) + `
+			AND ` + eqCond("parent_id", parentID, &args)
+
+		err := tx.QueryRow(query, args...).Scan(&insertAt)
+		if err != nil {
+			return 0, http.StatusInternalServerError, fmt.Errorf("selecting next order number: %w", err)
+		}
+
+		return insertAt, http.StatusOK, nil
+	}
+
+	// Increase order numbers of following blocks
+
+	args := []interface{}{specID, requiredPositions}
+
+	query := `UPDATE spec_block
+		SET order_number = order_number + $2
+		WHERE spec_id = $1
+		AND ` + eqCond("subspec_id", subspecID, &args) + `
+		AND ` + eqCond("parent_id", parentID, &args) + `
+		AND order_number >= (
+			SELECT insert_before_block.order_number
+			FROM spec_block AS insert_before_block
+			WHERE insert_before_block.id = ` + argPlaceholder(*insertBeforeID, &args) + `
+		)`
+
+	_, err := tx.Exec(query, args...)
+	if err != nil {
+		return 0, http.StatusInternalServerError, fmt.Errorf("incrementing order numbers: %w", err)
+	}
+
+	// Get order number after preceeding block
+
+	args = []interface{}{specID}
+
+	query = `SELECT COALESCE(MAX(order_number), -1) + 1 FROM spec_block
+		WHERE spec_id = $1
+		AND ` + eqCond("subspec_id", subspecID, &args) + `
+		AND ` + eqCond("parent_id", parentID, &args) + `
+		AND order_number < (
+			SELECT insert_before_block.order_number
+			FROM spec_block AS insert_before_block
+			WHERE insert_before_block.id = ` + argPlaceholder(*insertBeforeID, &args) + `
+		)`
+
+	err = tx.QueryRow(query, args...).Scan(&insertAt)
+	if err != nil {
+		return 0, http.StatusInternalServerError, fmt.Errorf("selecting preceeding order number: %w", err)
+	}
+
+	return insertAt, http.StatusOK, nil
 }

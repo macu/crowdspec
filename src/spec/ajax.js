@@ -99,9 +99,14 @@ export function ajaxSaveBlock(specId, blockId,
 	}).fail(alertError);
 }
 
-export function ajaxMoveBlock(blockId, subspecId, parentId, insertBeforeId) {
-	return $.post('/ajax/spec/move-block', {
-		blockId, // must be provided
+export function ajaxMoveBlocks(blockIds, subspecId, parentId, insertBeforeId) {
+	// Go app expects blockIds as an array of ints encoded in a string
+	for (var i = 0; i < blockIds.length; i++) {
+		blockIds[i] = parseInt(blockIds[i], 10);
+	}
+	blockIds = JSON.stringify(blockIds);
+	return $.post('/ajax/spec/move-blocks', {
+		blockIds,
 		subspecId, // null if spec-level
 		parentId, // null if no parent
 		insertBeforeId, // null to insert at end
