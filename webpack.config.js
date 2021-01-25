@@ -14,6 +14,11 @@ module.exports = {
 	optimization: {
 		minimize: true,
 	},
+	performance: {
+		hints: 'warning',
+		maxEntrypointSize: 250000, // 250 kB
+		maxAssetSize: 0, // no assets expected
+	},
 	externals: {
 		'jquery': 'jQuery',
 		'vue': 'Vue',

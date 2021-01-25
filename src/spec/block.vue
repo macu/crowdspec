@@ -477,7 +477,9 @@ export default {
 			width: unset;
 		}
 
-		>.layover + * ~ * {
+		// add vertical spacing between elements of block content,
+		// skipping layovers such as .parent-moving-layover
+		>.layover ~ *:not(.layover) ~ * {
 			margin-top: 10px;
 		}
 	} // .content
