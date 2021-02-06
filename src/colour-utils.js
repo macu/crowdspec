@@ -154,13 +154,13 @@ export function invertHsl(input) {
 	// Stepped approach
 	// Thanks https://stackoverflow.com/a/635073/1597274
 	if (hsl.l <= 25) {
-		hsl.l = 75;
+		hsl.l = 75; // use medium bright to contrast dark
 	} else if (hsl.l <= 50) {
-		hsl.l = 100;
+		hsl.l = 90; // use bright to contrast medium dark
 	} else if (hsl.l <= 75) {
-		hsl.l = 0;
+		hsl.l = 10; // use dark to contrast medium bright
 	} else {
-		hsl.l = 25;
+		hsl.l = 25; // use medium dark to contrast bright
 	}
 
 	return hsl;
