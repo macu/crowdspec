@@ -76,7 +76,8 @@ func makeRequestSignupHandler(db *sql.DB) func(w http.ResponseWriter, r *http.Re
 				executeTemplate(w, r,
 					username, email, message,
 					http.StatusTeapot, "Invalid reCAPTCHA",
-					fmt.Errorf("invalid reCAPTCHA [IP %s]", getUserIP(r)))
+					// fmt.Errorf("invalid reCAPTCHA [IP %s]", getUserIP(r)))
+					fmt.Errorf("invalid reCAPTCHA"))
 				return
 			}
 
@@ -179,12 +180,12 @@ func makeRequestSignupHandler(db *sql.DB) func(w http.ResponseWriter, r *http.Re
 				Event        string
 				Username     string
 				EmailAddress string
-				IPAddress    string
+				// IPAddress    string
 			}{
 				"SignupRequest",
 				username,
 				email,
-				getUserIP(r),
+				// getUserIP(r),
 			})
 
 			// save the request for review
@@ -346,7 +347,8 @@ func makeActivateSignupHandler(db *sql.DB) func(w http.ResponseWriter, r *http.R
 				// Use Teapot to indicate reCAPTCHA error
 				executeTemplate(w, r, token, username,
 					http.StatusTeapot, "Invalid reCAPTCHA",
-					fmt.Errorf("invalid reCAPTCHA [IP %s]", getUserIP(r)))
+					// fmt.Errorf("invalid reCAPTCHA [IP %s]", getUserIP(r)))
+					fmt.Errorf("invalid reCAPTCHA"))
 				return
 			}
 
@@ -378,15 +380,15 @@ func makeActivateSignupHandler(db *sql.DB) func(w http.ResponseWriter, r *http.R
 				}
 
 				logNotice(r, struct {
-					Event     string
-					Username  string
-					UserID    uint
-					IPAddress string
+					Event    string
+					Username string
+					UserID   uint
+					// IPAddress string
 				}{
 					"SignupActivate",
 					username,
 					userID,
-					getUserIP(r),
+					// getUserIP(r),
 				})
 
 				// Clear token and associate request with new user

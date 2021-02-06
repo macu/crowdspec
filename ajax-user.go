@@ -58,13 +58,13 @@ func ajaxUserChangePassword(db *sql.DB, userID uint, w http.ResponseWriter, r *h
 		}
 
 		logNotice(r, struct {
-			Event     string
-			UserID    uint
-			IPAddress string
+			Event  string
+			UserID uint
+			// IPAddress string
 		}{
 			"UpdatePassword",
 			userID,
-			getUserIP(r),
+			// getUserIP(r),
 		})
 
 		return nil, http.StatusOK

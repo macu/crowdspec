@@ -75,7 +75,8 @@ func makeRequestPasswordResetHandler(db *sql.DB) func(w http.ResponseWriter, r *
 				// Use Teapot to indicate reCAPTCHA error
 				executeTemplate(w, r,
 					http.StatusTeapot, "Invalid reCAPTCHA",
-					fmt.Errorf("invalid reCAPTCHA [IP %s]", getUserIP(r)))
+					// fmt.Errorf("invalid reCAPTCHA [IP %s]", getUserIP(r)))
+					fmt.Errorf("invalid reCAPTCHA"))
 				return
 			}
 
@@ -99,13 +100,13 @@ func makeRequestPasswordResetHandler(db *sql.DB) func(w http.ResponseWriter, r *
 			// Create request
 
 			logNotice(r, struct {
-				Event     string
-				UserID    uint
-				IPAddress string
+				Event  string
+				UserID uint
+				// IPAddress string
 			}{
 				"RequestResetPassword",
 				userID,
-				getUserIP(r),
+				// getUserIP(r),
 			})
 
 			token := randomToken(resetPasswordTokenLength)
@@ -260,7 +261,8 @@ func makeResetPasswordHandler(db *sql.DB) func(w http.ResponseWriter, r *http.Re
 				// Use Teapot to indicate reCAPTCHA error
 				executeTemplate(w, r, token, username,
 					http.StatusTeapot, "Invalid reCAPTCHA",
-					fmt.Errorf("invalid reCAPTCHA [IP %s]", getUserIP(r)))
+					// fmt.Errorf("invalid reCAPTCHA [IP %s]", getUserIP(r)))
+					fmt.Errorf("invalid reCAPTCHA"))
 				return
 			}
 
@@ -284,13 +286,13 @@ func makeResetPasswordHandler(db *sql.DB) func(w http.ResponseWriter, r *http.Re
 			// Update user password
 
 			logNotice(r, struct {
-				Event     string
-				UserID    uint
-				IPAddress string
+				Event  string
+				UserID uint
+				// IPAddress string
 			}{
 				"ResetPassword",
 				userID,
-				getUserIP(r),
+				// getUserIP(r),
 			})
 
 			authHash, err := bcrypt.GenerateFromPassword([]byte(newpass), BcryptCost)

@@ -162,7 +162,8 @@ func makeLoginHandler(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 				// Use Teapot to indicate reCAPTCHA error
 				executeLoginTemplate(w, r,
 					http.StatusTeapot, "Invalid reCAPTCHA",
-					fmt.Errorf("invalid reCAPTCHA [IP %s]", getUserIP(r)))
+					// fmt.Errorf("invalid reCAPTCHA [IP %s]", getUserIP(r)))
+					fmt.Errorf("invalid reCAPTCHA"))
 				return
 			}
 
@@ -176,13 +177,13 @@ func makeLoginHandler(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 				if err == sql.ErrNoRows {
 					// TODO Limit failed attempts
 					logNotice(r, struct {
-						Event     string
-						Username  string
-						IPAddress string
+						Event    string
+						Username string
+						// IPAddress string
 					}{
 						"InvalidLogin",
 						username,
-						getUserIP(r),
+						// getUserIP(r),
 					})
 					executeLoginTemplate(w, r,
 						http.StatusForbidden, "Invalid login",
@@ -199,13 +200,13 @@ func makeLoginHandler(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 			if err != nil {
 				// TODO Limit failed attempts
 				logNotice(r, struct {
-					Event     string
-					Username  string
-					IPAddress string
+					Event    string
+					Username string
+					// IPAddress string
 				}{
 					"InvalidLogin",
 					username,
-					getUserIP(r),
+					// getUserIP(r),
 				})
 				executeLoginTemplate(w, r,
 					http.StatusForbidden, "Invalid login",
@@ -224,13 +225,13 @@ func makeLoginHandler(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 			http.Redirect(w, r, "/", http.StatusSeeOther)
 
 			logDefault(r, struct {
-				Event     string
-				UserID    uint
-				IPAddress string
+				Event  string
+				UserID uint
+				// IPAddress string
 			}{
 				"UserLogin",
 				userID,
-				getUserIP(r),
+				// getUserIP(r),
 			})
 
 		} else {
