@@ -1,23 +1,23 @@
 var reCAPTCHA_ok = false;
 
 var form = document.getElementById('form');
-var newPassInput = document.getElementById('newpass');
-var newPass2Input = document.getElementById('newpass2');
+var passInput = document.getElementById('password');
+var pass2Input = document.getElementById('password2');
 var submitButton = document.getElementById('submitButton');
 
-newPassInput.addEventListener('keydown', function(e) {
+passInput.addEventListener('keydown', function(e) {
 	if (e.key === 'Enter') {
 		e.preventDefault();
-		if (newPassInput.value.trim() !== '') {
-			newPass2Input.focus();
+		if (passInput.value.trim() !== '') {
+			pass2Input.focus();
 		}
 	}
 });
 
-newPass2Input.addEventListener('keydown', function(e) {
+pass2Input.addEventListener('keydown', function(e) {
 	if (e.key === 'Enter') {
 		e.preventDefault();
-		if (newPass2Input.value.trim() !== '') {
+		if (pass2Input.value.trim() !== '') {
 			if (reCAPTCHA_ok || !window.verifyRequired) {
 				form.submit();
 			}
@@ -52,5 +52,5 @@ function recaptchaError() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-	newPassInput.focus();
+	passInput.focus();
 });

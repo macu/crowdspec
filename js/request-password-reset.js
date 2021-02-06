@@ -5,7 +5,7 @@ var emailInput = document.getElementById('email');
 var submitButton = document.getElementById('submitButton');
 
 emailInput.addEventListener('keydown', function(e) {
-	if (e.keyCode === 13) {
+	if (e.key === 'Enter') {
 		e.preventDefault();
 		if (emailInput.value.trim() !== '') {
 			if (reCAPTCHA_ok || !window.verifyRequired) {
@@ -17,7 +17,7 @@ emailInput.addEventListener('keydown', function(e) {
 
 submitButton.addEventListener('click', function(e) {
 	e.preventDefault();
-	if (reCAPTCHA_ok) {
+	if (reCAPTCHA_ok || !window.verifyRequired) {
 		form.submit();
 	}
 });

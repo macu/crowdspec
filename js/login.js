@@ -6,7 +6,7 @@ var passwordInput = document.getElementById('password');
 var submitButton = document.getElementById('submitButton');
 
 usernameInput.addEventListener('keydown', function(e) {
-	if (e.keyCode === 13) {
+	if (e.key === 'Enter') {
 		e.preventDefault();
 		if (usernameInput.value.trim() !== '') {
 			passwordInput.focus();
@@ -15,7 +15,7 @@ usernameInput.addEventListener('keydown', function(e) {
 });
 
 passwordInput.addEventListener('keydown', function(e) {
-	if (e.keyCode === 13) {
+	if (e.key === 'Enter') {
 		e.preventDefault();
 		if (passwordInput.value.trim() !== '') {
 			if (reCAPTCHA_ok || !window.verifyRequired) {
@@ -27,7 +27,7 @@ passwordInput.addEventListener('keydown', function(e) {
 
 submitButton.addEventListener('click', function(e) {
 	e.preventDefault();
-	if (reCAPTCHA_ok) {
+	if (reCAPTCHA_ok || !window.verifyRequired) {
 		form.submit();
 	}
 });

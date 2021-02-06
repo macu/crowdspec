@@ -3,8 +3,8 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"net/http"
 	"regexp"
 	"strings"
 	"time"
@@ -36,43 +36,75 @@ type BlockEditingSettings struct {
 	DeleteButton string `json:"deleteButton"`
 }
 
+// Username pattern
+var usernameRegex = regexp.MustCompile("^[a-zA-Z0-9_]+$")
+
 // Regex adapted from https://www.w3.org/TR/html5/forms.html#valid-e-mail-address
 var emailRegexp = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 
+const usernameMaxLength = 25
+const emailAddressMaxLength = 50
+const passwordMinLength = 5
+
+// Used for error logging userID when there is no user logged in.
+const nullUserID = 0
+
 // Returns the user ID if the user was successfully created.
-func createUser(db *sql.DB, username, password, email string) (int64, error) {
+func createUser(r *http.Request, db *sql.DB,
+	username, password, email string) (uint, error) {
+
+	var newUserID uint
+	var err error
+
+	err = inTransaction(r, db, func(tx *sql.Tx) error {
+		// inTransaction may return same or different error
+		newUserID, err = createUserTx(tx, username, password, email)
+		return err
+	})
+
+	if err != nil {
+		return 0, err
+	}
+
+	return newUserID, nil
+}
+
+// Creates a user within an existing transaction.
+// Error is returned on failure; cancel the transaction in the parent context.
+// Returns the user ID if the user was successfully created.
+func createUserTx(tx *sql.Tx, username, password, email string) (uint, error) {
 
 	username = strings.TrimSpace(username)
 	email = strings.TrimSpace(email)
 
 	if username == "" {
-		return 0, errors.New("username required")
+		return 0, fmt.Errorf("username required")
 	}
-	if len(username) > 25 {
-		return 0, errors.New("username must be 25 characters or less")
+	if len(username) > usernameMaxLength {
+		return 0, fmt.Errorf("username must be %d characters or less", usernameMaxLength)
 	}
 	if email == "" {
-		return 0, errors.New("email required")
+		return 0, fmt.Errorf("email required")
 	}
-	if len(email) > 50 {
-		return 0, errors.New("email must be 50 characters or less")
+	if len(email) > emailAddressMaxLength {
+		return 0, fmt.Errorf("email must be %d characters or less", emailAddressMaxLength)
 	}
 	if !emailRegexp.MatchString(email) {
-		return 0, errors.New("invalid email address")
+		return 0, fmt.Errorf("invalid email address")
 	}
-	if strings.TrimSpace(password) == "" {
-		return 0, errors.New("password empty")
+	if len(strings.TrimSpace(password)) < passwordMinLength {
+		return 0, fmt.Errorf("password must be %d characters or more", passwordMinLength)
 	}
 
 	var exists bool
-	err := db.QueryRow(
-		`SELECT EXISTS(SELECT * FROM user_account WHERE username = $1)`,
-		username).Scan(&exists)
+	err := tx.QueryRow(
+		`SELECT EXISTS(SELECT * FROM user_account WHERE username = $1)`, username,
+	).Scan(&exists)
 	if err != nil {
 		return 0, err
 	}
 	if exists {
-		return 0, errors.New("username already exists")
+		return 0, fmt.Errorf("username already exists")
 	}
 
 	authHash, err := bcrypt.GenerateFromPassword([]byte(password), BcryptCost)
@@ -80,27 +112,16 @@ func createUser(db *sql.DB, username, password, email string) (int64, error) {
 		return 0, err
 	}
 
-	tx, err := db.Begin()
-	if err != nil {
-		return 0, err
-	}
-
-	var userID int64
+	var userID uint
 	err = tx.QueryRow(
 		`INSERT INTO user_account (username, email, auth_hash, created_at)
 		VALUES ($1, $2, $3, $4) RETURNING id`,
 		username, email, authHash, time.Now()).Scan(&userID)
 	if err != nil {
-		_ = tx.Rollback()
 		return 0, err
 	}
 
 	// TODO Create any initial user-related records in same transaction
-
-	err = tx.Commit()
-	if err != nil {
-		return 0, err
-	}
 
 	return userID, nil
 }

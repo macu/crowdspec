@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -35,7 +34,7 @@ func verifyRecaptcha(r *http.Request) (bool, error) {
 		}
 	}
 
-	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
+	ip := getUserIP(r)
 
 	form := url.Values{}
 	form.Set("secret", recaptchaSecretKey)

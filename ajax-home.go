@@ -26,7 +26,7 @@ func ajaxUserHome(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 		s := Spec{}
 		err = rows.Scan(&s.ID, &s.OwnerType, &s.OwnerID, &s.Name, &s.Desc, &s.Public, &s.Updated)
 		if err != nil {
-			if err2 := rows.Close(); err2 != nil { // TODO Add everywhere
+			if err2 := rows.Close(); err2 != nil {
 				logError(r, userID, fmt.Errorf("closing rows: %s; on scan error: %w", err2, err))
 				return nil, http.StatusInternalServerError
 			}
@@ -58,7 +58,7 @@ func ajaxUserHome(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 		err = rows.Scan(&s.ID, &s.OwnerType, &s.OwnerID, &s.Name, &s.Desc,
 			&s.Username, &s.Highlight, &s.Updated)
 		if err != nil {
-			if err2 := rows.Close(); err2 != nil { // TODO Add everywhere
+			if err2 := rows.Close(); err2 != nil {
 				logError(r, userID, fmt.Errorf("closing rows: %s; on scan error: %w", err2, err))
 				return nil, http.StatusInternalServerError
 			}

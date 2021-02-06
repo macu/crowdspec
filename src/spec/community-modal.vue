@@ -13,6 +13,7 @@
 		/>
 
 	<p v-if="loading"><i class="el-icon-loading"/> Loading...</p>
+	<p v-else-if="error">{{error}}</p>
 
 	<template v-else-if="target">
 
@@ -101,7 +102,6 @@ import PreviewSubspec from './preview-subspec.vue';
 import PreviewBlock from './preview-block.vue';
 import PreviewComment from './preview-comment.vue';
 import {
-	alertError,
 	idsEq,
 } from '../utils.js';
 import {
@@ -131,6 +131,7 @@ export default {
 		return {
 			showing: false,
 			loading: false, // loading community space
+			error: null,
 			targetType: null,
 			target: null,
 			comments: [],
@@ -197,6 +198,7 @@ export default {
 		},
 		loadCommunity(targetType, targetId) {
 			this.loading = true;
+			this.error = null;
 			ajaxLoadCommunity(this.specId, targetType, targetId).then(response => {
 				this.loading = false;
 				this.targetType = targetType;
@@ -221,6 +223,9 @@ export default {
 			}).fail(() => {
 				this.loading = false;
 				this.error = 'Failed to load community.';
+				if (this.$refs.contextStack.checkEmpty()) {
+					this.showing = false;
+				}
 			});
 		},
 		loadMoreComments() {

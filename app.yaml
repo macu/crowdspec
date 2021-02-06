@@ -3,6 +3,7 @@ runtime: go114
 env_variables:
   DOMAIN: "crowdspec.dev"
   DEV_ENV: "appengine"
+  MAINTENANCE_MODE: "false"
   DB_HOST: "/cloudsql/crowdspec-dev:northamerica-northeast1:crowdspec-dev"
   DB_NAME: "crowdspec"
   DB_USER: "postgres"
@@ -11,7 +12,7 @@ env_variables:
   RECAPTCHA_SECRET: "projects/178253280892/secrets/RECAPTCHA"
   MAILJET_API_KEY: "b0334490baa0138d74375c16998277a0"
   MAILJET_SECRET: "projects/178253280892/secrets/MAILJET_SECRET_KEY"
-  VERSION_STAMP: "202101250028"
+  VERSION_STAMP: "202102061341"
 
 handlers:
 - url: /css

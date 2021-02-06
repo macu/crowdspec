@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 // AjaxRoute represents an authenticated AJAX handler that returns
@@ -23,6 +24,9 @@ var ajaxHandlers = map[string]map[string]AjaxRoute{
 		"/ajax/spec/urls":           ajaxSpecURLs,
 		"/ajax/spec/community":      ajaxSpecLoadCommunity,
 		"/ajax/spec/community/page": ajaxSpecCommunityLoadCommentsPage,
+
+		// admin
+		"/ajax/admin/signup-requests": ajaxAdminLoadSignupRequests,
 	},
 	http.MethodPost: {
 		"/ajax/user/change-password": ajaxUserChangePassword,
@@ -47,6 +51,9 @@ var ajaxHandlers = map[string]map[string]AjaxRoute{
 		"/ajax/spec/community/add-comment":    ajaxSpecCommunityAddComment,
 		"/ajax/spec/community/update-comment": ajaxSpecCommunityUpdateComment,
 		"/ajax/spec/community/delete-comment": ajaxSpecCommunityDeleteComment,
+
+		// admin
+		"/ajax/admin/review-signup": ajaxAdminSubmitSignupRequestReview,
 	},
 }
 
@@ -55,6 +62,12 @@ func ajaxHandler(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request
 	if foundMethod {
 		handler, fouundPath := handlers[r.URL.Path]
 		if fouundPath {
+			// Verify access to admin routes
+			if strings.HasPrefix(r.URL.Path, "/ajax/admin") && userID != adminUserID {
+				logError(r, userID, fmt.Errorf("forbidden admin access"))
+				w.WriteHeader(http.StatusForbidden)
+				return
+			}
 			response, statusCode := handler(db, userID, w, r)
 			if statusCode >= 400 {
 				w.WriteHeader(statusCode)
@@ -85,42 +98,4 @@ func ajaxTest(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (
 	return struct {
 		Message string `json:"message"`
 	}{"Message retrieved using AJAX"}, http.StatusOK
-}
-
-func inTransaction(r *http.Request, db *sql.DB, userID uint, f func(*sql.Tx) (interface{}, int)) (interface{}, int) {
-	c := r.Context()
-	tx, err := db.BeginTx(c, nil)
-	if err != nil {
-		rbErr := tx.Rollback()
-		if rbErr != nil {
-			logError(r, userID, fmt.Errorf("rollback: %v; on begin transaction: %w", rbErr, err))
-			return nil, http.StatusInternalServerError
-		}
-		logError(r, userID, fmt.Errorf("begin transaction: %w", err))
-		return nil, http.StatusInternalServerError
-	}
-
-	response, statusCode := f(tx)
-	if err != nil {
-		rbErr := tx.Rollback()
-		if rbErr != nil {
-			logError(r, userID, fmt.Errorf("rollback: %v; on run function: %w", rbErr, err))
-			return nil, http.StatusInternalServerError
-		}
-		logError(r, userID, fmt.Errorf("run function: %w", err))
-		return nil, statusCode
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		rbErr := tx.Rollback()
-		if rbErr != nil {
-			logError(r, userID, fmt.Errorf("rollback: %v; on commit: %w", rbErr, err))
-			return nil, http.StatusInternalServerError
-		}
-		logError(r, userID, fmt.Errorf("commit: %w", err))
-		return nil, http.StatusInternalServerError
-	}
-
-	return response, statusCode
 }

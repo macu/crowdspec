@@ -13,12 +13,14 @@
 
 			<el-tag
 				v-if="userRead"
-				size="mini" type="success">
+				size="mini" type="success"
+				@click="setUserRead(false)">
 				Read
 			</el-tag>
 			<el-tag
 				v-else
-				size="mini" type="info">
+				size="mini" type="info"
+				@click="setUserRead(true)">
 				Unread
 			</el-tag>
 
@@ -224,11 +226,17 @@ export default {
 			}
 			>.el-tag {
 				margin-left: 5px;
+				cursor: pointer; // click to toggle read
 			}
 			>.el-button {
 				margin-left: 10px;
 				padding: 3px;
 				font-size: 12px;
+			}
+			.el-checkbox__input.is-checked .el-checkbox__inner {
+				color: white;
+				background-color: $e-success;
+				border-color: $e-success;
 			}
 		}
 	}

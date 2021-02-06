@@ -16,6 +16,7 @@ export const store = new Vuex.Store({
 		return {
 			currentTime: Date.now(), // updated every minute
 			windowWidth: $window.width(),
+			windowHeight: $window.height(),
 			dragging: false, // drag operation in progress; lock down interface
 			movingBlockIds: [], // ids of blocks being moved
 			movingBlocksSourceSubspecId: null, // id of source subspec if any for current move operation
@@ -34,6 +35,9 @@ export const store = new Vuex.Store({
 		},
 		userSettings(state) {
 			return $.extend(true, defaultUserSettings(), state.userSettings);
+		},
+		userIsAdmin(state) {
+			return window.user.admin;
 		},
 		mobileViewport(state) {
 			return state.windowWidth <= MOBILE_MAX_WIDTH;
@@ -83,8 +87,9 @@ export const store = new Vuex.Store({
 		},
 	},
 	mutations: {
-		setWindowWidth(state, width) {
-			state.windowWidth = width;
+		updateWindowDimensions(state) {
+			state.windowWidth = $window.width();
+			state.windowHeight = $window.height();
 		},
 		setUserSettings(state, settings) {
 			state.userSettings = settings;
@@ -136,7 +141,7 @@ export const store = new Vuex.Store({
 export default store;
 
 $window.on('resize', () => {
-	store.commit('setWindowWidth', $window.width());
+	store.commit('updateWindowDimensions');
 });
 
 const TIMEOUT = 60 * 1000;

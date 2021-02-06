@@ -57,7 +57,7 @@ export default {
 			this.stack = [];
 		},
 		checkEmpty() {
-			this.empty = !this.stack.length;
+			return this.empty = !this.stack.length;
 		},
 	},
 }

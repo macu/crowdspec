@@ -80,6 +80,11 @@ postgres=#
 
 ## Changelog
 
+### 2021-02
+
+- [x] Add maintenance mode
+- [x] Signup requests
+
 ### 2021-01
 
 - [x] Add community space, comments, sub-comments, read records, and unread counts

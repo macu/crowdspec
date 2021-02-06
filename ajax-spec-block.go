@@ -87,7 +87,7 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 
 	// TODO Html sanitize title and body
 
-	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
 		var err error
 
@@ -214,7 +214,7 @@ func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 
 	// TODO Html sanitize title and body
 
-	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
 		var err error
 
@@ -343,7 +343,7 @@ func ajaxSpecMoveBlocks(db *sql.DB, userID uint, w http.ResponseWriter, r *http.
 		return nil, status
 	}
 
-	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
 		insertAt, code, err := makeInsertAt(tx, specID, targetSubspecID, parentID, insertBeforeID, len(blockIDs))
 		if err != nil {
@@ -461,7 +461,7 @@ func ajaxSpecDeleteBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 		return nil, status
 	}
 
-	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
 		// Delete block row (delete is cascade; subblocks will also be deleted)
 		_, err := tx.Exec(`

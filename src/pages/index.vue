@@ -1,7 +1,18 @@
 <template>
 <div class="index-page">
 
-	<el-button @click="promptCreateSpec()" type="primary">New spec</el-button>
+	<el-button
+		@click="promptCreateSpec()"
+		type="primary">
+		New spec
+	</el-button>
+
+	<el-button
+		v-if="$store.getters.userIsAdmin"
+		@click="$router.push({name: 'admin'})"
+		class="admin-access">
+		Admin
+	</el-button>
 
 	<div class="user-specs">
 		<h2>Your specs</h2>
@@ -200,6 +211,12 @@ export default {
 
 		}
 	} // ul.specs-list
+
+	.el-button.admin-access {
+		color: white;
+		background-color: $admin-bg;
+		border-color: $admin-bg;
+	}
 
 } // .index-page
 </style>

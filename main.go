@@ -53,6 +53,12 @@ func isLocal() bool {
 
 func main() {
 
+	if AtoBool(os.Getenv("MAINTENANCE_MODE")) {
+		// Site down for databae upgrades
+		maintenanceMode()
+		os.Exit(0)
+	}
+
 	initDB := flag.Bool("initDB", false, "Initialize a fresh database")
 	createNewUser := flag.Bool("createUser", false, "Whether to create a user on startup")
 	newUserUsername := flag.String("username", "", "Login username for new user")
@@ -161,7 +167,8 @@ func main() {
 	}
 
 	if isLocal() && *createNewUser {
-		if _, err := createUser(db, *newUserUsername, *newUserPassword, *newUserEmail); err != nil {
+		if _, err := createUser(&http.Request{}, // request needed for r.Context()
+			db, *newUserUsername, *newUserPassword, *newUserEmail); err != nil {
 			logErrorFatal(err)
 		}
 		log.Println("New user created")
@@ -188,6 +195,8 @@ func main() {
 	authenticate := makeAuthenticator(db)
 
 	r.HandleFunc("/login", makeLoginHandler(db))
+	r.HandleFunc("/signup", makeRequestSignupHandler(db))
+	r.HandleFunc("/activate-signup", makeActivateSignupHandler(db))
 	r.HandleFunc("/request-password-reset", makeRequestPasswordResetHandler(db))
 	r.HandleFunc("/reset-password", makeResetPasswordHandler(db))
 	r.HandleFunc("/logout", authenticate(logoutHandler))
@@ -208,9 +217,14 @@ func main() {
 		logErrorFatal(err)
 	}
 
+	// Flush pending logs
+	if appEngineLoggingClient != nil {
+		appEngineLoggingClient.Close()
+		appEngineLoggingClient = nil
+	}
 	if appEngineErrorClient != nil {
-		// Flush pending logs
 		appEngineErrorClient.Close()
+		appEngineErrorClient = nil
 	}
 }
 
@@ -234,8 +248,61 @@ func indexHandler(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 	indexTemplate.Execute(w, struct {
 		UserID       uint
 		Username     string
+		Admin        bool
 		Settings     UserSettings
 		VersionStamp string
 		Local        bool
-	}{userID, username, *settings, cacheControlVersionStamp, isLocal()})
+	}{
+		userID,
+		username,
+		userID == adminUserID,
+		*settings,
+		cacheControlVersionStamp,
+		isLocal(),
+	})
+}
+
+func maintenanceMode() {
+	var port string
+	if isAppEngine() {
+		port = os.Getenv("PORT")
+	} else {
+		var config = &config{}
+		configContents, err := ioutil.ReadFile("env.json")
+		if err != nil {
+			logErrorFatal(err)
+		}
+		err = json.Unmarshal(configContents, config)
+		if err != nil {
+			logErrorFatal(err)
+		}
+		port = config.HTTPPort
+	}
+
+	var maintenancePageTemplate *template.Template
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		if !isAjax(r) {
+			if maintenancePageTemplate == nil {
+				maintenancePageTemplate = template.Must(template.ParseFiles("html/maintenance.html"))
+			}
+			maintenancePageTemplate.Execute(w, nil)
+		}
+	})
+
+	log.Printf("Listening on port %s", port)
+
+	if err := http.ListenAndServe(":"+port, nil); err != http.ErrServerClosed {
+		logErrorFatal(err)
+	}
+
+	// Flush pending logs
+	if appEngineLoggingClient != nil {
+		appEngineLoggingClient.Close()
+		appEngineLoggingClient = nil
+	}
+	if appEngineErrorClient != nil {
+		appEngineErrorClient.Close()
+		appEngineErrorClient = nil
+	}
 }

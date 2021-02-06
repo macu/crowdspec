@@ -4,8 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
-	"net"
 	"net/http"
 	"strings"
 
@@ -28,10 +26,12 @@ func ajaxUserChangePassword(db *sql.DB, userID uint, w http.ResponseWriter, r *h
 		return nil, http.StatusBadRequest
 	}
 
-	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
 		var authHash string
-		err := tx.QueryRow(`SELECT auth_hash FROM user_account WHERE id=$1`, userID).Scan(&authHash)
+		err := tx.QueryRow(
+			`SELECT auth_hash FROM user_account WHERE id=$1`, userID,
+		).Scan(&authHash)
 		if err != nil {
 			logError(r, userID, fmt.Errorf("looking up user: %w", err))
 			return nil, http.StatusInternalServerError
@@ -49,16 +49,23 @@ func ajaxUserChangePassword(db *sql.DB, userID uint, w http.ResponseWriter, r *h
 			return nil, http.StatusInternalServerError
 		}
 
-		_, err = tx.Exec(`
-			UPDATE user_account SET auth_hash=$3 WHERE id=$1 AND auth_hash=$2
-			`, userID, authHash, newAuthHash)
+		_, err = tx.Exec(
+			`UPDATE user_account SET auth_hash=$3 WHERE id=$1 AND auth_hash=$2`,
+			userID, authHash, newAuthHash)
 		if err != nil {
 			logError(r, userID, fmt.Errorf("updating user: %w", err))
 			return nil, http.StatusInternalServerError
 		}
 
-		ip, _, _ := net.SplitHostPort(r.RemoteAddr)
-		log.Printf("password updated for user ID %d [%s]", userID, ip)
+		logNotice(r, struct {
+			Event     string
+			UserID    uint
+			IPAddress string
+		}{
+			"UpdatePassword",
+			userID,
+			getUserIP(r),
+		})
 
 		return nil, http.StatusOK
 	})

@@ -1,31 +1,30 @@
 var reCAPTCHA_ok = false;
 
 var form = document.getElementById('form');
-var newPassInput = document.getElementById('newpass');
-var newPass2Input = document.getElementById('newpass2');
+var usernameInput = document.getElementById('username');
+var emailInput = document.getElementById('email');
+var messageInput = document.getElementById('message');
 var submitButton = document.getElementById('submitButton');
 
-newPassInput.addEventListener('keydown', function(e) {
+usernameInput.addEventListener('keydown', function (e) {
 	if (e.key === 'Enter') {
 		e.preventDefault();
-		if (newPassInput.value.trim() !== '') {
-			newPass2Input.focus();
+		if (usernameInput.value.trim() !== '') {
+			emailInput.focus();
 		}
 	}
 });
 
-newPass2Input.addEventListener('keydown', function(e) {
+emailInput.addEventListener('keydown', function (e) {
 	if (e.key === 'Enter') {
 		e.preventDefault();
-		if (newPass2Input.value.trim() !== '') {
-			if (reCAPTCHA_ok || !window.verifyRequired) {
-				form.submit();
-			}
+		if (emailInput.value.trim() !== '') {
+			messageInput.focus();
 		}
 	}
 });
 
-submitButton.addEventListener('click', function(e) {
+submitButton.addEventListener('click', function (e) {
 	e.preventDefault();
 	if (reCAPTCHA_ok || !window.verifyRequired) {
 		form.submit();
@@ -51,6 +50,6 @@ function recaptchaError() {
 	}
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-	newPassInput.focus();
+document.addEventListener('DOMContentLoaded', function () {
+	usernameInput.focus();
 });

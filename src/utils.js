@@ -10,7 +10,11 @@ export function alertError(error) {
 		if (error.readyState === 0) {
 			message = 'Could not connect to server.';
 		} else if (error.readyState && error.status) {
-			message = 'Request failed with HTTP error code ' + error.status + '.';
+			if (error.status === 503) { // Service Unavailable
+				message = 'CrowdSpec is currently offline for database upgrades. Please try again in a bit.';
+			} else {
+				message = 'Request failed with HTTP error code ' + error.status + '.';
+			}
 		} else if (error.message) {
 			message = error.message;
 		} else if (typeof error === 'string') {
@@ -71,7 +75,7 @@ export function debounce(callback, timeoutMs = 500) {
 }
 
 export function setWindowSubtitle(subtitle = null) {
-	window.title = 'CrowdSpec' + (subtitle ? ' | ' : '') + subtitle;
+	document.title = 'CrowdSpec' + (subtitle ? (' | ' + subtitle) : '');
 }
 
 // Call when dragging starts, returns handler.

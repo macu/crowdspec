@@ -263,7 +263,7 @@ func readBlocks(rows *sql.Rows, blocks *[]*SpecBlock, blocksByID *map[int64]*Spe
 			&urlSpecID, &urlCreated, &urlUpdated, &urlURL, &urlTitle, &urlDesc, &urlImageData,
 			&b.UnreadCount)
 		if err != nil {
-			if err2 := rows.Close(); err2 != nil { // TODO Add everywhere
+			if err2 := rows.Close(); err2 != nil {
 				return fmt.Errorf("closing rows: %s; on scan error: %w", err2, err)
 			}
 			return fmt.Errorf("scanning block: %w", err)

@@ -146,7 +146,7 @@ func ajaxSpecCreateSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *ht
 
 	desc := AtoPointerNilIfEmpty(strings.TrimSpace(r.Form.Get("desc")))
 
-	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
 		var subspecID int64
 
@@ -195,7 +195,7 @@ func ajaxSpecSaveSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 
 	desc := AtoPointerNilIfEmpty(strings.TrimSpace(r.Form.Get("desc")))
 
-	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
 		s := &SpecSubspec{
 			ID: subspecID,
@@ -246,7 +246,7 @@ func ajaxSpecDeleteSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *ht
 		return nil, status
 	}
 
-	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
 		// Blocks in subspec are deleted on cascade
 

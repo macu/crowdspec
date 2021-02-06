@@ -51,7 +51,7 @@ func ajaxSpecURLs(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 		}
 		err = rows.Scan(&o.ID, &o.Created, &o.URL, &o.Title, &o.Desc, &o.ImageData, &o.Updated)
 		if err != nil {
-			if err2 := rows.Close(); err2 != nil { // TODO Add everywhere
+			if err2 := rows.Close(); err2 != nil {
 				logError(r, userID, fmt.Errorf("closing rows: %s; on scan error: %w", err2, err))
 				return nil, http.StatusInternalServerError
 			}
@@ -93,7 +93,7 @@ func ajaxSpecCreateURL(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 		return nil, http.StatusBadRequest
 	}
 
-	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
 		urlObject, err := createURLObject(tx, specID, url)
 
@@ -135,7 +135,7 @@ func ajaxSpecRefreshURL(db *sql.DB, userID uint, w http.ResponseWriter, r *http.
 		return nil, http.StatusBadRequest
 	}
 
-	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
 		urlObject, err := updateURLObject(tx, id, url)
 
@@ -167,7 +167,7 @@ func ajaxSpecDeleteURL(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 		return nil, status
 	}
 
-	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
 		// Don't clear references from blocks - display "content unavailable" message
 

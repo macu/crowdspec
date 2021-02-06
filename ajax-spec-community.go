@@ -382,7 +382,7 @@ func ajaxSpecCommunityAddComment(db *sql.DB, userID uint, w http.ResponseWriter,
 		return nil, http.StatusBadRequest
 	}
 
-	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
 		var now = time.Now()
 		var c = Comment{
@@ -449,7 +449,7 @@ func ajaxSpecCommunityUpdateComment(db *sql.DB, userID uint, w http.ResponseWrit
 		return nil, http.StatusBadRequest
 	}
 
-	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
 		var comment = struct {
 			ID      int64     `json:"id"`
@@ -495,7 +495,7 @@ func ajaxSpecCommunityDeleteComment(db *sql.DB, userID uint, w http.ResponseWrit
 		return nil, status
 	}
 
-	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
 		_, err := tx.Exec(`DELETE FROM spec_community_comment WHERE id = $1`, commentID)
 		if err != nil {
@@ -517,7 +517,7 @@ func ajaxSpecCommunityMarkRead(db *sql.DB, userID uint, w http.ResponseWriter, r
 
 	read := AtoBool(r.FormValue("read"))
 
-	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
 		var existing bool
 

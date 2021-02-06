@@ -134,6 +134,7 @@ export default {
 
 	.content-page { // just content - no header - standard padding
 		padding: $content-area-padding;
+		padding-top: $content-area-padding / 2;
 
 		@include mobile {
 			padding: $content-area-padding-sm;

@@ -79,7 +79,6 @@ func loadCommentsPage(r *http.Request, db DBConn, userID uint,
 
 	if updatedBefore == nil {
 		// Select all of the current user's own comments
-		// TODO unread_count
 		unionUsersOwnComments =
 			`(SELECT c.id, c.user_id, c.created_at, c.updated_at, c.comment_body, u.username,
 				'' AS highlight, -- blank because highlight for current user is already known
@@ -126,7 +125,7 @@ func loadCommentsPage(r *http.Request, db DBConn, userID uint,
 		err = rows.Scan(&c.ID, &c.UserID, &c.Created, &c.Updated, &c.Body,
 			&c.Username, &c.Highlight, &c.UnreadCount, &c.UserRead)
 		if err != nil {
-			if err2 := rows.Close(); err2 != nil { // TODO Add everywhere
+			if err2 := rows.Close(); err2 != nil {
 				logError(r, userID, fmt.Errorf("closing rows: %s; on scan error: %w", err2, err))
 				return nil, false, 0, http.StatusInternalServerError
 			}

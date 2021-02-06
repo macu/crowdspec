@@ -93,7 +93,7 @@ func ajaxCreateSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Requ
 
 	isPublic := AtoBool(r.Form.Get("isPublic"))
 
-	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
 		var specID int64
 
@@ -141,7 +141,7 @@ func ajaxSaveSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 
 	isPublic := AtoBool(r.Form.Get("isPublic"))
 
-	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
 		spec := &Spec{
 			ID:     specID,
@@ -192,7 +192,7 @@ func ajaxDeleteSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Requ
 		return nil, status
 	}
 
-	return inTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
 		_, err := tx.Exec(`DELETE FROM spec WHERE id=$1`, specID)
 

@@ -225,13 +225,10 @@ export default {
 			$.get('/ajax/settings').then(settings => {
 				this.settingsForm = $.extend(true, defaultUserSettings(), settings);
 				this.waiting = false;
-			}).fail(() => {
+			}).fail(jqXHR => {
 				this.waiting = false;
 				this.clearMode();
-				this.$alert('Failed to load settings', {
-					confirmButtonText: 'Close',
-					type: 'error',
-				});
+				alertError(jqXHR);
 			});
 		},
 		handleChangePasswordReturn() {
@@ -302,9 +299,11 @@ export default {
 			});
 		},
 		submitSettings() {
+			this.waiting = true;
 			$.post('/ajax/user/save-settings', {
 				settings: JSON.stringify(this.settingsForm),
 			}).then(settings => {
+				this.waiting = false;
 				this.$message({
 					message: 'Settings updated',
 					type: 'success',
@@ -313,13 +312,9 @@ export default {
 				});
 				this.clearMode();
 				this.$store.commit('setUserSettings', settings);
-			}).fail(() => {
-				this.$message({
-					message: 'Failed to update settings',
-					type: 'error',
-					showClose: true,
-					duration: ERROR_MESSAGE_TIMEOUT,
-				});
+			}).fail(jqXHR => {
+				this.waiting = false;
+				alertError(jqXHR);
 			});
 		},
 		clearMode() {

@@ -45,7 +45,11 @@ form td:first-child:not(:last-child) {
 form label {
 	font-weight: bold;
 }
-form input {
+form input, form textarea {
 	width: 100%;
 	max-width: 400px;
+}
+
+span.identifier {
+	text-decoration: underline;
 }

@@ -1,15 +1,15 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
-<meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1"/>
+	<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+	<meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1"/>
 
-<title>CrowdSpec</title>
+	<title>CrowdSpec | Log in</title>
 
-<link rel="shortcut icon" href="/img/favicon.ico"/>
-<link rel="stylesheet" href="/css/login.css?v={{.VersionStamp}}"/>
+	<link rel="shortcut icon" href="/img/favicon.ico"/>
+	<link rel="stylesheet" href="/css/static.css?v={{.VersionStamp}}"/>
 
-<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+	<script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
 </head>
 <body>
@@ -18,14 +18,8 @@
 
 	<div class="content-area">
 
-		{{if eq .Error 403}}
-		<p class="error">Invalid login</p>
-		{{else if eq .Error 418}}
-		<p class="error">Invalid reCAPTCHA</p>
-		{{else if eq .Error 400}}
-		<p class="error">Bad request</p>
-		{{else if eq .Error 500}}
-		<p class="error">Server error</p>
+		{{if ne .Error ""}}
+			<p class="error">{{.Error}}</p>
 		{{end}}
 
 		<form id="form" action="/login" method="POST">
@@ -57,6 +51,7 @@
 		</form>
 
 		<p><a href="/request-password-reset">Request password reset</a></p>
+		<p><a href="/signup">Sign up</a></p>
 
 	</div>
 
