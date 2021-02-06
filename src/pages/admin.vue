@@ -32,7 +32,9 @@
 				</el-table-column>
 				<el-table-column label="Actions" width="200">
 					<template slot-scope="scope">
-						<el-button size="mini" @click="openReviewSignupRequest(scope.row)">
+						<el-button v-if="!scope.row.reviewed"
+							@click="openReviewSignupRequest(scope.row)"
+							size="mini">
 							Review
 						</el-button>
 					</template>

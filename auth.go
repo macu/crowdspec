@@ -12,7 +12,7 @@ import (
 )
 
 // Only I currently have admin access.
-const adminUserID = 1
+const adminUserID = 2
 
 const sessionTokenCookieName = "session_token"
 
