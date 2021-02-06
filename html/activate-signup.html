@@ -18,7 +18,11 @@
 
 <body>
 
-	<h1>CrowdSpec</h1>
+	{{if eq .Mode "success"}}
+		<h1 class="link"><a href="/">CrowdSpec</a></h1>
+	{{else}}
+		<h1>CrowdSpec</h1>
+	{{end}}
 
 	<div class="content-area">
 

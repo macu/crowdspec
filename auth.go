@@ -11,7 +11,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// First user is allowed admin access.
+// Only I currently have admin access.
 const adminUserID = 1
 
 const sessionTokenCookieName = "session_token"
