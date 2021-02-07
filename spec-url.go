@@ -162,7 +162,7 @@ func fetchYouTubeVideoMetadata(videoID string) (*URLMetadata, error) {
 
 	if len(response.Items) == 1 && response.Items[0].Snippet != nil {
 		var snippet = response.Items[0].Snippet
-		data.CanonicalURL = requestURL
+		data.CanonicalURL = "https://www.youtube.com/watch?v=" + videoID
 		data.Title = snippet.Title
 		data.Description = snippet.Description
 
