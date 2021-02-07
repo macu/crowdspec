@@ -27,7 +27,7 @@
 			<el-button
 				v-if="showCommunity"
 				@click="openComments()"
-				:type="unreadCount ? 'primary' : 'default'"
+				:type="!!unreadCount ? 'primary' : 'default'"
 				size="mini"
 				icon="el-icon-chat-dot-square">
 				<template v-if="showUnreadOnly || unreadCount">

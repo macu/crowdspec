@@ -24,7 +24,7 @@
 					</span>
 					<el-button
 						@click="openSpecCommunity()"
-						:type="unreadCount ? 'primary' : 'default'"
+						:type="!!unreadCount ? 'primary' : 'default'"
 						:disabled="choosingAddPosition"
 						size="mini" icon="el-icon-chat-dot-square">
 						<template v-if="showUnreadOnly || unreadCount">
@@ -44,7 +44,7 @@
 					</span>
 					<el-button
 						@click="openSpecCommunity()"
-						:type="unreadCount ? 'primary' : 'default'"
+						:type="!!unreadCount ? 'primary' : 'default'"
 						size="mini" icon="el-icon-chat-dot-square">
 						<template v-if="showUnreadOnly || unreadCount">
 							<template v-if="unreadCount">{{unreadCount}} unread</template>

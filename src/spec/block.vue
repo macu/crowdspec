@@ -10,15 +10,12 @@
 				<div class="expand-control" :class="{hide: showActions}">
 					<!-- only show community button to admins in collapsed mobile menu when there are unread submissions -->
 					<!-- always show community button to guests, who only make community interactions -->
-					<el-button v-if="showUnreadOnly ? !!unreadCount : !!commentsCount"
+					<el-button v-if="showUnreadOnly && !!unreadCount"
 						@click="openCommunity()"
 						type="primary"
 						size="mini"
 						icon="el-icon-chat-dot-square">
-						<template v-if="showUnreadOnly || unreadCount">
-							<template v-if="unreadCount">{{unreadCount}} unread</template>
-						</template>
-						<template v-else-if="commentsCount">{{commentsCount}}</template>
+						{{unreadCount}} unread
 					</el-button>
 					<el-button @click="focusActions = true" type="default" size="mini" icon="el-icon-more" circle/>
 				</div>
@@ -49,7 +46,7 @@
 					</template>
 					<template v-else>
 						<el-button @click="openCommunity()"
-							:type="unreadCount ? 'primary' : 'default'"
+							:type="!!unreadCount ? 'primary' : 'default'"
 							size="mini"
 							icon="el-icon-chat-dot-square">
 							<template v-if="showUnreadOnly || unreadCount">
@@ -68,7 +65,7 @@
 			<div v-else class="visitor-actions">
 				<el-button
 					@click="openCommunity()"
-					:type="unreadCount ? 'primary' : 'default'"
+					:type="!!unreadCount ? 'primary' : 'default'"
 					size="mini"
 					icon="el-icon-chat-dot-square">
 					<template v-if="showUnreadOnly || unreadCount">
