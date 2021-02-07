@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"image"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -122,8 +121,6 @@ func fetchYouTubeVideoMetadata(videoID string) (*URLMetadata, error) {
 	query.Set("key", youtubeAPIKey) // auth
 
 	var requestURL = "https://youtube.googleapis.com/youtube/v3/videos?" + query.Encode()
-
-	log.Println(requestURL)
 
 	req, err := http.NewRequest(http.MethodGet, requestURL, nil)
 	if err != nil {
