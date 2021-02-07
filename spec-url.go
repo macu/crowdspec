@@ -3,10 +3,14 @@ package main
 import (
 	"database/sql"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"image"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -20,6 +24,7 @@ import (
 const urlMaxLen = 1024
 const urlTitleMaxLen = 255
 const urlDescMaxLen = 255
+const maxThumbnailDims = 300
 
 // URLObject contains display information about a URL.
 type URLObject struct {
@@ -42,14 +47,58 @@ type URLMetadata struct {
 	SiteName     string  `meta:"og:site_name"`
 }
 
+// YouTubeVideoListResponse represents a response from YouTube API.
+type YouTubeVideoListResponse struct {
+	Items []YouTubeVideoMetadata `json:"items"`
+}
+
+// YouTubeVideoMetadata represents data about a video in a response from YouTube API.
+type YouTubeVideoMetadata struct {
+	Snippet *YouTubeVideoSnippet `json:"snippet"`
+}
+
+// YouTubeVideoSnippet represents snippet data about a video in a response from YouTube API.
+type YouTubeVideoSnippet struct {
+	Title       string                           `json:"title"`
+	Description string                           `json:"description"`
+	Thumbnails  map[string]YouTubeVideoThumbnail `json:"thumbnails"`
+}
+
+// YouTubeVideoThumbnail represents thumbnail data about a video in a response from YouTube API.
+type YouTubeVideoThumbnail struct {
+	URL    string `json:"url"`
+	Width  uint   `json:"width"`
+	Height uint   `json:"height"`
+}
+
 // URLMetadataTimeout is the max connection time when loading URL metadata.
 const URLMetadataTimeout = 5 * time.Second
 
+// Recognized video URL formats:
+// http://www.youtube.com/watch?v=My2FRPA3Gf8
+// http://www.youtube.com/embed/My2FRPA3Gf8
+// http://youtu.be/My2FRPA3Gf8
+// https://youtube.googleapis.com/v/My2FRPA3Gf8
+var youTubeLinkRegex = regexp.MustCompile("^https?:\\/\\/(?:www\\.|m\\.)?(?:youtube\\.com\\/watch\\?v=|youtube\\.com\\/embed\\/|youtu\\.be\\/|youtube\\.googleapis\\.com\\/v\\/)([a-zA-Z0-9_-]+)")
+
 func fetchMetadata(url string) (*URLMetadata, error) {
+	if m := youTubeLinkRegex.FindStringSubmatch(url); len(m) == 2 {
+		// Load YouTube metadata through their API
+		return fetchYouTubeVideoMetadata(m[1])
+	}
+
 	client := http.Client{
 		Timeout: URLMetadataTimeout,
 	}
-	res, err := client.Get(url)
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("initiating HTTP request: %w", err)
+	}
+
+	req.Header.Add("Referer", httpClientReferer)
+
+	res, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("fetching URL: %w", err)
 	}
@@ -61,6 +110,85 @@ func fetchMetadata(url string) (*URLMetadata, error) {
 	err = m.Metabolize(res.Body, data)
 	if err != nil {
 		return nil, fmt.Errorf("reading meta tags: %w", err)
+	}
+
+	return data, nil
+}
+
+func fetchYouTubeVideoMetadata(videoID string) (*URLMetadata, error) {
+	var query = make(url.Values)
+	query.Set("id", videoID)
+	query.Set("part", "snippet")
+	query.Set("key", youtubeAPIKey) // auth
+
+	var requestURL = "https://youtube.googleapis.com/youtube/v3/videos?" + query.Encode()
+
+	log.Println(requestURL)
+
+	req, err := http.NewRequest(http.MethodGet, requestURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("initiating YouTube request: %w", err)
+	}
+
+	req.Header.Add("Referer", httpClientReferer)
+	req.Header.Add("Accept", "application/json")
+
+	var client = http.Client{
+		Timeout: URLMetadataTimeout,
+	}
+
+	res, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("fetching URL: %w", err)
+	}
+
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("error response from YouTube: %d", res.StatusCode)
+	}
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, fmt.Errorf("reading YouTube response body: %w", err)
+	}
+
+	var response YouTubeVideoListResponse
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshalling YouTube JSON response: %w", err)
+	}
+
+	var data = &URLMetadata{
+		SiteName: "YouTube",
+	}
+
+	if len(response.Items) == 1 && response.Items[0].Snippet != nil {
+		var snippet = response.Items[0].Snippet
+		data.CanonicalURL = requestURL
+		data.Title = snippet.Title
+		data.Description = snippet.Description
+
+		var imageURLString string
+
+		// https://developers.google.com/youtube/v3/docs/videos#snippet.thumbnails
+		if high, ok := snippet.Thumbnails["high"]; ok {
+			imageURLString = high.URL
+		} else if medium, ok := snippet.Thumbnails["medium"]; ok {
+			imageURLString = medium.URL
+		} else if small, ok := snippet.Thumbnails["default"]; ok {
+			imageURLString = small.URL
+		}
+
+		if imageURLString != "" {
+			imageURL, err := url.ParseRequestURI(imageURLString)
+			if err != nil {
+				return nil, fmt.Errorf("parsing YouTube thumbnail URL: %w", err)
+			}
+			if imageURL != nil {
+				data.ImageURL = *imageURL
+			}
+		}
 	}
 
 	return data, nil
@@ -83,7 +211,7 @@ func loadImageThumbData(imageURL string) (string, error) {
 		return "", fmt.Errorf("decoding image: %w", err)
 	}
 
-	thumb := resize.Thumbnail(300, 300, image, resize.Lanczos3)
+	thumb := resize.Thumbnail(maxThumbnailDims, maxThumbnailDims, image, resize.Lanczos3)
 
 	stringBuilder := new(strings.Builder)
 	base64Writer := base64.NewEncoder(base64.StdEncoding, stringBuilder)

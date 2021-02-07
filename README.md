@@ -92,6 +92,7 @@ postgres=#
 - [x] Add maintenance mode
 - [x] Signup requests
 - [x] Add unreadOnly community setting
+- [x] Use YouTube API for fetching video previews
 
 ### 2021-01
 

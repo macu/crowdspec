@@ -21,16 +21,18 @@ import (
 
 // Represents local env.json config
 type config struct {
-	DBUser           string `json:"dbUser"`
-	DBPass           string `json:"dbPass"`
-	DBName           string `json:"dbName"`
-	HTTPPort         string `json:"httpPort"`
-	AdminUserID      uint   `json:"adminUserId"`
-	ReSiteKey        string `json:"recaptchaSiteKey"`
-	ReSecretKey      string `json:"recaptchaSecretKey"`
-	MailjetAPIKey    string `json:"mailjetApiKey"`
-	MailjetSecretKey string `json:"mailjetSecretKey"`
-	VersionStamp     string `json:"versionStamp"`
+	DBUser            string `json:"dbUser"`
+	DBPass            string `json:"dbPass"`
+	DBName            string `json:"dbName"`
+	HTTPPort          string `json:"httpPort"`
+	AdminUserID       uint   `json:"adminUserId"`
+	ReSiteKey         string `json:"recaptchaSiteKey"`
+	ReSecretKey       string `json:"recaptchaSecretKey"`
+	MailjetAPIKey     string `json:"mailjetApiKey"`
+	MailjetSecretKey  string `json:"mailjetSecretKey"`
+	YoutubeAPIKey     string `json:"youtubeApiKey"`
+	HTTPClientReferer string `json:"httpClientReferer"`
+	VersionStamp      string `json:"versionStamp"`
 }
 
 // reCAPTCHA site keys
@@ -38,6 +40,9 @@ var recaptchaSiteKey, recaptchaSecretKey string
 
 // Mailjet API keys
 var mailjetAPIKey, mailjetSecretKey string
+
+// YouTube API keys
+var youtubeAPIKey, httpClientReferer string
 
 // Used to invalidate cache on compiled client resources
 var cacheControlVersionStamp string
@@ -101,6 +106,8 @@ func main() {
 		// Site key comes from env
 		recaptchaSiteKey = os.Getenv("RECAPTCHA_SITE_KEY")
 		mailjetAPIKey = os.Getenv("MAILJET_API_KEY")
+		youtubeAPIKey = os.Getenv("YOUTUBE_API_KEY")
+		httpClientReferer = os.Getenv("HTTP_CLIENT_REFERER")
 
 		// Version stamp comes from env
 		cacheControlVersionStamp = os.Getenv("VERSION_STAMP")
@@ -133,6 +140,8 @@ func main() {
 		recaptchaSecretKey = config.ReSecretKey
 		mailjetAPIKey = config.MailjetAPIKey
 		mailjetSecretKey = config.MailjetSecretKey
+		youtubeAPIKey = config.YoutubeAPIKey
+		httpClientReferer = config.HTTPClientReferer
 
 		// Version stamp comes from env.json
 		cacheControlVersionStamp = config.VersionStamp
