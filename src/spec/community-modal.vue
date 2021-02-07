@@ -38,7 +38,13 @@
 			@deleted="commentDeleted"
 			/>
 
-		<div v-text="formattedCommentsCount"/>
+
+		<div class="flex-row">
+			<div class="fill" v-text="formattedCommentsCount"/>
+			<el-checkbox v-model="unreadOnly" @change="reloadCommunity()">
+				Show only unread comments
+			</el-checkbox>
+		</div>
 
 		<div class="new-comment-area">
 			<p v-if="sendingComment"><i class="el-icon-loading"/> Posting comment...</p>
@@ -64,7 +70,8 @@
 			</el-button>
 		</div>
 
-		<template v-if="comments.length">
+		<p v-if="reloadingComments"><i class="el-icon-loading"/> Reloading...</p>
+		<template v-else-if="comments.length">
 
 			<preview-comment
 				v-for="c in comments"
@@ -142,6 +149,8 @@ export default {
 			newCommentBody: '',
 			sendingComment: false, // during POST
 			onAdjustUnread: null,
+			unreadOnly: false,
+			reloadingComments: false,
 		};
 	},
 	computed: {
@@ -193,13 +202,16 @@ export default {
 	methods: {
 		openCommunity(targetType, targetId, onAdjustUnread = null) {
 			this.onAdjustUnread = onAdjustUnread;
+			this.unreadOnly = this.$store.getters.userSettings.community.unreadOnly;
 			this.loadCommunity(targetType, targetId);
 			this.showing = true;
 		},
 		loadCommunity(targetType, targetId) {
 			this.loading = true;
 			this.error = null;
-			ajaxLoadCommunity(this.specId, targetType, targetId).then(response => {
+			ajaxLoadCommunity(this.specId, targetType, targetId,
+				this.unreadOnly,
+			).then(response => {
 				this.loading = false;
 				this.targetType = targetType;
 				switch (targetType) {
@@ -228,6 +240,20 @@ export default {
 				}
 			});
 		},
+		reloadCommunity() {
+			this.reloadingComments = true;
+			let updatedBefore = null; // start at beginning
+			ajaxLoadCommentsPage(this.specId, this.targetType, this.target.id,
+				updatedBefore, this.unreadOnly,
+			).then(response => {
+				this.reloadingComments = false;
+				this.comments = response.comments;
+				this.commentsCount = response.commentsCount;
+				this.hasMoreComments = response.hasMore;
+			}).fail(() => {
+				this.reloadingComments = false;
+			});
+		},
 		loadMoreComments() {
 			this.loadingPage = true;
 			// Get updated time of last comment.
@@ -235,7 +261,7 @@ export default {
 			// because new comments may be added while paging.
 			let updatedBefore = this.comments[this.comments.length - 1].updated;
 			ajaxLoadCommentsPage(this.specId, this.targetType, this.target.id,
-				updatedBefore,
+				updatedBefore, this.unreadOnly,
 			).then(response => {
 				this.loadingPage = false;
 				this.comments = this.comments.concat(response.comments);
@@ -350,6 +376,21 @@ export default {
 					margin-bottom: 10px;
 					max-height: 60vh;
 					overflow-y: auto;
+				}
+			}
+			.flex-row {
+				display: flex;
+				flex-direction: row;
+				flex-wrap: wrap;
+				align-items: center;
+				>* {
+					margin-bottom: 5px;
+				}
+				>*+* {
+					margin-left: 20px;
+				}
+				>.fill {
+					flex: 1;
 				}
 			}
 		}

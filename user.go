@@ -22,8 +22,9 @@ type UserAccount struct {
 
 // UserSettings represents a user's configurable settings.
 type UserSettings struct {
-	UserProfile  UserProfileSettings  `json:"userProfile"`
-	BlockEditing BlockEditingSettings `json:"blockEditing"`
+	UserProfile  UserProfileSettings   `json:"userProfile"`
+	BlockEditing BlockEditingSettings  `json:"blockEditing"`
+	Community    UserCommunitySettings `json:"community"`
 }
 
 // UserProfileSettings holds user settings regarding the user's own profile.
@@ -34,6 +35,11 @@ type UserProfileSettings struct {
 // BlockEditingSettings holds user settings regarding blocks they can edit.
 type BlockEditingSettings struct {
 	DeleteButton string `json:"deleteButton"`
+}
+
+// UserCommunitySettings holds user-specific community-related settings.
+type UserCommunitySettings struct {
+	UnreadOnly bool `json:"unreadOnly"`
 }
 
 // Username pattern

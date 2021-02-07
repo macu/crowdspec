@@ -17,7 +17,7 @@ type specCommunity struct {
 		Desc *string `json:"desc"`
 	} `json:"spec"`
 
-	Tags          []*Tag     `json:"tags,omitEmpty"`
+	Tags          []*Tag     `json:"tags,omitempty"`
 	Comments      []*Comment `json:"comments"`
 	CommentsCount uint       `json:"commentsCount"`
 
@@ -33,7 +33,7 @@ type subspecCommunity struct {
 		Desc    *string   `json:"desc"`
 	} `json:"subspec"`
 
-	Tags          []*Tag     `json:"tags,omitEmpty"`
+	Tags          []*Tag     `json:"tags,omitempty"`
 	Comments      []*Comment `json:"comments"`
 	CommentsCount uint       `json:"commentsCount"`
 
@@ -56,7 +56,7 @@ type blockCommunity struct {
 		RefItem interface{} `json:"refItem,omitempty"`
 	} `json:"block"`
 
-	Tags          []*Tag     `json:"tags,omitEmpty"`
+	Tags          []*Tag     `json:"tags,omitempty"`
 	Comments      []*Comment `json:"comments"`
 	CommentsCount uint       `json:"commentsCount"`
 
@@ -78,7 +78,7 @@ type commentCommunity struct {
 		UserRead  bool    `json:"userRead"`  // joined
 	} `json:"comment"`
 
-	Tags          []*Tag     `json:"tags,omitEmpty"`
+	Tags          []*Tag     `json:"tags,omitempty"`
 	Comments      []*Comment `json:"comments"`
 	CommentsCount uint       `json:"commentsCount"`
 
@@ -86,8 +86,9 @@ type commentCommunity struct {
 }
 
 type communityCommentsPage struct {
-	Comments []*Comment `json:"comments"`
-	HasMore  bool       `json:"hasMore"`
+	Comments      []*Comment `json:"comments"`
+	HasMore       bool       `json:"hasMore"`
+	CommentsCount uint       `json:"commentsCount"`
 
 	RenderTime time.Time `json:"renderTime"`
 }
@@ -127,11 +128,13 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID uint, w http.ResponseWriter, r *ht
 		return nil, status
 	}
 
+	unreadOnly := AtoBool(r.FormValue("unreadOnly")) // only load unread comments
+
 	// load tags
 	// TODO
 
 	comments, _, commentsCount, status := loadCommentsPage(r, db, userID,
-		targetType, targetID, commentsPageSize, nil)
+		targetType, targetID, commentsPageSize, nil, unreadOnly)
 	if status != http.StatusOK {
 		return nil, status
 	}
@@ -343,16 +346,19 @@ func ajaxSpecCommunityLoadCommentsPage(db *sql.DB, userID uint,
 		return nil, http.StatusBadRequest
 	}
 
-	comments, hasMore, _, status := loadCommentsPage(r, db, userID,
-		targetType, targetID, commentsPageSize, updatedBefore)
+	unreadOnly := AtoBool(r.FormValue("unreadOnly")) // only load unread comments
+
+	comments, hasMore, commentsCount, status := loadCommentsPage(r, db, userID,
+		targetType, targetID, commentsPageSize, updatedBefore, unreadOnly)
 	if status != http.StatusOK {
 		return nil, status
 	}
 
 	results := &communityCommentsPage{
-		Comments:   comments,
-		HasMore:    hasMore,
-		RenderTime: time.Now(),
+		Comments:      comments,
+		HasMore:       hasMore,
+		CommentsCount: commentsCount,
+		RenderTime:    time.Now(),
 	}
 
 	return results, http.StatusOK

@@ -45,6 +45,9 @@ export function defaultUserSettings() {
 		blockEditing: {
 			deleteButton: 'all',
 		},
+		community: {
+			unreadOnly: false,
+		},
 	};
 }
 

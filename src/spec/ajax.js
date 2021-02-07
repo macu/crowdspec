@@ -145,21 +145,23 @@ export function ajaxDeleteUrl(id) {
 	}).fail(alertError);
 }
 
-export function ajaxLoadCommunity(specId, targetType, targetId) {
+export function ajaxLoadCommunity(specId, targetType, targetId, unreadOnly) {
 	return $.get('/ajax/spec/community', {
 		specId,
 		targetType,
 		targetId,
+		unreadOnly,
 	}).fail(alertError);
 }
 
-export function ajaxLoadCommentsPage(specId, targetType, targetId, updatedBefore) {
+export function ajaxLoadCommentsPage(specId, targetType, targetId, updatedBefore, unreadOnly) {
 	// TODO accept filters
 	return $.get('/ajax/spec/community/page', {
 		specId,
 		targetType,
 		targetId,
 		updatedBefore,
+		unreadOnly,
 	}).fail(alertError);
 }
 

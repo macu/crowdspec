@@ -50,12 +50,13 @@ const (
 
 func loadCommentsPage(r *http.Request, db DBConn, userID uint,
 	targetType string, targetID int64,
-	pageSize uint, updatedBefore *time.Time) ([]*Comment, bool, uint, int) {
+	pageSize uint, updatedBefore *time.Time, unreadOnly bool) ([]*Comment, bool, uint, int) {
 
 	var comments = []*Comment{}
 	var commentsCount uint
 	var hasMore bool
 
+	var unreadOnlyCond string
 	var unionUsersOwnComments string
 	var updatedBeforeCond string
 
@@ -77,6 +78,14 @@ func loadCommentsPage(r *http.Request, db DBConn, userID uint,
 			WHERE r.user_id = $3 AND r.target_type = 'comment' AND r.target_id = c.id
 		)) AS user_read`
 
+	if unreadOnly {
+		unreadOnlyCond = `AND NOT EXISTS(
+			SELECT *
+			FROM spec_community_read AS r
+			WHERE r.user_id = $3 AND r.target_type = 'comment' AND r.target_id = c.id
+		)`
+	}
+
 	if updatedBefore == nil {
 		// Select all of the current user's own comments
 		unionUsersOwnComments =
@@ -89,6 +98,7 @@ func loadCommentsPage(r *http.Request, db DBConn, userID uint,
 				ON u.id = c.user_id
 			WHERE c.target_type = $1 AND c.target_id = $2
 				AND c.user_id = $3
+				` + unreadOnlyCond + `
 			ORDER BY c.updated_at)
 			UNION`
 	} else {
@@ -111,10 +121,11 @@ func loadCommentsPage(r *http.Request, db DBConn, userID uint,
 			WHERE c.target_type = $1 AND c.target_id = $2
 				AND c.user_id != $3
 				`+updatedBeforeCond+`
+				`+unreadOnlyCond+`
 			ORDER BY c.updated_at DESC
 			LIMIT $4)
-		) AS c ORDER BY CASE WHEN c.user_id = $3 THEN 0 ELSE 1 END, c.updated_at DESC
-		`, args...)
+		) AS c ORDER BY CASE WHEN c.user_id = $3 THEN 0 ELSE 1 END, c.updated_at DESC`,
+		args...)
 	if err != nil {
 		logError(r, userID, fmt.Errorf("reading comments: %w", err))
 		return nil, false, 0, http.StatusInternalServerError
@@ -137,11 +148,16 @@ func loadCommentsPage(r *http.Request, db DBConn, userID uint,
 
 	if updatedBefore == nil {
 		// Count total comments when loading initial page
+		countArgs := []interface{}{targetType, targetID}
+		if unreadOnlyCond != "" {
+			countArgs = append(countArgs, userID)
+		}
 		err = db.QueryRow(
 			`SELECT COUNT(c.id)
 			FROM spec_community_comment AS c
 			WHERE c.target_type = $1 AND c.target_id = $2
-			`, targetType, targetID).Scan(&commentsCount)
+			`+unreadOnlyCond,
+			countArgs...).Scan(&commentsCount)
 		if err != nil {
 			logError(r, userID, fmt.Errorf("reading comment count: %w", err))
 			return nil, false, 0, http.StatusInternalServerError
@@ -157,8 +173,10 @@ func loadCommentsPage(r *http.Request, db DBConn, userID uint,
 				WHERE c.target_type = $1 AND c.target_id = $2
 					AND c.user_id != $3
 					AND c.updated_at < $4
+					`+unreadOnlyCond+`
 				LIMIT 1
-			)`, targetType, targetID, userID, lastResultUpdatedAt,
+			)`,
+			targetType, targetID, userID, lastResultUpdatedAt,
 		).Scan(&hasMore)
 		if err != nil {
 			logError(r, userID, fmt.Errorf("reading has more comments: %w", err))

@@ -96,6 +96,12 @@
 			</el-select>
 		</el-form-item>
 		<el-form-item>
+			<strong slot="label" class="section-heading">Community</strong>
+			<el-checkbox v-model="settingsForm.community.unreadOnly">
+				Show only unread comments by default
+			</el-checkbox>
+		</el-form-item>
+		<el-form-item>
 			<el-button type="primary" @click="submitSettings()">
 				Update
 			</el-button>
