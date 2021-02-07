@@ -15,7 +15,7 @@
 						type="primary"
 						size="mini"
 						icon="el-icon-chat-dot-square">
-						<template v-if="showUnreadOnly">
+						<template v-if="showUnreadOnly || unreadCount">
 							<template v-if="unreadCount">{{unreadCount}} unread</template>
 						</template>
 						<template v-else-if="commentsCount">{{commentsCount}}</template>
@@ -52,7 +52,7 @@
 							:type="unreadCount ? 'primary' : 'default'"
 							size="mini"
 							icon="el-icon-chat-dot-square">
-							<template v-if="showUnreadOnly">
+							<template v-if="showUnreadOnly || unreadCount">
 								<template v-if="unreadCount">{{unreadCount}} unread</template>
 							</template>
 							<template v-else-if="commentsCount">{{commentsCount}}</template>
@@ -71,7 +71,7 @@
 					:type="unreadCount ? 'primary' : 'default'"
 					size="mini"
 					icon="el-icon-chat-dot-square">
-					<template v-if="showUnreadOnly">
+					<template v-if="showUnreadOnly || unreadCount">
 						<template v-if="unreadCount">{{unreadCount}} unread</template>
 					</template>
 					<template v-else-if="commentsCount">{{commentsCount}}</template>
@@ -203,7 +203,7 @@ export default {
 		clearRef() {
 			// whether to add {clear: both} to ref item area
 			// clear because "N unread" appears in actions
-			return this.showUnreadOnly && !!this.unreadCount;
+			return !!this.unreadCount;
 		},
 		mobileAdjust() {
 			// whether to add {clear: both} to ref item area on mobile

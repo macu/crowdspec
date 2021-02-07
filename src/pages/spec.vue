@@ -27,7 +27,7 @@
 						:type="unreadCount ? 'primary' : 'default'"
 						:disabled="choosingAddPosition"
 						size="mini" icon="el-icon-chat-dot-square">
-						<template v-if="showUnreadOnly">
+						<template v-if="showUnreadOnly || unreadCount">
 							<template v-if="unreadCount">{{unreadCount}} unread</template>
 						</template>
 						<template v-else-if="commentsCount">{{commentsCount}}</template>
@@ -46,7 +46,7 @@
 						@click="openSpecCommunity()"
 						:type="unreadCount ? 'primary' : 'default'"
 						size="mini" icon="el-icon-chat-dot-square">
-						<template v-if="showUnreadOnly">
+						<template v-if="showUnreadOnly || unreadCount">
 							<template v-if="unreadCount">{{unreadCount}} unread</template>
 						</template>
 						<template v-else-if="commentsCount">{{commentsCount}}</template>
