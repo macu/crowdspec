@@ -25,6 +25,7 @@ type config struct {
 	DBPass           string `json:"dbPass"`
 	DBName           string `json:"dbName"`
 	HTTPPort         string `json:"httpPort"`
+	AdminUserID      uint   `json:"adminUserId"`
 	ReSiteKey        string `json:"recaptchaSiteKey"`
 	ReSecretKey      string `json:"recaptchaSecretKey"`
 	MailjetAPIKey    string `json:"mailjetApiKey"`
@@ -89,6 +90,11 @@ func main() {
 			logErrorFatal(err)
 		}
 
+		adminUserID, err = AtoUint(os.Getenv("ADMIN_USER_ID"))
+		if err != nil {
+			logErrorFatal(fmt.Errorf("parsing admin ID: %w", err))
+		}
+
 		// Port number comes from env on App Engine
 		config.HTTPPort = os.Getenv("PORT")
 
@@ -119,6 +125,8 @@ func main() {
 		if err != nil {
 			logErrorFatal(err)
 		}
+
+		adminUserID = config.AdminUserID
 
 		// API keys and secret keys come from env.json
 		recaptchaSiteKey = config.ReSiteKey

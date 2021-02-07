@@ -39,14 +39,16 @@ module.exports = {
 				use: {
 					loader: 'babel-loader',
 					options: {
-						presets: ['@babel/preset-env'],
+						presets: [
+							['@babel/preset-env', {targets: '>1%'}],
+						],
 					},
 				},
 			},
 			{
-				test: /\.scss$/,
+				test: /\.s?css$/,
 				use: [
-					MiniCssExtractPlugin.loader,
+					MiniCssExtractPlugin.loader, // add support for `import 'file.scss';` in JS
 					{
 						loader: 'css-loader',
 						options: {
@@ -70,6 +72,7 @@ module.exports = {
 	plugins: [
 		new VueLoaderPlugin(),
 		new MiniCssExtractPlugin({
+			// Output destination for compiled CSS
 			filename: '../css/compiled.css',
 		}),
 	],
