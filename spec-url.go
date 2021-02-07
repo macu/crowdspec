@@ -17,6 +17,7 @@ import (
 	"github.com/nfnt/resize"         // (ISC license) https://github.com/nfnt/resize/blob/master/LICENSE
 )
 
+const urlMaxLen = 1024
 const urlTitleMaxLen = 255
 const urlDescMaxLen = 255
 

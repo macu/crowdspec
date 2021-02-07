@@ -33,7 +33,13 @@ func validateCreateRefItemFields(fields url.Values) (*string, *int64, error) {
 		if refURL == nil {
 			return nil, nil, fmt.Errorf("refUrl required for refType: %s", *refType)
 		}
-		// TODO validate URL syntax
+		if len(*refURL) > urlMaxLen {
+			return nil, nil, fmt.Errorf("refUrl max length is %d digits", urlMaxLen)
+		}
+		// Validate URL syntax
+		if _, err := url.ParseRequestURI(*refURL); err != nil {
+			return nil, nil, fmt.Errorf("parsing refUrl: %w", err)
+		}
 		return refType, nil, nil
 
 	case BlockRefSubspec:

@@ -239,9 +239,10 @@ func main() {
 var indexTemplate = template.Must(template.ParseFiles("html/index.html"))
 
 func indexHandler(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) {
-	row := db.QueryRow("SELECT username FROM user_account WHERE id=$1", userID)
-	var username string
-	err := row.Scan(&username)
+	var username, email string
+	err := db.QueryRow(
+		`SELECT username, email FROM user_account WHERE id=$1`, userID,
+	).Scan(&username, &email)
 	if err != nil {
 		logError(r, userID, fmt.Errorf("selecting username: %w", err))
 		w.WriteHeader(http.StatusInternalServerError)
@@ -254,18 +255,28 @@ func indexHandler(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 		return
 	}
 	indexTemplate.Execute(w, struct {
-		UserID       uint
-		Username     string
-		Admin        bool
-		Settings     UserSettings
-		VersionStamp string
-		Local        bool
+		UserID              uint
+		Username            string
+		EmailAddress        string
+		Admin               bool
+		Settings            UserSettings
+		VersionStamp        string
+		PasswordMinLength   uint
+		SpecNameMaxLength   uint
+		BlockTitleMaxLength uint
+		URLMaxLength        uint
+		Local               bool
 	}{
 		userID,
 		username,
+		email,
 		userID == adminUserID,
 		*settings,
 		cacheControlVersionStamp,
+		passwordMinLength,
+		subspecNameMaxLen,
+		blockTitleMaxLen,
+		urlMaxLen,
 		isLocal(),
 	})
 }

@@ -14,7 +14,7 @@
 
 	<label>
 		URL
-		<el-input ref="urlInput" v-model="url"/>
+		<el-input ref="urlInput" v-model="url" :maxlength="urlMaxLength"/>
 	</label>
 
 	<template v-if="urlObject">
@@ -74,6 +74,9 @@ export default {
 		disableSubmit() {
 			window.isValidURL = isValidURL;
 			return !isValidURL(this.url) || (this.urlObject && !(this.refresh || this.autoRefresh));
+		},
+		urlMaxLength() {
+			return window.const.urlMaxLength;
 		},
 		autoRefresh() {
 			return this.urlObject && this.url !== this.urlObject.url;

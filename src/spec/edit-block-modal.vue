@@ -20,7 +20,7 @@
 
 	<label>
 		Title
-		<el-input ref="titleInput" v-model="title" clearable/>
+		<el-input ref="titleInput" v-model="title" :maxlength="titleMaxLength" clearable/>
 	</label>
 
 	<label>
@@ -121,6 +121,9 @@ export default {
 			} else {
 				return !(this.title.trim() || this.body.trim());
 			}
+		},
+		titleMaxLength() {
+			return window.const.blockTitleMaxLength;
 		},
 		existingUrlRefItem() {
 			return this.block && this.block.refType === REF_TYPE_URL && this.block.refItem || null;

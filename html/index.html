@@ -23,12 +23,19 @@
 window.user = {
 	id: {{.UserID}},
 	username: "{{.Username}}",
+	email: "{{.EmailAddress}}",
 	settings: {{.Settings}},
 	admin: {{.Admin}},
 };
 
-// Version stamp at load time
-window.appVersion = "{{.VersionStamp}}";
+// Constants defined in server code
+window.const = {
+	appVersion: "{{.VersionStamp}}", // version stamp at load time
+	passwordMinLength: {{.PasswordMinLength}},
+	specNameMaxLength: {{.SpecNameMaxLength}},
+	blockTitleMaxLength: {{.BlockTitleMaxLength}},
+	urlMaxLength: {{.URLMaxLength}},
+};
 
 </script>
 

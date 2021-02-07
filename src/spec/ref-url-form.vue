@@ -3,7 +3,7 @@
 	<el-card v-if="creating">
 		<label>
 			New link URL
-			<el-input v-model="newUrl" clearable/>
+			<el-input v-model="newUrl" :maxlength="urlMaxLength" clearable/>
 			<el-alert v-if="newUrl && !isValid" title="Invalid URL" type="error" :closable="false"/>
 			<el-alert v-else-if="newUrlIsVideo" title="Embeddable video detected" type="info" :closable="false"/>
 		</label>
@@ -133,6 +133,9 @@ export default {
 				return {refId: this.initialUrlObject.id};
 			}
 			return null;
+		},
+		urlMaxLength() {
+			return window.const.urlMaxLength;
 		},
 	},
 	watch: {

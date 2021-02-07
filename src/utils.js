@@ -27,7 +27,7 @@ export function alertError(error) {
 	if (error && error.responseText &&
 			VERSION_STAMP_RESPONSE.test(error.responseText)) {
 		let match = VERSION_STAMP_RESPONSE.exec(error.responseText);
-		if (match[1] !== window.appVersion) {
+		if (match[1] !== window.const.appVersion) {
 			message += ' (A new version is available. Reload this page to use the latest client code.)'
 		}
 	}

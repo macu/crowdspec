@@ -23,7 +23,7 @@
 				type="password"
 				name="old_password"
 				v-model="changePasswordForm.oldPass"
-				autocomplete="off"
+				autocomplete="current-password"
 				@keyup.enter.native="handleChangePasswordReturn($refs.oldPass)"/>
 		</el-form-item>
 		<el-form-item label="New password" prop="newPass">
@@ -32,7 +32,7 @@
 				type="password"
 				name="new_password"
 				v-model="changePasswordForm.newPass"
-				autocomplete="off"
+				autocomplete="new-password"
 				@keyup.enter.native="handleChangePasswordReturn($refs.newPass)"/>
 		</el-form-item>
 		<el-form-item label="Confirm new password" prop="newPass2">
@@ -41,7 +41,7 @@
 				type="password"
 				name="verify_password"
 				v-model="changePasswordForm.newPass2"
-				autocomplete="off"
+				autocomplete="new-password"
 				@keyup.enter.native="handleChangePasswordReturn($refs.newPass2)"/>
 		</el-form-item>
 		<el-form-item>
@@ -112,6 +112,7 @@
 	</el-form>
 
 	<div v-else class="options">
+		<p>Your email address on file is <span class="email">{{$store.getters.emailAddress}}</span>.</p>
 		<el-button @click="enterChangePasswordMode()">
 			Change password
 		</el-button>
@@ -182,8 +183,9 @@ export default {
 				}],
 				newPass: [{
 					validator: (rule, value, callback) => {
-						if (value.trim().length < 5) {
-							callback(new Error('Password minimum length is 5 digits'));
+						if (value.trim().length < window.const.passwordMinLength) {
+							callback(new Error('Password minimum length is ' +
+								window.const.passwordMinLength + ' digits'));
 						} else {
 							if (this.changePasswordForm.newPass2.trim()) {
 								this.$refs.changePasswordForm.validateField('newPass2');
@@ -404,12 +406,18 @@ export default {
 	}
 
 	.options {
+		.email {
+			text-decoration: underline;
+		}
 		.el-button {
 			display: block;
 			margin: 0;
-			&:not(:first-child) {
-				margin-top: 10px;
-			}
+		}
+		p + .el-button {
+			margin-top: 20px;
+		}
+		.el-button + .el-button {
+			margin-top: 10px;
 		}
 	}
 

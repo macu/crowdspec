@@ -33,6 +33,9 @@ export const store = new Vuex.Store({
 		username(state) {
 			return window.user.username;
 		},
+		emailAddress(state) {
+			return window.user.email;
+		},
 		userSettings(state) {
 			return $.extend(true, defaultUserSettings(), state.userSettings);
 		},

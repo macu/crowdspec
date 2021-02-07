@@ -30,8 +30,11 @@ postgres=# \d spec
 	"dbPass": "testpass",
 	"dbName": "crowdspec",
 	"httpPort": "2020",
+	"adminUserId": 1,
 	"recaptchaSiteKey": "...",
 	"recaptchaSecretKey": "...",
+	"mailjetApiKey": "...",
+	"mailjetSecretKey": "...",
 	"versionStamp": ""
 }
 ```
@@ -51,6 +54,10 @@ $ sh restart.sh
 ```
 
 ## Publish
+
+Make two separate deploys for database upgrades,
+setting `MAINTENANCE_MODE` to `"true"` in app.yaml for the first deploy
+to disable the site temporarily.
 
 ```
 $ gcloud app deploy

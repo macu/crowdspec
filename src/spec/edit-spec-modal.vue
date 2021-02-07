@@ -14,7 +14,7 @@
 
 	<label>
 		Name
-		<el-input ref="nameInput" v-model="name" clearable/>
+		<el-input ref="nameInput" v-model="name" :maxlength="nameMaxLength" clearable/>
 	</label>
 
 	<label>
@@ -59,6 +59,9 @@ export default {
 	computed: {
 		disableSubmit() {
 			return !this.name.trim();
+		},
+		nameMaxLength() {
+			return window.const.specNameMaxLength;
 		},
 	},
 	watch: {

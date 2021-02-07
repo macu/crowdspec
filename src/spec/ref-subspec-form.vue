@@ -3,7 +3,7 @@
 	<el-card v-if="creating">
 		<label>
 			New subspec name
-			<el-input ref="newSubspecNameInput" v-model="subspecName" clearable/>
+			<el-input ref="newSubspecNameInput" v-model="subspecName" :maxlength="nameMaxLength" clearable/>
 		</label>
 		<label>
 			Description
@@ -89,6 +89,9 @@ export default {
 				refName: this.subspecName,
 				refDesc: this.subspecDesc,
 			} : {refId: this.refId};
+		},
+		nameMaxLength() {
+			return window.const.specNameMaxLength;
 		},
 	},
 	watch: {
