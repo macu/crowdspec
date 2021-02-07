@@ -30,8 +30,8 @@ export default {
 		promptNavSpec() {
 			this.$emit('prompt-nav-spec');
 		},
-		openCommunity(targetType, targetId, onAdjustUnread) {
-			this.$emit('open-community', targetType, targetId, onAdjustUnread);
+		openCommunity(targetType, targetId, onAdjustUnread, onAdjustComments) {
+			this.$emit('open-community', targetType, targetId, onAdjustUnread, onAdjustComments);
 		},
 		playVideo(urlObject) {
 			this.$emit('play-video', urlObject);

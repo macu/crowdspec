@@ -26,7 +26,8 @@ type SpecSubspec struct {
 	OwnerID    int64     `json:"ownerId,omitempty"`
 
 	// Community attributes
-	UnreadCount uint `json:"unreadCount"`
+	UnreadCount   uint `json:"unreadCount"`
+	CommentsCount uint `json:"commentsCount"`
 
 	Blocks []*SpecBlock `json:"blocks,omitempty"`
 }

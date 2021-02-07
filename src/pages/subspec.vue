@@ -11,7 +11,10 @@
 					:type="unreadCount ? 'primary' : 'default'"
 					:disabled="choosingAddPosition"
 					size="mini" icon="el-icon-chat-dot-square">
-					<template v-if="unreadCount">{{unreadCount}}</template>
+					<template v-if="showUnreadOnly">
+						<template v-if="unreadCount">{{unreadCount}} unread</template>
+					</template>
+					<template v-else-if="commentsCount">{{commentsCount}}</template>
 				</el-button>
 				<el-button
 					v-if="enableEditing"
@@ -28,7 +31,10 @@
 					@click="openSubspecCommunity()"
 					:type="unreadCount ? 'primary' : 'default'"
 					size="mini" icon="el-icon-chat-dot-square">
-					<template v-if="unreadCount">{{unreadCount}}</template>
+					<template v-if="showUnreadOnly">
+						<template v-if="unreadCount">{{unreadCount}} unread</template>
+					</template>
+					<template v-else-if="commentsCount">{{commentsCount}}</template>
 				</el-button>
 			</template>
 
@@ -86,6 +92,7 @@ export default {
 			loading: true,
 			subspec: null,
 			unreadCount: 0,
+			commentsCount: 0,
 		};
 	},
 	computed: {
@@ -100,6 +107,9 @@ export default {
 		},
 		choosingAddPosition() {
 			return this.$store.getters.currentlyMovingBlocks;
+		},
+		showUnreadOnly() {
+			return this.$store.getters.userSettings.community.unreadOnly;
 		},
 	},
 	beforeRouteEnter(to, from, next) {
@@ -117,6 +127,7 @@ export default {
 		console.debug('beforeRouteLeave subspec');
 		this.subspec = null;
 		this.unreadCount = 0;
+		this.commentsCount = 0;
 		setWindowSubtitle(); // clear
 		next();
 	},
@@ -128,6 +139,7 @@ export default {
 				console.debug('subspec loaded', subspec);
 				this.subspec = subspec;
 				this.unreadCount = subspec.unreadCount || 0;
+				this.commentsCount = subspec.commentsCount || 0;
 				setWindowSubtitle(subspec.name);
 				this.loading = false;
 				this.$refs.view.$once('rendered', this.restoreScroll);
@@ -145,10 +157,12 @@ export default {
 		openSubspecCommunity() {
 			this.$emit('open-community', TARGET_TYPE_SUBSPEC, this.subspec.id, adjustUnreadCount => {
 				this.unreadCount += adjustUnreadCount;
+			}, adjustCommentsCount => {
+				this.commentsCount += adjustCommentsCount;
 			});
 		},
-		openCommunity(targetType, targetId, onAdjustUnread) {
-			this.$emit('open-community', targetType, targetId, onAdjustUnread);
+		openCommunity(targetType, targetId, onAdjustUnread, onAdjustComments) {
+			this.$emit('open-community', targetType, targetId, onAdjustUnread, onAdjustComments);
 		},
 		playVideo(urlObject) {
 			this.$emit('play-video', urlObject);
@@ -159,6 +173,7 @@ export default {
 				this.subspec.name = updatedSubspec.name;
 				this.subspec.desc = updatedSubspec.desc;
 				this.unreadCount = updatedSubspec.unreadCount || 0;
+				this.commentsCount = updatedSubspec.commentsCount || 0;
 				setWindowSubtitle(updatedSubspec.name);
 			});
 		},

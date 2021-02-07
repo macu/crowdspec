@@ -301,8 +301,8 @@ export default {
 				this.panToBlock($block);
 			});
 		},
-		openBlockCommunity(blockId, onAdjustUnread) {
-			this.$emit('open-community', TARGET_TYPE_BLOCK, blockId, onAdjustUnread);
+		openBlockCommunity(blockId, onAdjustUnread, onAdjustComments) {
+			this.$emit('open-community', TARGET_TYPE_BLOCK, blockId, onAdjustUnread, onAdjustComments);
 		},
 		openEdit(block, callback) {
 			this.$refs.editBlockModal.showEdit(block, callback);

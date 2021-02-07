@@ -27,7 +27,10 @@
 						:type="unreadCount ? 'primary' : 'default'"
 						:disabled="choosingAddPosition"
 						size="mini" icon="el-icon-chat-dot-square">
-						<template v-if="unreadCount">{{unreadCount}}</template>
+						<template v-if="showUnreadOnly">
+							<template v-if="unreadCount">{{unreadCount}} unread</template>
+						</template>
+						<template v-else-if="commentsCount">{{commentsCount}}</template>
 					</el-button>
 					<el-button
 						@click="openManageSpec()"
@@ -43,7 +46,10 @@
 						@click="openSpecCommunity()"
 						:type="unreadCount ? 'primary' : 'default'"
 						size="mini" icon="el-icon-chat-dot-square">
-						<template v-if="unreadCount">{{unreadCount}}</template>
+						<template v-if="showUnreadOnly">
+							<template v-if="unreadCount">{{unreadCount}} unread</template>
+						</template>
+						<template v-else-if="commentsCount">{{commentsCount}}</template>
 					</el-button>
 				</template>
 			</template>
@@ -118,6 +124,7 @@ export default {
 			loading: true,
 			spec: null,
 			unreadCount: 0,
+			commentsCount: 0,
 		};
 	},
 	computed: {
@@ -142,6 +149,9 @@ export default {
 		choosingAddPosition() {
 			return this.$store.getters.currentlyMovingBlocks;
 		},
+		showUnreadOnly() {
+			return this.$store.getters.userSettings.community.unreadOnly;
+		},
 	},
 	beforeRouteEnter(to, from, next) {
 		console.debug('beforeRouteEnter spec', to);
@@ -158,6 +168,7 @@ export default {
 		console.debug('beforeRouteLeave spec');
 		this.spec = null;
 		this.unreadCount = 0;
+		this.commentsCount = 0;
 		setWindowSubtitle(); // clear
 		next();
 	},
@@ -169,6 +180,7 @@ export default {
 				console.debug('spec loaded', spec);
 				this.spec = spec;
 				this.unreadCount = spec.unreadCount || 0;
+				this.commentsCount = spec.commentsCount || 0;
 				setWindowSubtitle(spec.name);
 				this.loading = false;
 				this.$refs.view.$once('rendered', this.restoreScroll);
@@ -197,16 +209,19 @@ export default {
 				this.spec.desc = updatedSpec.desc;
 				this.spec.public = updatedSpec.public;
 				this.unreadCount = updatedSpec.unreadCount || 0;
+				this.commentsCount = updatedSpec.commentsCount || 0;
 				setWindowSubtitle(updatedSpec.name);
 			});
 		},
 		openSpecCommunity() {
 			this.$refs.communityModal.openCommunity(TARGET_TYPE_SPEC, this.spec.id, adjustUnreadCount => {
 				this.unreadCount += adjustUnreadCount;
+			}, adjustCommentsCount => {
+				this.commentsCount += adjustCommentsCount;
 			});
 		},
-		openCommunity(targetType, targetId, onAdjustUnread) {
-			this.$refs.communityModal.openCommunity(targetType, targetId, onAdjustUnread);
+		openCommunity(targetType, targetId, onAdjustUnread, onAdjustComments) {
+			this.$refs.communityModal.openCommunity(targetType, targetId, onAdjustUnread, onAdjustComments);
 		},
 		playVideo(urlObject) {
 			this.$refs.playVideoModal.show(urlObject);
@@ -214,13 +229,13 @@ export default {
 		promptNavSpec() {
 			this.$refs.navSpecModal.show();
 		},
-		restoreScroll(position) {
+		restoreScroll() {
 			if (this.onSpecRoute) {
-				let position = this.$store.state.savedScrollPosition;
-				if (position) {
+				let savedPosition = this.$store.state.savedScrollPosition;
+				if (savedPosition) {
 					console.debug('restoreScroll spec');
 					// Restore scroll position from history
-					$(window).scrollTop(position.y).scrollLeft(position.x);
+					$(window).scrollTop(savedPosition.y).scrollLeft(savedPosition.x);
 				} else if (
 					idsEq(this.$store.getters.currentSpecId, this.spec.id) &&
 					!!this.$store.state.currentSpecScrollTop

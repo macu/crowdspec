@@ -28,7 +28,8 @@ type SpecBlock struct {
 	RefItem interface{} `json:"refItem,omitempty"`
 
 	// Community attributes
-	UnreadCount uint `json:"unreadCount"`
+	UnreadCount   uint `json:"unreadCount"`
+	CommentsCount uint `json:"commentsCount"`
 
 	SubBlocks []*SpecBlock `json:"subblocks,omitempty"`
 }
@@ -160,7 +161,12 @@ func loadBlocksByID(db DBConn, userID uint, specID int64, blockIDs ...int64) ([]
 			WHERE c.spec_id = spec_block.spec_id
 				AND c.target_type = 'block' AND c.target_id = spec_block.id
 				AND r.user_id IS NULL
-				) AS unread_count
+		) AS unread_count,
+		-- select total number of comments
+		(SELECT COUNT(*) FROM spec_community_comment AS c
+			WHERE c.spec_id = spec_block.spec_id
+				AND c.target_type = 'block' AND c.target_id = spec_block.id
+		) AS comments_count
 		FROM spec_block
 		INNER JOIN block_tree
 			ON block_tree.id = spec_block.id
@@ -214,7 +220,12 @@ func loadContextBlocks(db *sql.DB, userID uint, specID int64, subspecID *int64) 
 			WHERE c.spec_id = spec_block.spec_id
 				AND c.target_type = 'block' AND c.target_id = spec_block.id
 				AND r.user_id IS NULL
-				) AS unread_count
+		) AS unread_count,
+		-- select total number of comments
+		(SELECT COUNT(*) FROM spec_community_comment AS c
+			WHERE c.spec_id = spec_block.spec_id
+				AND c.target_type = 'block' AND c.target_id = spec_block.id
+		) AS comments_count
 		FROM spec_block
 		LEFT JOIN spec_subspec AS ref_subspec
 			ON spec_block.ref_type=` + argPlaceholder(BlockRefSubspec, &args) + `
@@ -261,7 +272,7 @@ func readBlocks(rows *sql.Rows, blocks *[]*SpecBlock, blocksByID *map[int64]*Spe
 			&b.StyleType, &b.ContentType, &b.RefType, &b.RefID, &b.Title, &b.Body,
 			&subspecSpecID, &subspecName, &subspecDesc,
 			&urlSpecID, &urlCreated, &urlUpdated, &urlURL, &urlTitle, &urlDesc, &urlImageData,
-			&b.UnreadCount)
+			&b.UnreadCount, &b.CommentsCount)
 		if err != nil {
 			if err2 := rows.Close(); err2 != nil {
 				return fmt.Errorf("closing rows: %s; on scan error: %w", err2, err)

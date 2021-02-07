@@ -46,7 +46,13 @@ func ajaxSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (
 			WHERE c.spec_id = spec.id
 				AND c.target_type = 'spec' AND c.target_id = spec.id
 				AND r.user_id IS NULL
-		) AS unread_count
+		) AS unread_count,
+		-- select total number of comments
+		(SELECT COUNT(*)
+			FROM spec_community_comment AS c
+			WHERE c.spec_id = spec.id
+				AND c.target_type = 'spec' AND c.target_id = spec.id
+		) AS comments_count
 		FROM spec
 		LEFT JOIN user_account
 		ON spec.owner_type=$2
@@ -54,7 +60,7 @@ func ajaxSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (
 		WHERE spec.id=$1
 		`, specID, OwnerTypeUser, userID,
 	).Scan(&s.ID, &s.OwnerType, &s.OwnerID, &s.Username, &s.Highlight,
-		&s.Name, &s.Desc, &s.Public, &s.Created, &s.Updated, &s.UnreadCount)
+		&s.Name, &s.Desc, &s.Public, &s.Created, &s.Updated, &s.UnreadCount, &s.CommentsCount)
 	if err != nil {
 		logError(r, userID, fmt.Errorf("reading spec: %w", err))
 		return nil, http.StatusInternalServerError
@@ -160,9 +166,15 @@ func ajaxSaveSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 				WHERE c.spec_id = spec.id
 					AND c.target_type = 'spec' AND c.target_id = spec.id
 					AND r.user_id IS NULL
-			) AS unread_count`,
+			) AS unread_count,
+			-- select total number of comments
+			(SELECT COUNT(*)
+				FROM spec_community_comment AS c
+				WHERE c.spec_id = spec.id
+					AND c.target_type = 'spec' AND c.target_id = spec.id
+			) AS comments_count`,
 			specID, time.Now(), name, desc, isPublic,
-		).Scan(&spec.Updated, &spec.Name, &spec.Desc, &spec.UnreadCount)
+		).Scan(&spec.Updated, &spec.Name, &spec.Desc, &spec.UnreadCount, &spec.CommentsCount)
 
 		if err != nil {
 			logError(r, userID, fmt.Errorf("updating spec: %w", err))

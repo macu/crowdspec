@@ -258,10 +258,17 @@ func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 				WHERE c.spec_id = spec_block.spec_id
 					AND c.target_type = 'block' AND c.target_id = spec_block.id
 					AND r.user_id IS NULL
-			) AS unread_count
-			`, userID, specID, blockID, time.Now(),
+			) AS unread_count,
+			-- select total number of comments
+			(SELECT COUNT(*)
+				FROM spec_community_comment AS c
+				WHERE c.spec_id = spec_block.id
+					AND c.target_type = 'block' AND c.target_id = spec_block.id
+			) AS comments_count`,
+			userID, specID, blockID, time.Now(),
 			styleType, contentType, refType, refID, title, body,
-		).Scan(&block.Updated, &block.SubspecID, &block.Title, &block.Body, &block.UnreadCount)
+		).Scan(&block.Updated, &block.SubspecID, &block.Title, &block.Body,
+			&block.UnreadCount, &block.CommentsCount)
 		if err != nil {
 			logError(r, userID, fmt.Errorf("updating block: %w", err))
 			return nil, http.StatusInternalServerError
@@ -364,7 +371,8 @@ func ajaxSpecMoveBlocks(db *sql.DB, userID uint, w http.ResponseWriter, r *http.
 			`UPDATE spec_block
 			SET parent_id = $1, order_number = v.order_number
 			FROM (`+values+`) AS v(id, order_number)
-			WHERE spec_block.id = v.id`, args...)
+			WHERE spec_block.id = v.id`,
+			args...)
 		if err != nil {
 			logError(r, userID, fmt.Errorf("moving blocks: %w", err))
 			return nil, http.StatusInternalServerError
@@ -378,8 +386,8 @@ func ajaxSpecMoveBlocks(db *sql.DB, userID uint, w http.ResponseWriter, r *http.
 			// Recursively set subspec_id
 			var args = []interface{}{targetSubspecID}
 			var placeholders = createArgsListInt64s(&args, blockIDs...)
-			_, err = tx.Exec(`
-				WITH RECURSIVE block_tree(id) AS (
+			_, err = tx.Exec(
+				`WITH RECURSIVE block_tree(id) AS (
 					-- Anchor
 					SELECT id
 					FROM spec_block
@@ -393,8 +401,8 @@ func ajaxSpecMoveBlocks(db *sql.DB, userID uint, w http.ResponseWriter, r *http.
 				-- Update original table
 				UPDATE spec_block
 				SET subspec_id = $1
-				WHERE spec_block.id IN (SELECT id FROM block_tree)
-				`, args...)
+				WHERE spec_block.id IN (SELECT id FROM block_tree)`,
+				args...)
 			if err != nil {
 				logError(r, userID, fmt.Errorf("moving block tree to subspec: %w", err))
 				return nil, http.StatusInternalServerError
@@ -447,11 +455,13 @@ func ajaxSpecDeleteBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 
 	var specID int64
 	var subspecID *int64
-	err = db.QueryRow(`
-			SELECT spec_id, subspec_id
-			FROM spec_block
-			WHERE id = $1
-			`, blockID).Scan(&specID, &subspecID)
+	err = db.QueryRow(
+		`SELECT spec_id, subspec_id
+		FROM spec_block
+		WHERE id = $1`,
+		blockID,
+	).Scan(&specID, &subspecID)
+
 	if err != nil {
 		logError(r, userID, fmt.Errorf("loading specID for block %d: %w", blockID, err))
 		return nil, http.StatusInternalServerError
@@ -464,10 +474,10 @@ func ajaxSpecDeleteBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
 		// Delete block row (delete is cascade; subblocks will also be deleted)
-		_, err := tx.Exec(`
-			DELETE FROM spec_block
-			WHERE id=$1
-			`, blockID)
+		_, err := tx.Exec(
+			`DELETE FROM spec_block
+			WHERE id=$1`,
+			blockID)
 		if err != nil {
 			logError(r, userID, fmt.Errorf("deleting block: %w", err))
 			return nil, http.StatusInternalServerError

@@ -84,6 +84,7 @@ postgres=#
 
 - [x] Add maintenance mode
 - [x] Signup requests
+- [x] Add unreadOnly community setting
 
 ### 2021-01
 

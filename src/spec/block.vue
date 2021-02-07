@@ -1,7 +1,7 @@
 <template>
 <li :data-spec-block="block.id" class="spec-block" :class="classes" @click.stop.prevent="clearSelection()">
 
-	<div class="content" :class="{'mobile-adjust': mobileAdjust}">
+	<div class="content" :class="{'clear-ref': clearRef, 'mobile-adjust': mobileAdjust}">
 
 		<div class="bg"></div>
 
@@ -10,12 +10,15 @@
 				<div class="expand-control" :class="{hide: showActions}">
 					<!-- only show community button to admins in collapsed mobile menu when there are unread submissions -->
 					<!-- always show community button to guests, who only make community interactions -->
-					<el-button v-if="unreadCount"
+					<el-button v-if="showUnreadOnly ? !!unreadCount : !!commentsCount"
 						@click="openCommunity()"
 						type="primary"
 						size="mini"
 						icon="el-icon-chat-dot-square">
-						{{unreadCount}}
+						<template v-if="showUnreadOnly">
+							<template v-if="unreadCount">{{unreadCount}} unread</template>
+						</template>
+						<template v-else-if="commentsCount">{{commentsCount}}</template>
 					</el-button>
 					<el-button @click="focusActions = true" type="default" size="mini" icon="el-icon-more" circle/>
 				</div>
@@ -49,7 +52,10 @@
 							:type="unreadCount ? 'primary' : 'default'"
 							size="mini"
 							icon="el-icon-chat-dot-square">
-							<template v-if="unreadCount">{{unreadCount}}</template>
+							<template v-if="showUnreadOnly">
+								<template v-if="unreadCount">{{unreadCount}} unread</template>
+							</template>
+							<template v-else-if="commentsCount">{{commentsCount}}</template>
 						</el-button>
 						<el-button @click="editBlock()" type="default" size="mini" icon="el-icon-edit" circle/>
 						<el-button v-if="showDeleteButton" @click="promptDeleteBlock()" type="warning" size="mini" icon="el-icon-delete" circle/>
@@ -65,7 +71,10 @@
 					:type="unreadCount ? 'primary' : 'default'"
 					size="mini"
 					icon="el-icon-chat-dot-square">
-					<template v-if="unreadCount">{{unreadCount}}</template>
+					<template v-if="showUnreadOnly">
+						<template v-if="unreadCount">{{unreadCount}} unread</template>
+					</template>
+					<template v-else-if="commentsCount">{{commentsCount}}</template>
 				</el-button>
 			</div>
 		</div>
@@ -127,6 +136,7 @@ export default {
 			body: this.block.body,
 			refItem: this.block.refItem,
 			unreadCount: this.block.unreadCount || 0,
+			commentsCount: this.block.commentsCount || 0,
 			subblocks: this.block.subblocks ? this.block.subblocks.slice() : [],
 
 			// Dynamic
@@ -187,10 +197,20 @@ export default {
 		showActions() {
 			return this.focusActions || this.currentlyMovingBlocks;
 		},
-		mobileAdjust() {
+		showUnreadOnly() {
+			return this.$store.getters.userSettings.community.unreadOnly;
+		},
+		clearRef() {
 			// whether to add {clear: both} to ref item area
+			// clear because "N unread" appears in actions
+			return this.showUnreadOnly && !!this.unreadCount;
+		},
+		mobileAdjust() {
+			// whether to add {clear: both} to ref item area on mobile
 			// (show layover above rather than to right of ref item)
-			return this.showActions || !!this.unreadCount;
+			return this.showActions ||
+				!!this.unreadCount ||
+				(!this.showUnreadOnly && !!this.commentsCount);
 		},
 	},
 	mounted() {
@@ -235,6 +255,7 @@ export default {
 				this.title = updatedBlock.title;
 				this.body = updatedBlock.body;
 				this.unreadCount = updatedBlock.unreadCount || 0;
+				this.commentsCount = updatedBlock.commentsCount || 0;
 			});
 		},
 		raiseOpenEdit(block, callback) {
@@ -313,6 +334,8 @@ export default {
 		openCommunity() {
 			this.$emit('open-community', this.block.id, adjustUnreadCount => {
 				this.unreadCount += adjustUnreadCount;
+			}, adjustCommentsCount => {
+				this.commentsCount += adjustCommentsCount;
 			});
 		},
 		updateHasSubblocks() {
@@ -375,6 +398,16 @@ export default {
 		&:hover {
 			>.bg {
 				display: block;
+			}
+		}
+
+		&.clear-ref {
+			>.layover {
+				margin-bottom: 5px;
+			}
+
+			>.ref-item {
+				clear: both;
 			}
 		}
 

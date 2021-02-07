@@ -44,7 +44,7 @@ router.beforeEach((to, from, next) => {
 		) {
 			// Leaving spec context for another context
 			store.commit('clearCurrentSpec');
-			store.commit('endMovingBlock');
+			store.commit('endMovingBlocks');
 		} else if (from.name === 'spec') {
 			// Leaving spec page for another page in same spec
 			store.commit('saveCurrentSpecScrollTop');

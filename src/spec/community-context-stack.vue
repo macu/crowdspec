@@ -33,12 +33,13 @@ export default {
 		},
 	},
 	methods: {
-		pushStack(targetType, target, onAdjustUnread) {
+		pushStack(targetType, target, onAdjustUnread, onAdjustComments) {
 			this.empty = false;
 			this.stack.push({
 				targetType,
 				target,
 				onAdjustUnread,
+				onAdjustComments,
 			});
 		},
 		popStack() {
@@ -49,7 +50,8 @@ export default {
 		},
 		jumpStack(i) {
 			let item = this.stack[i];
-			this.$emit('pop-stack', item.targetType, item.target.id, item.onAdjustUnread);
+			this.$emit('pop-stack', item.targetType, item.target.id,
+				item.onAdjustUnread, item.onAdjustComments);
 			this.stack = this.stack.slice(0, i);
 			return item;
 		},

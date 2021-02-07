@@ -80,6 +80,7 @@
 				:spec-id="specId"
 				:comment="c"
 				:show-community="true"
+				:show-unread-only="unreadOnly"
 				@open-comments="openComments"
 				@update-unread="adjustUnread"
 				@deleted="commentDeleted"
@@ -142,6 +143,7 @@ export default {
 			targetType: null,
 			target: null,
 			comments: [],
+			unreadCount: 0,
 			commentsCount: 0,
 			hasMoreComments: false,
 			loadingPage: false, // loading more comments
@@ -149,6 +151,7 @@ export default {
 			newCommentBody: '',
 			sendingComment: false, // during POST
 			onAdjustUnread: null,
+			onAdjustComments: null,
 			unreadOnly: false,
 			reloadingComments: false,
 		};
@@ -183,9 +186,10 @@ export default {
 			return !this.newCommentBody.trim();
 		},
 		formattedCommentsCount() {
-			return this.commentsCount +
+			let count = this.unreadOnly ? this.unreadCount : this.commentsCount;
+			return count + (this.unreadOnly ? ' unread' : '') +
 				(this.targetType === TARGET_TYPE_COMMENT ? ' sub' : '') +
-				' comment' + ((this.commentsCount !== 1) ? 's' : '');
+				' comment' + ((count !== 1) ? 's' : '');
 		},
 	},
 	watch: {
@@ -200,8 +204,9 @@ export default {
 		},
 	},
 	methods: {
-		openCommunity(targetType, targetId, onAdjustUnread = null) {
+		openCommunity(targetType, targetId, onAdjustUnread = null, onAdjustComments = null) {
 			this.onAdjustUnread = onAdjustUnread;
+			this.onAdjustComments = onAdjustComments;
 			this.unreadOnly = this.$store.getters.userSettings.community.unreadOnly;
 			this.loadCommunity(targetType, targetId);
 			this.showing = true;
@@ -229,6 +234,7 @@ export default {
 						break;
 				}
 				this.comments = response.comments;
+				this.unreadCount = response.unreadCount;
 				this.commentsCount = response.commentsCount;
 				this.hasMoreComments = response.commentsCount > response.comments.length;
 				this.newCommentBody = '';
@@ -248,6 +254,7 @@ export default {
 			).then(response => {
 				this.reloadingComments = false;
 				this.comments = response.comments;
+				this.unreadCount = response.unreadCount;
 				this.commentsCount = response.commentsCount;
 				this.hasMoreComments = response.hasMore;
 			}).fail(() => {
@@ -286,7 +293,7 @@ export default {
 			).then(newComment => {
 				this.sendingComment = false;
 				this.comments.unshift(newComment); // most recent appear first
-				this.commentsCount++; // one more known comment
+				this.adjustComments(1); // one more known comment
 				this.addingComment = false;
 				this.newCommentBody = '';
 				// Do not adjust unread count on parent item -
@@ -302,13 +309,23 @@ export default {
 		openComments(commentId) {
 			// add to stack
 			this.$refs.contextStack.pushStack(
-				this.targetType, this.target, this.onAdjustUnread);
+				this.targetType, this.target,
+				this.onAdjustUnread, this.onAdjustComments,
+			);
 			this.onAdjustUnread = null; // no longer applies
+			this.onAdjustComments = null;
 			this.loadCommunity('comment', commentId);
 		},
 		adjustUnread(direction) {
+			this.unreadCount += direction;
 			if (this.onAdjustUnread) {
 				this.onAdjustUnread(direction);
+			}
+		},
+		adjustComments(direction) {
+			this.commentsCount += direction;
+			if (this.onAdjustComments) {
+				this.onAdjustComments(direction);
 			}
 		},
 		commentDeleted(commentId) {
@@ -322,23 +339,27 @@ export default {
 					// from within the comment's community view
 					parentContext.onAdjustUnread(-1);
 				}
+				if (parentContext.onAdjustComments) {
+					parentContext.onAdjustComments(-1);
+				}
 			} else {
 				for (var i = 0; i < this.comments.length; i++) {
 					if (idsEq(this.comments[i].id, commentId)) {
 						let unread = !this.$refs.comments[i].userRead;
 						this.comments.splice(i, 1); // Remove from array
-						this.commentsCount--; // one less known comment
 						if (unread) {
 							// if comment was unread, call onAdjustUnread
 							this.adjustUnread(-1);
 						}
+						this.adjustComments(-1);
 						break;
 					}
 				}
 			}
 		},
-		popStack(targetType, targetId, onAdjustUnread) {
+		popStack(targetType, targetId, onAdjustUnread, onAdjustComments) {
 			this.onAdjustUnread = onAdjustUnread; // restore for top-level context
+			this.onAdjustComments = onAdjustComments; // restore for top-level context
 			this.loadCommunity(targetType, targetId);
 		},
 		raisePlayVideo(urlObject) {
@@ -351,6 +372,7 @@ export default {
 			this.addingComment = false;
 			this.newCommentBody = '';
 			this.onAdjustUnread = null;
+			this.onAdjustComments = null;
 			this.$refs.contextStack.clearStack();
 		},
 	},

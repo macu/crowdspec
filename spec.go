@@ -27,7 +27,8 @@ type Spec struct {
 	Highlight *string `json:"highlight,omitempty"`
 
 	// Community attributes
-	UnreadCount uint `json:"unreadCount"`
+	UnreadCount   uint `json:"unreadCount"`
+	CommentsCount uint `json:"commentsCount"`
 
 	// Root level blocks in this spec
 	Blocks []*SpecBlock `json:"blocks,omitempty"`
