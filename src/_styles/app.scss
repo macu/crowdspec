@@ -12,6 +12,12 @@ html, body {
 	// Apply normal word-break (Element is from China)
 	word-break: normal;
 	white-space: normal;
+
+	// Also break links and long words
+	// https://css-tricks.com/snippets/css/prevent-long-urls-from-breaking-out-of-container/
+	word-break: normal;
+	overflow-wrap: break-word; // required for IE and Safari;
+	overflow-wrap: anywhere; // soft wrap considered in intrinsic min content size calculation
 }
 
 .el-checkbox {
@@ -56,5 +62,72 @@ html, body {
 	padding-top: 5px;
 	.el-button {
 		margin-top: 10px;
+	}
+}
+
+.markdown {
+	// Styles for rendered markdown
+
+	word-break: normal;
+	overflow-wrap: break-word; // required for IE and Safari;
+	overflow-wrap: anywhere; // soft wrap considered in intrinsic min content size calculation
+
+	h1, h2, h3, h4, h5, h6 {
+		margin: 10px 0;
+		padding: 0;
+
+		// Headers are rendered same size as the rest of the font
+		font-size: inherit;
+		font-weight: bold;
+	}
+
+	h1::before { content: '# '; }
+	h2::before { content: '## '; }
+	h3::before { content: '### '; }
+	h4::before { content: '#### '; }
+	h5::before { content: '##### '; }
+	h6::before { content: '###### '; }
+
+	p {
+		margin: 10px 0;
+	}
+
+	blockquote {
+		margin: 10px 0;
+		border-left: thin solid lightgray;
+		padding-left: 10px;
+	}
+
+	ol, ul {
+		margin: 10px 0;
+		// TODO fix discontinuous sub list numbering
+	}
+
+	table {
+		margin: 10px 0;
+		max-width: 100%;
+		overflow-y: auto;
+	}
+
+	pre {
+		margin: 10px 0;
+		width: 100%;
+		overflow-x: auto;
+		line-height: 1.4;
+		>code {
+			display: block;
+			padding: 5px;
+			width: 100%;
+			overflow-x: auto;
+			background-color: rgba(0,0,0,.10);
+		}
+	}
+
+	// Allow parent context to define outer margins
+	>:first-child {
+		margin-top: 0;
+	}
+	>:last-child {
+		margin-bottom: 0;
 	}
 }

@@ -221,7 +221,7 @@ export default {
 			}).$mount();
 
 			vc.$on('open-community', this.openBlockCommunity);
-			vc.$on('open-edit', this.openEdit);
+			vc.$on('open-edit', this.openEditBlock);
 			vc.$on('prompt-add-subblock', this.promptAddSubblock);
 			vc.$on('prompt-delete', this.promptDeleteBlock);
 			vc.$on('start-moving', this.startMovingBlocks);
@@ -304,8 +304,8 @@ export default {
 		openBlockCommunity(blockId, onAdjustUnread, onAdjustComments) {
 			this.$emit('open-community', TARGET_TYPE_BLOCK, blockId, onAdjustUnread, onAdjustComments);
 		},
-		openEdit(block, callback) {
-			this.$refs.editBlockModal.showEdit(block, callback);
+		openEditBlock(blockId, callback) {
+			this.$refs.editBlockModal.showEdit(blockId, callback);
 		},
 		promptAddSubblock(parentId, insertBeforeId) {
 			this.$refs.editBlockModal.showAdd(parentId, insertBeforeId, newBlock => {

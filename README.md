@@ -93,6 +93,7 @@ postgres=#
 - [x] Signup requests
 - [x] Add unreadOnly community setting
 - [x] Use YouTube API for fetching video previews
+- [x] Add Markdown support
 
 ### 2021-01
 

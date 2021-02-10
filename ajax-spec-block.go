@@ -60,9 +60,9 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 		return nil, http.StatusBadRequest
 	}
 
-	contentType := AtoPointerNilIfEmpty(r.Form.Get("contentType"))
-	if contentType != nil && !isValidTextContentType(*contentType) {
-		logError(r, userID, fmt.Errorf("invalid contentType: %s", *contentType))
+	contentType := r.Form.Get("contentType")
+	if !isValidTextContentType(contentType) {
+		logError(r, userID, fmt.Errorf("invalid contentType: %s", contentType))
 		return nil, http.StatusBadRequest
 	}
 
@@ -86,6 +86,16 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 	}
 
 	// TODO Html sanitize title and body
+
+	var renderedHTML *string
+	if body != nil && contentType == TextContentMarkdown {
+		html, err := renderMarkdown(*body)
+		if err != nil {
+			// don't log error
+			return nil, http.StatusBadRequest
+		}
+		renderedHTML = &html
+	}
 
 	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
@@ -132,12 +142,12 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 		err = tx.QueryRow(`
 			INSERT INTO spec_block
 			(spec_id, created_at, updated_at, subspec_id, parent_id, order_number,
-				style_type, content_type, ref_type, ref_id, block_title, block_body)
-			VALUES ($1, $2, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-			RETURNING id, created_at, updated_at, block_title, block_body
+				style_type, content_type, ref_type, ref_id, block_title, block_body, rendered_html)
+			VALUES ($1, $2, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+			RETURNING id, created_at, updated_at, block_title, block_body, rendered_html
 			`, specID, time.Now(), subspecID, parentID, insertAt,
-			styleType, contentType, refType, refID, title, body,
-		).Scan(&block.ID, &block.Created, &block.Updated, &block.Title, &block.Body)
+			styleType, contentType, refType, refID, title, body, renderedHTML,
+		).Scan(&block.ID, &block.Created, &block.Updated, &block.Title, &block.Body, &block.HTML)
 		if err != nil {
 			logError(r, userID, fmt.Errorf("creating block: %w", err))
 			return nil, http.StatusInternalServerError
@@ -154,6 +164,58 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 
 		return block, http.StatusOK
 	})
+}
+
+func ajaxLoadBlockForEditing(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
+	// GET
+
+	specID, err := AtoInt64(r.FormValue("specId"))
+	if err != nil {
+		logError(r, userID, fmt.Errorf("parsing specId: %w", err))
+		return nil, http.StatusBadRequest
+	}
+
+	blockID, err := AtoInt64(r.FormValue("blockId"))
+	if err != nil {
+		logError(r, userID, fmt.Errorf("parsing blockId: %w", err))
+		return nil, http.StatusBadRequest
+	}
+
+	if access, status := verifyWriteSpecBlock(r, db, userID, specID, blockID); !access {
+		return nil, status
+	}
+
+	block, err := loadBlockForEditing(db, userID, specID, blockID)
+	if err != nil {
+		logError(r, userID, fmt.Errorf("loading block: %w", err))
+		return nil, http.StatusInternalServerError
+	}
+
+	return block, http.StatusOK
+}
+
+func ajaxRenderMarkdown(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
+	// POST
+
+	var markdown = AtoPointerNilIfEmpty(strings.TrimSpace(r.FormValue("markdown")))
+
+	if markdown != nil {
+		html, err := renderMarkdown(*markdown)
+		if err != nil {
+			// don't log error;
+			// return validation error to client
+			return struct {
+				Error string `json:"error"`
+			}{err.Error()}, http.StatusOK
+		}
+		return struct {
+			HTML string `json:"html"`
+		}{html}, http.StatusOK
+	}
+
+	return struct {
+		HTML string `json:"html"`
+	}{""}, http.StatusOK
 }
 
 func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
@@ -187,9 +249,9 @@ func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 		return nil, http.StatusBadRequest
 	}
 
-	contentType := AtoPointerNilIfEmpty(r.Form.Get("contentType"))
-	if contentType != nil && !isValidTextContentType(*contentType) {
-		logError(r, userID, fmt.Errorf("invalid contentType: %s", *contentType))
+	contentType := r.Form.Get("contentType")
+	if !isValidTextContentType(contentType) {
+		logError(r, userID, fmt.Errorf("invalid contentType: %s", contentType))
 		return nil, http.StatusBadRequest
 	}
 
@@ -213,6 +275,16 @@ func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 	}
 
 	// TODO Html sanitize title and body
+
+	var renderedHTML *string
+	if body != nil && contentType == TextContentMarkdown {
+		html, err := renderMarkdown(*body)
+		if err != nil {
+			// don't log error
+			return nil, http.StatusBadRequest
+		}
+		renderedHTML = &html
+	}
 
 	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
@@ -248,9 +320,10 @@ func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 		// Update block row
 		err = tx.QueryRow(`
 			UPDATE spec_block
-			SET updated_at=$4, style_type=$5, content_type=$6, ref_type=$7, ref_id=$8, block_title=$9, block_body=$10
+			SET updated_at=$4, style_type=$5, content_type=$6,
+				ref_type=$7, ref_id=$8, block_title=$9, block_body=$10, rendered_html=$11
 			WHERE id=$3 AND spec_id=$2
-			RETURNING updated_at, subspec_id, block_title, block_body,
+			RETURNING updated_at, subspec_id, block_title, block_body, rendered_html,
 			-- select number of unread comments
 			(SELECT COUNT(*) FROM spec_community_comment AS c
 				LEFT JOIN spec_community_read AS r
@@ -266,8 +339,8 @@ func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 					AND c.target_type = 'block' AND c.target_id = spec_block.id
 			) AS comments_count`,
 			userID, specID, blockID, time.Now(),
-			styleType, contentType, refType, refID, title, body,
-		).Scan(&block.Updated, &block.SubspecID, &block.Title, &block.Body,
+			styleType, contentType, refType, refID, title, body, renderedHTML,
+		).Scan(&block.Updated, &block.SubspecID, &block.Title, &block.Body, &block.HTML,
 			&block.UnreadCount, &block.CommentsCount)
 		if err != nil {
 			logError(r, userID, fmt.Errorf("updating block: %w", err))

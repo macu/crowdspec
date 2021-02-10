@@ -23,7 +23,12 @@
 			:closable="false"
 			type="warning"/>
 
-		<div v-if="hasBody" class="body">{{block.body}}</div>
+		<template v-if="hasBody">
+			<div v-if="block.contentType === CONTENT_TYPE_PLAIN"
+				class="body plain" v-text="block.body"></div>
+			<div v-else-if="block.contentType === CONTENT_TYPE_MARKDOWN"
+				class="body markdown" v-html="block.html"></div>
+		</template>
 
 		<dynamic-stylesheet :rules="blockPreviewRules"/>
 
@@ -36,7 +41,10 @@ import $ from 'jquery';
 import RefUrl from './ref-url.vue';
 import RefSubspec from './ref-subspec.vue';
 import DynamicStylesheet from '@macu/dynamic-stylesheet-vue/index.js';
-import {REF_TYPE_URL, REF_TYPE_SUBSPEC} from './const.js';
+import {
+	CONTENT_TYPE_PLAIN, CONTENT_TYPE_MARKDOWN,
+	REF_TYPE_URL, REF_TYPE_SUBSPEC,
+} from './const.js';
 
 export default {
 	components: {
@@ -48,6 +56,18 @@ export default {
 		block: Object,
 	},
 	computed: {
+		CONTENT_TYPE_PLAIN() {
+			return CONTENT_TYPE_PLAIN;
+		},
+		CONTENT_TYPE_MARKDOWN() {
+			return CONTENT_TYPE_MARKDOWN;
+		},
+		REF_TYPE_URL() {
+			return REF_TYPE_URL;
+		},
+		REF_TYPE_SUBSPEC() {
+			return REF_TYPE_SUBSPEC;
+		},
 		blockId() {
 			return parseInt(this.block.id, 10) || 0;
 		},
@@ -74,20 +94,17 @@ export default {
 				},
 			};
 		},
-		REF_TYPE_URL() {
-			return REF_TYPE_URL;
-		},
-		REF_TYPE_SUBSPEC() {
-			return REF_TYPE_SUBSPEC;
-		},
 		hasTitle() {
 			return !!(this.block.title && this.block.title.trim());
 		},
-		hasBody() {
-			return !!(this.block.body && this.block.body.trim());
-		},
 		hasRefItem() {
 			return !!(this.block.refType && this.block.refItem);
+		},
+		hasBody() {
+			return !!(
+				(this.block.body && this.block.body.trim()) ||
+				(this.block.html && this.block.html.trim())
+			);
 		},
 		refItemMissing() {
 			return !!this.block.refType && !this.block.refItem;
@@ -122,7 +139,11 @@ ul.spec-block-preview {
 		}
 
 		>.body {
-			white-space: pre-wrap;
+			&.plain {
+				white-space: pre-wrap;
+			}
+			// &.markdown {
+			// }
 		}
 
 		>.el-alert {

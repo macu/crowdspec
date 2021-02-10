@@ -18,12 +18,13 @@ var ajaxHandlers = map[string]map[string]AjaxRoute{
 		"/ajax/home":     ajaxUserHome,
 		"/ajax/settings": ajaxUserSettings,
 
-		"/ajax/spec":                ajaxSpec,
-		"/ajax/spec/subspecs":       ajaxSubspecs,
-		"/ajax/spec/subspec":        ajaxSubspec,
-		"/ajax/spec/urls":           ajaxSpecURLs,
-		"/ajax/spec/community":      ajaxSpecLoadCommunity,
-		"/ajax/spec/community/page": ajaxSpecCommunityLoadCommentsPage,
+		"/ajax/spec":                 ajaxSpec,
+		"/ajax/spec/subspecs":        ajaxSubspecs,
+		"/ajax/spec/subspec":         ajaxSubspec,
+		"/ajax/spec/urls":            ajaxSpecURLs,
+		"/ajax/spec/community":       ajaxSpecLoadCommunity,
+		"/ajax/spec/community/page":  ajaxSpecCommunityLoadCommentsPage,
+		"/ajax/spec/load-edit-block": ajaxLoadBlockForEditing,
 
 		// admin
 		"/ajax/admin/signup-requests": ajaxAdminLoadSignupRequests,
@@ -51,6 +52,9 @@ var ajaxHandlers = map[string]map[string]AjaxRoute{
 		"/ajax/spec/community/add-comment":    ajaxSpecCommunityAddComment,
 		"/ajax/spec/community/update-comment": ajaxSpecCommunityUpdateComment,
 		"/ajax/spec/community/delete-comment": ajaxSpecCommunityDeleteComment,
+
+		// util
+		"/ajax/render-markdown": ajaxRenderMarkdown,
 
 		// admin
 		"/ajax/admin/review-signup": ajaxAdminSubmitSignupRequestReview,

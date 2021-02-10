@@ -67,6 +67,13 @@ export function ajaxDeleteSubspec(subspecId) {
 	}).fail(alertError);
 }
 
+export function ajaxLoadBlockForEditing(specId, blockId) {
+	return $.get('/ajax/spec/load-edit-block', {
+		specId, // must be provided
+		blockId, // must be provided
+	}).fail(alertError);
+}
+
 export function ajaxCreateBlock(specId, subspecId, parentId, insertBeforeId,
 		styleType, contentType, title, body, refType, refFields) {
 	refFields = refFields || {};
@@ -196,4 +203,20 @@ export function ajaxDeleteComment(specId, commentId) {
 		specId,
 		commentId,
 	}).fail(alertError);
+}
+
+export function ajaxRenderMarkdown(markdown) {
+	let xhr = $.post('/ajax/render-markdown', {
+		markdown,
+	});
+
+	xhr.fail(function(jqXHR) {
+		if (jqXHR.status === 0 && jqXHR.statusText === 'abort') {
+			// Request was cancelled before a subsequent request
+		} else {
+			alertError(jqXHR);
+		}
+	});
+
+	return xhr;
 }

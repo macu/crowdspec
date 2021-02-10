@@ -54,6 +54,7 @@ type blockCommunity struct {
 		RefID       *int64    `json:"refId"`
 		Title       *string   `json:"title"`
 		Body        *string   `json:"body"`
+		HTML        *string   `json:"html"`
 
 		RefItem interface{} `json:"refItem,omitempty"`
 	} `json:"block"`
@@ -229,7 +230,9 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID uint, w http.ResponseWriter, r *ht
 
 		err = db.QueryRow(`
 			SELECT id, created_at, updated_at,
-				style_type, content_type, ref_type, ref_id, block_title, block_body,
+				style_type, content_type, ref_type, ref_id, block_title,
+				CASE WHEN content_type = 'plaintext' THEN block_body ELSE NULL END AS block_body,
+				CASE WHEN content_type = 'markdown' THEN rendered_html ELSE NULL END AS rendered_html,
 				(CASE WHEN style_type = 'numbered' THEN
 					-- find position among numbered blocks in same immediate list
 					array_position(ARRAY(
@@ -253,7 +256,7 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID uint, w http.ResponseWriter, r *ht
 			targetID,
 		).Scan(&bc.Block.ID, &bc.Block.Created, &bc.Block.Updated,
 			&bc.Block.StyleType, &bc.Block.ContentType, &bc.Block.RefType, &bc.Block.RefID,
-			&bc.Block.Title, &bc.Block.Body, &bc.Block.Number)
+			&bc.Block.Title, &bc.Block.Body, &bc.Block.HTML, &bc.Block.Number)
 		if err != nil {
 			logError(r, userID, fmt.Errorf("reading block: %w", err))
 			return nil, http.StatusInternalServerError

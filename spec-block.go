@@ -19,11 +19,12 @@ type SpecBlock struct {
 	ParentID    *int64    `json:"parentId"`  // may be null (root level)
 	OrderNumber int       `json:"orderNumber"`
 	StyleType   string    `json:"styleType"`
-	ContentType *string   `json:"contentType"`
+	ContentType string    `json:"contentType"`
 	RefType     *string   `json:"refType"`
 	RefID       *int64    `json:"refId"`
 	Title       *string   `json:"title"`
 	Body        *string   `json:"body"`
+	HTML        *string   `json:"html"` // rendered when content type is markdown
 
 	RefItem interface{} `json:"refItem,omitempty"`
 
@@ -78,7 +79,7 @@ func isValidListStyleType(t string) bool {
 func isValidTextContentType(t string) bool {
 	return stringInSlice(t, []string{
 		TextContentPlain,
-		// TextContentMarkdown,
+		TextContentMarkdown,
 		// TextContentHTML,
 	})
 }
@@ -118,6 +119,62 @@ func isURLRequiredForRefType(t *string) bool {
 	})
 }
 
+func loadBlockForEditing(db DBConn, userID uint, specID, blockID int64) (*SpecBlock, error) {
+
+	var args = []interface{}{specID, userID, blockID}
+
+	// only load block_body; preview will be rendered separately if content type is Markdown
+
+	var query = `SELECT spec_block.id, spec_block.spec_id, spec_block.created_at, spec_block.updated_at,
+		spec_block.subspec_id, spec_block.parent_id, spec_block.order_number,
+		spec_block.style_type, spec_block.content_type, spec_block.ref_type, spec_block.ref_id,
+		spec_block.block_title, spec_block.block_body, NULL AS rendered_html,
+		ref_subspec.spec_id AS subspec_spec_id, ref_subspec.subspec_name, ref_subspec.subspec_desc,
+		ref_url.spec_id AS url_spec_id, ref_url.created_at AS url_created, ref_url.updated_at AS url_updated,
+		ref_url.url AS url_url, ref_url.url_title, ref_url.url_desc, ref_url.url_image_data,
+		-- select number of unread comments
+		(SELECT COUNT(c.id) FROM spec_community_comment AS c
+			LEFT JOIN spec_community_read AS r
+				ON r.user_id = $2 AND r.target_type = 'comment' AND r.target_id = c.id
+			WHERE c.spec_id = spec_block.spec_id
+				AND c.target_type = 'block' AND c.target_id = spec_block.id
+				AND r.user_id IS NULL
+		) AS unread_count,
+		-- select total number of comments
+		(SELECT COUNT(*) FROM spec_community_comment AS c
+			WHERE c.spec_id = spec_block.spec_id
+				AND c.target_type = 'block' AND c.target_id = spec_block.id
+		) AS comments_count
+		FROM spec_block
+		LEFT JOIN spec_subspec AS ref_subspec
+			ON spec_block.ref_type = ` + argPlaceholder(BlockRefSubspec, &args) + `
+			AND ref_subspec.id = spec_block.ref_id
+			AND ref_subspec.spec_id = spec_block.spec_id
+		LEFT JOIN spec_url AS ref_url
+			ON spec_block.ref_type = ` + argPlaceholder(BlockRefURL, &args) + `
+			AND ref_url.id = spec_block.ref_id
+			AND ref_url.spec_id = spec_block.spec_id
+		WHERE spec_block.spec_id = $1 AND spec_block.id = $3`
+
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("querying blocks: %w", err)
+	}
+
+	blocks := []*SpecBlock{}
+	blocksByID := map[int64]*SpecBlock{}
+	err = readBlocks(rows, &blocks, &blocksByID)
+	if err != nil {
+		return nil, fmt.Errorf("reading blocks: %w", err)
+	}
+
+	if len(blocks) > 0 {
+		return blocks[0], nil
+	}
+
+	return nil, fmt.Errorf("no blocks found in spec %d for block %d", specID, blockID)
+}
+
 func loadBlocksByID(db DBConn, userID uint, specID int64, blockIDs ...int64) ([]*SpecBlock, error) {
 
 	var args = []interface{}{specID, userID}
@@ -150,7 +207,9 @@ func loadBlocksByID(db DBConn, userID uint, specID int64, blockIDs ...int64) ([]
 		SELECT spec_block.id, spec_block.spec_id, spec_block.created_at, spec_block.updated_at,
 		spec_block.subspec_id, spec_block.parent_id, spec_block.order_number,
 		spec_block.style_type, spec_block.content_type, spec_block.ref_type, spec_block.ref_id,
-		spec_block.block_title, spec_block.block_body,
+		spec_block.block_title,
+		CASE WHEN spec_block.content_type = 'plaintext' THEN spec_block.block_body ELSE NULL END AS block_body,
+		CASE WHEN spec_block.content_type = 'markdown' THEN spec_block.rendered_html ELSE NULL END AS rendered_html,
 		ref_subspec.spec_id AS subspec_spec_id, ref_subspec.subspec_name, ref_subspec.subspec_desc,
 		ref_url.spec_id AS url_spec_id, ref_url.created_at AS url_created, ref_url.updated_at AS url_updated,
 		ref_url.url AS url_url, ref_url.url_title, ref_url.url_desc, ref_url.url_image_data,
@@ -187,7 +246,10 @@ func loadBlocksByID(db DBConn, userID uint, specID int64, blockIDs ...int64) ([]
 
 	blocks := []*SpecBlock{}
 	blocksByID := map[int64]*SpecBlock{}
-	readBlocks(rows, &blocks, &blocksByID)
+	err = readBlocks(rows, &blocks, &blocksByID)
+	if err != nil {
+		return nil, fmt.Errorf("reading blocks: %w", err)
+	}
 
 	requestedBlocks := []*SpecBlock{}
 	for _, b := range blocks {
@@ -205,11 +267,12 @@ func loadContextBlocks(db *sql.DB, userID uint, specID int64, subspecID *int64) 
 	// Ref items are only loaded if belonging to the same spec.
 	// TODO Allow linking to any ref item, but verify current user's access when joining info.
 	args := []interface{}{userID, specID}
-	query := `
-		SELECT spec_block.id, spec_block.spec_id, spec_block.created_at, spec_block.updated_at,
+	query := `SELECT spec_block.id, spec_block.spec_id, spec_block.created_at, spec_block.updated_at,
 		spec_block.subspec_id, spec_block.parent_id, spec_block.order_number,
 		spec_block.style_type, spec_block.content_type, spec_block.ref_type, spec_block.ref_id,
-		spec_block.block_title, spec_block.block_body,
+		spec_block.block_title,
+		CASE WHEN spec_block.content_type = 'plaintext' THEN spec_block.block_body ELSE NULL END AS block_body,
+		CASE WHEN spec_block.content_type = 'markdown' THEN spec_block.rendered_html ELSE NULL END AS rendered_html,
 		ref_subspec.spec_id AS subspec_spec_id, ref_subspec.subspec_name, ref_subspec.subspec_desc,
 		ref_url.spec_id AS url_spec_id, ref_url.created_at AS url_created, ref_url.updated_at AS url_updated,
 		ref_url.url AS url_url, ref_url.url_title, ref_url.url_desc, ref_url.url_image_data,
@@ -246,7 +309,10 @@ func loadContextBlocks(db *sql.DB, userID uint, specID int64, subspecID *int64) 
 
 	blocks := []*SpecBlock{}
 	blocksByID := map[int64]*SpecBlock{}
-	readBlocks(rows, &blocks, &blocksByID)
+	err = readBlocks(rows, &blocks, &blocksByID)
+	if err != nil {
+		return nil, fmt.Errorf("reading blocks: %w", err)
+	}
 
 	rootBlocks := []*SpecBlock{}
 	for _, b := range blocks {
@@ -269,7 +335,7 @@ func readBlocks(rows *sql.Rows, blocks *[]*SpecBlock, blocksByID *map[int64]*Spe
 
 		err := rows.Scan(&b.ID, &b.SpecID, &b.Created, &b.Updated,
 			&b.SubspecID, &b.ParentID, &b.OrderNumber,
-			&b.StyleType, &b.ContentType, &b.RefType, &b.RefID, &b.Title, &b.Body,
+			&b.StyleType, &b.ContentType, &b.RefType, &b.RefID, &b.Title, &b.Body, &b.HTML,
 			&subspecSpecID, &subspecName, &subspecDesc,
 			&urlSpecID, &urlCreated, &urlUpdated, &urlURL, &urlTitle, &urlDesc, &urlImageData,
 			&b.UnreadCount, &b.CommentsCount)

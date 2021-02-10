@@ -91,7 +91,12 @@
 			:closable="false"
 			type="warning"/>
 
-		<div v-if="hasBody" class="body">{{body}}</div>
+		<template v-if="hasBody">
+			<div v-if="contentType === CONTENT_TYPE_PLAIN"
+				class="body plain" v-text="body"></div>
+			<div v-else-if="contentType === CONTENT_TYPE_MARKDOWN"
+				class="body markdown" v-html="renderedHtml"></div>
+		</template>
 
 	</div>
 
@@ -106,7 +111,10 @@
 import $ from 'jquery';
 import RefUrl from './ref-url.vue';
 import RefSubspec from './ref-subspec.vue';
-import {REF_TYPE_URL, REF_TYPE_SUBSPEC} from './const.js';
+import {
+	CONTENT_TYPE_PLAIN, CONTENT_TYPE_MARKDOWN,
+	REF_TYPE_URL, REF_TYPE_SUBSPEC,
+} from './const.js';
 import {idsEq} from '../utils.js';
 
 export default {
@@ -131,6 +139,7 @@ export default {
 			refId: this.block.refId,
 			title: this.block.title,
 			body: this.block.body,
+			renderedHtml: this.block.html,
 			refItem: this.block.refItem,
 			unreadCount: this.block.unreadCount || 0,
 			commentsCount: this.block.commentsCount || 0,
@@ -143,6 +152,12 @@ export default {
 		};
 	},
 	computed: {
+		CONTENT_TYPE_PLAIN() {
+			return CONTENT_TYPE_PLAIN;
+		},
+		CONTENT_TYPE_MARKDOWN() {
+			return CONTENT_TYPE_MARKDOWN;
+		},
 		REF_TYPE_URL() {
 			return REF_TYPE_URL;
 		},
@@ -163,7 +178,10 @@ export default {
 			return !!(this.title && this.title.trim());
 		},
 		hasBody() {
-			return !!(this.body && this.body.trim());
+			return !!(
+				(this.body && this.body.trim()) ||
+				(this.renderedHtml && this.renderedHtml.trim())
+			);
 		},
 		hasRefItem() {
 			return !!(this.refType && this.refItem);
@@ -231,18 +249,7 @@ export default {
 			return $nextBlock.length ? $nextBlock.attr('data-spec-block') : null;
 		},
 		editBlock() {
-			this.raiseOpenEdit({
-				id: this.block.id,
-				created: this.block.created,
-				updated: this.updated,
-				styleType: this.styleType,
-				contentType: this.contentType,
-				refType: this.refType,
-				refId: this.refId,
-				refItem: this.refItem,
-				title: this.title,
-				body: this.body,
-			}, updatedBlock => {
+			this.raiseOpenEdit(this.block.id, updatedBlock => {
 				this.updated = updatedBlock.updated;
 				this.styleType = updatedBlock.styleType;
 				this.contentType = updatedBlock.contentType;
@@ -251,6 +258,7 @@ export default {
 				this.refItem = updatedBlock.refItem;
 				this.title = updatedBlock.title;
 				this.body = updatedBlock.body;
+				this.renderedHtml = updatedBlock.html;
 				this.unreadCount = updatedBlock.unreadCount || 0;
 				this.commentsCount = updatedBlock.commentsCount || 0;
 			});
@@ -500,7 +508,11 @@ export default {
 		}
 
 		>.body {
-			white-space: pre-wrap;
+			&.plain {
+				white-space: pre-wrap;
+			}
+			// &.markdown {
+			// }
 		}
 
 		>.el-alert {

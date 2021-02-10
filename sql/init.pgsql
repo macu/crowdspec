@@ -117,11 +117,12 @@ CREATE TABLE spec_block (
 	parent_id INTEGER REFERENCES spec_block (id) ON DELETE CASCADE,
 	order_number INTEGER NOT NULL,
 	style_type list_style_type NOT NULL DEFAULT 'none',
-	content_type text_content_type,
+	content_type text_content_type NOT NULL,
 	ref_type spec_block_ref_type,
 	ref_id INTEGER,
 	block_title VARCHAR(255),
-	block_body TEXT
+	block_body TEXT,
+	rendered_html TEXT
 );
 CREATE TABLE spec_url (
 	id SERIAL PRIMARY KEY,
