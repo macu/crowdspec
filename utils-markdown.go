@@ -76,8 +76,9 @@ func init() {
 					return false
 				}
 			}
+			return true
 		}
-		return true
+		return false
 	}).OnElements("table")
 
 	// style="width:100%;" on table
