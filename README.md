@@ -94,6 +94,7 @@ postgres=#
 - [x] Add unreadOnly community setting
 - [x] Use YouTube API for fetching video previews
 - [x] Add Markdown support
+- [x] Add community review page
 
 ### 2021-01
 

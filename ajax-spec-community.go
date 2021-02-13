@@ -97,15 +97,15 @@ type commentCommunity struct {
 type communityStackElement struct {
 	TargetType string `json:"targetType"`
 	Target     struct {
-		ID           int64  `json:"id"`
-		Name         string `json:"name"` // spec or subspec
-		BlockRefType string `json:"refType"`
-		BlockTitle   string `json:"title"`
-		Body         string `json:"body"` // block or comment
+		ID           int64   `json:"id"`
+		Name         string  `json:"name"` // spec or subspec
+		BlockRefType *string `json:"refType"`
+		BlockTitle   *string `json:"title"`
+		Body         *string `json:"body"` // block or comment
 		BlockRefItem struct {
-			SubspecName string `json:"name"`
-			URLTitle    string `json:"title"`
-			URL         string `json:"url"`
+			SubspecName string  `json:"name"`
+			URLTitle    *string `json:"title"`
+			URL         string  `json:"url"`
 		} `json:"refItem"`
 	} `json:"target"`
 
@@ -430,10 +430,11 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID uint, w http.ResponseWriter, r *ht
 				err = db.QueryRow(
 					`SELECT b.id, b.ref_type,
 						-- only take first 100 characters for single-line stack
+						substr(b.block_title, 0, 100) AS block_title,
 						substr(b.block_body, 0, 100) AS block_body,
 						COALESCE(ref_subspec.subspec_name, '') AS subspec_name,
-						COALESCE(ref_url.url_title, '') AS url_title,
-						COALESCE(ref_url.url, '') AS url,
+						ref_url.url_title AS url_title,
+						COALESCE(ref_url.url, '') AS url
 					FROM spec_block b
 					LEFT JOIN spec_subspec AS ref_subspec
 						ON b.ref_type = $2
@@ -443,10 +444,10 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID uint, w http.ResponseWriter, r *ht
 						ON b.ref_type = $3
 						AND ref_url.id = b.ref_id
 						AND ref_url.spec_id = b.spec_id
-					WHERE id = $1`,
+					WHERE b.id = $1`,
 					targetID, BlockRefSubspec, BlockRefURL,
 				).Scan(&context.Target.ID,
-					&context.Target.BlockRefType, &context.Target.Body,
+					&context.Target.BlockRefType, &context.Target.BlockTitle, &context.Target.Body,
 					&context.Target.BlockRefItem.SubspecName,
 					&context.Target.BlockRefItem.URLTitle, &context.Target.BlockRefItem.URL)
 				if err != nil {
