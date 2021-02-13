@@ -1,5 +1,6 @@
 import $ from 'jquery';
 import Vue from 'vue';
+import moment from 'moment';
 
 const VERSION_STAMP_RESPONSE = /^VersionStamp: (.+)$/m;
 
@@ -199,4 +200,10 @@ export function ucFirst(s) {
 	}
 	// convert only the first letter
 	return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+// Expects instance of Date
+// Outputs RFC3339Nano expected for time.Time for Go json.Parse
+export function dateToTimestampz(date) {
+	return moment(date).format('YYYY-MM-DD[T]HH:mm:ss.SSSSSSSSSZ');
 }

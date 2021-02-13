@@ -25,6 +25,7 @@ var ajaxHandlers = map[string]map[string]AjaxRoute{
 		"/ajax/spec/community":       ajaxSpecLoadCommunity,
 		"/ajax/spec/community/page":  ajaxSpecCommunityLoadCommentsPage,
 		"/ajax/spec/load-edit-block": ajaxLoadBlockForEditing,
+		"/ajax/community-review":     ajaxLoadCommuntyReviewPage,
 
 		// admin
 		"/ajax/admin/signup-requests": ajaxAdminLoadSignupRequests,

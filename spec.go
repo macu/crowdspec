@@ -31,6 +31,8 @@ type Spec struct {
 	CommentsCount uint `json:"commentsCount"`
 
 	// Root level blocks in this spec
+	// Note on omitempty: https://play.golang.org/p/Lk_FdWeL4i8
+	// empty slice will be omitted
 	Blocks []*SpecBlock `json:"blocks,omitempty"`
 }
 

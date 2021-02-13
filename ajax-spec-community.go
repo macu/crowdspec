@@ -87,7 +87,31 @@ type commentCommunity struct {
 	UnreadCount   uint       `json:"unreadCount"`
 	CommentsCount uint       `json:"commentsCount"`
 
+	// Context stack
+	Stack []*communityStackElement `json:"stack"`
+
 	RenderTime time.Time `json:"renderTime"`
+}
+
+// mirror structure of payload delivered to community-context-stack.vue
+type communityStackElement struct {
+	TargetType string `json:"targetType"`
+	Target     struct {
+		ID           int64  `json:"id"`
+		Name         string `json:"name"` // spec or subspec
+		BlockRefType string `json:"refType"`
+		BlockTitle   string `json:"title"`
+		Body         string `json:"body"` // block or comment
+		BlockRefItem struct {
+			SubspecName string `json:"name"`
+			URLTitle    string `json:"title"`
+			URL         string `json:"url"`
+		} `json:"refItem"`
+	} `json:"target"`
+
+	// Include for null value
+	OnAdjustUnread   *struct{} `json:"onAdjustUnread"`
+	OnAdjustComments *struct{} `json:"onAdjustComments"`
 }
 
 type communityCommentsPage struct {
@@ -117,6 +141,7 @@ func extractValidCommunityTarget(r *http.Request, userID uint) (int64, string, i
 }
 
 func ajaxSpecLoadCommunity(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
+	// GET
 
 	specID, err := AtoInt64(r.FormValue("specId"))
 	if err != nil {
@@ -325,6 +350,118 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID uint, w http.ResponseWriter, r *ht
 		}
 
 		// TODO load policy
+
+		if AtoBool(r.FormValue("loadStack")) {
+			var targetType = cc.Comment.TargetType
+			var targetID = cc.Comment.TargetID
+
+			if targetType == CommunityTargetComment {
+				var rows, err = db.Query(
+					`WITH RECURSIVE comment_stack(id, target_type, target_id, level) AS (
+						-- Anchor
+						SELECT id, target_type, target_id, 0
+						FROM spec_community_comment
+						WHERE id = $1
+						-- Recursive Member
+						UNION ALL
+						SELECT cc.id, cc.target_type, cc.target_id, cs.level + 1
+						FROM spec_community_comment cc, comment_stack cs
+						WHERE cs.target_type = 'comment'
+							AND cs.target_id = cc.id
+					)
+					SELECT cc.id, cc.comment_body
+					FROM spec_community_comment cc
+					INNER JOIN comment_stack cs
+					ON cs.id = cc.id
+					ORDER BY cs.level ASC`,
+					targetID,
+				)
+				if err != nil {
+					logError(r, userID, fmt.Errorf("querying stack: %w", err))
+					return nil, http.StatusInternalServerError
+				}
+
+				for rows.Next() {
+					var context = communityStackElement{TargetType: CommunityTargetComment}
+					err = rows.Scan(&context.Target.ID, &context.Target.Body)
+					if err != nil {
+						if err2 := rows.Close(); err2 != nil {
+							logError(r, userID, fmt.Errorf("closing rows: %s; on scanning stack: %w", err2, err))
+							return nil, http.StatusInternalServerError
+						}
+						logError(r, userID, fmt.Errorf("scanning stack row: %w", err))
+						return nil, http.StatusInternalServerError
+					}
+					cc.Stack = append(cc.Stack, &context)
+					targetType = context.TargetType
+					targetID = context.Target.ID
+				}
+			}
+
+			if targetType == CommunityTargetSpec {
+
+				var context = communityStackElement{TargetType: CommunityTargetSpec}
+				err = db.QueryRow(
+					`SELECT id, spec_name FROM spec WHERE id = $1`, targetID,
+				).Scan(&context.Target.ID, &context.Target.Name)
+				if err != nil {
+					logError(r, userID, fmt.Errorf("scanning stack spec: %w", err))
+					return nil, http.StatusInternalServerError
+				}
+				cc.Stack = append(cc.Stack, &context)
+
+			} else if targetType == CommunityTargetSubspec {
+
+				var context = communityStackElement{TargetType: CommunityTargetSubspec}
+				err = db.QueryRow(
+					`SELECT id, subspec_name FROM spec_subspec WHERE id = $1`, targetID,
+				).Scan(&context.Target.ID, &context.Target.Name)
+				if err != nil {
+					logError(r, userID, fmt.Errorf("scanning stack subspec: %w", err))
+					return nil, http.StatusInternalServerError
+				}
+				cc.Stack = append(cc.Stack, &context)
+
+			} else if targetType == CommunityTargetBlock {
+
+				var context = communityStackElement{
+					TargetType: CommunityTargetBlock,
+				}
+				err = db.QueryRow(
+					`SELECT b.id, b.ref_type,
+						-- only take first 100 characters for single-line stack
+						substr(b.block_body, 0, 100) AS block_body,
+						COALESCE(ref_subspec.subspec_name, '') AS subspec_name,
+						COALESCE(ref_url.url_title, '') AS url_title,
+						COALESCE(ref_url.url, '') AS url,
+					FROM spec_block b
+					LEFT JOIN spec_subspec AS ref_subspec
+						ON b.ref_type = $2
+						AND ref_subspec.id = b.ref_id
+						AND ref_subspec.spec_id = b.spec_id
+					LEFT JOIN spec_url AS ref_url
+						ON b.ref_type = $3
+						AND ref_url.id = b.ref_id
+						AND ref_url.spec_id = b.spec_id
+					WHERE id = $1`,
+					targetID, BlockRefSubspec, BlockRefURL,
+				).Scan(&context.Target.ID,
+					&context.Target.BlockRefType, &context.Target.Body,
+					&context.Target.BlockRefItem.SubspecName,
+					&context.Target.BlockRefItem.URLTitle, &context.Target.BlockRefItem.URL)
+				if err != nil {
+					logError(r, userID, fmt.Errorf("scanning stack subspec: %w", err))
+					return nil, http.StatusInternalServerError
+				}
+				cc.Stack = append(cc.Stack, &context)
+
+			}
+
+			// Reverse order of stack
+			for i, j := 0, len(cc.Stack)-1; i < j; i, j = i+1, j-1 {
+				cc.Stack[i], cc.Stack[j] = cc.Stack[j], cc.Stack[i]
+			}
+		}
 
 		return cc, http.StatusOK
 

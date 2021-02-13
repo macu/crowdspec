@@ -16,6 +16,7 @@
 
 <script>
 import StackBar from './community-context-stack-bar.vue';
+import {idsEq} from '../utils.js';
 
 export default {
 	components: {
@@ -25,6 +26,7 @@ export default {
 		return {
 			stack: [],
 			empty: true,
+			cachedContext: [],
 		};
 	},
 	computed: {
@@ -33,6 +35,11 @@ export default {
 		},
 	},
 	methods: {
+		replaceStack(stack) {
+			this.stack = stack;
+			this.cachedContext = [];
+			this.checkEmpty();
+		},
 		pushStack(targetType, target, onAdjustUnread, onAdjustComments) {
 			this.empty = false;
 			this.stack.push({
@@ -44,19 +51,66 @@ export default {
 		},
 		popStack() {
 			if (this.stack.length) {
-				return this.jumpStack(this.stack.length - 1);
+				let items = this.stack.splice(this.stack.length - 1, 1); // remove last item
+				let item = items[0];
+				this.$emit('pop-stack', item.targetType, item.target.id,
+					item.onAdjustUnread, item.onAdjustComments);
+				this.cacheItemHandlers(item);
+				return item;
 			}
 			return null;
 		},
 		jumpStack(i) {
-			let item = this.stack[i];
+			let items = this.stack.splice(i, this.stack.length - i); // remove items
+			let item = items[0];
 			this.$emit('pop-stack', item.targetType, item.target.id,
 				item.onAdjustUnread, item.onAdjustComments);
-			this.stack = this.stack.slice(0, i);
+			for (var i = 0; i < items.length; i++) {
+				this.cacheItemHandlers(items[i]);
+			}
 			return item;
+		},
+		cacheItemHandlers(item) {
+			// Delete old cache entry
+			for (var i = 0; i < this.cachedContext.length; i++) {
+				let c = this.cachedContext[i];
+				if (
+					c.targetType === item.targetType &&
+					idsEq(c.target.id, item.target.id)
+				) {
+					this.cachedContext.splice(i, 1); // remove from array
+					break;
+				}
+			}
+			if (item.onAdjustUnread || item.onAdjustComments) {
+				// Cached popped item to preserve handlers
+				this.cachedContext.push(item);
+			}
+		},
+		retrieveCachedHandlers(targetType, targetId) {
+			// Attempt to restore handlers from cached context
+			for (var i = 0; i < this.cachedContext.length; i++) {
+				let c = this.cachedContext[i];
+				if (
+					c.targetType === targetType &&
+					idsEq(c.target.id, targetId)
+				) {
+					let items = this.cachedContext.splice(i, 1);
+					let cachedItem = items[0];
+					return cachedItem;
+				}
+			}
+			return null;
+		},
+		getParentContext() {
+			if (this.stack.length) {
+				return this.stack[this.stack.length - 1];
+			}
+			return null;
 		},
 		clearStack() {
 			this.stack = [];
+			this.cachedContext = [];
 		},
 		checkEmpty() {
 			return this.empty = !this.stack.length;

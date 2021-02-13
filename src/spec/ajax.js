@@ -152,12 +152,13 @@ export function ajaxDeleteUrl(id) {
 	}).fail(alertError);
 }
 
-export function ajaxLoadCommunity(specId, targetType, targetId, unreadOnly) {
+export function ajaxLoadCommunity(specId, targetType, targetId, unreadOnly, loadStack) {
 	return $.get('/ajax/spec/community', {
 		specId,
 		targetType,
 		targetId,
 		unreadOnly,
+		loadStack,
 	}).fail(alertError);
 }
 

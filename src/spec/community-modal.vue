@@ -36,6 +36,7 @@
 			:spec-id="specId"
 			:comment="target"
 			@deleted="commentDeleted"
+			@update-unread="contextUpdateUnread"
 			/>
 
 
@@ -211,11 +212,18 @@ export default {
 			this.loadCommunity(targetType, targetId);
 			this.showing = true;
 		},
-		loadCommunity(targetType, targetId) {
+		openCommunityReview(targetType, targetId, onAdjustUnread = null, onAdjustComments = null) {
+			this.onAdjustUnread = onAdjustUnread;
+			this.onAdjustComments = onAdjustComments;
+			this.unreadOnly = this.$store.getters.userSettings.community.unreadOnly;
+			this.loadCommunity(targetType, targetId, true);
+			this.showing = true;
+		},
+		loadCommunity(targetType, targetId, loadStack = false) {
 			this.loading = true;
 			this.error = null;
 			ajaxLoadCommunity(this.specId, targetType, targetId,
-				this.unreadOnly,
+				this.unreadOnly, loadStack,
 			).then(response => {
 				this.loading = false;
 				this.targetType = targetType;
@@ -233,11 +241,21 @@ export default {
 						this.target = response.comment;
 						break;
 				}
+				if (loadStack && response.stack) {
+					this.$refs.contextStack.replaceStack(response.stack);
+				}
 				this.comments = response.comments;
 				this.unreadCount = response.unreadCount;
 				this.commentsCount = response.commentsCount;
 				this.hasMoreComments = response.commentsCount > response.comments.length;
 				this.newCommentBody = '';
+
+				// Restore handlers from stack history
+				let cachedItem = this.$refs.contextStack.retrieveCachedHandlers(targetType, targetId);
+				if (cachedItem) {
+					this.onAdjustUnread = cachedItem.onAdjustUnread;
+					this.onAdjustComments = cachedItem.onAdjustComments;
+				}
 			}).fail(() => {
 				this.loading = false;
 				this.error = 'Failed to load community.';
@@ -357,7 +375,22 @@ export default {
 				}
 			}
 		},
+		contextUpdateUnread(read) {
+			// Called when toggling read on comment representing current community context
+			let parentContext = this.$refs.contextStack.getParentContext();
+			if (parentContext && parentContext.onAdjustUnread) {
+				parentContext.onAdjustUnread(read);
+			}
+		},
 		popStack(targetType, targetId, onAdjustUnread, onAdjustComments) {
+			// Cache current view in case of interaction handlers
+			this.$refs.contextStack.cacheItemHandlers({
+				targetType: this.targetType,
+				target: this.target,
+				onAdjustUnread: this.onAdjustUnread,
+				onAdjustComments: this.onAdjustComments,
+			});
+
 			this.onAdjustUnread = onAdjustUnread; // restore for top-level context
 			this.onAdjustComments = onAdjustComments; // restore for top-level context
 			this.loadCommunity(targetType, targetId);

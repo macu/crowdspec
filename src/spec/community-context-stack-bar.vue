@@ -2,8 +2,8 @@
 <div class="community-context-stack-bar" :class="targetType">
 	<el-button size="mini" icon="el-icon-top-left" type="primary" circle/>
 	<span class="bar">
-		<span class="label">{{label}}</span>
-		<span class="content" v-text="content"/>
+		<span class="label">{{label || '...'}}</span>
+		<span class="content" v-text="content || '...'"/>
 	</span>
 </div>
 </template>

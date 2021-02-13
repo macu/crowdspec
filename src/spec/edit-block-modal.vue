@@ -400,6 +400,7 @@ export default {
 
 <style lang="scss">
 @import '../_styles/_breakpoints.scss';
+@import '../_styles/_colours.scss';
 
 .spec-edit-block-modal {
 	>.el-dialog {
@@ -422,7 +423,7 @@ export default {
 				>.el-radio-group {
 					display: block;
 					padding: 10px;
-					background-color: rgba(240,240,255,.5);
+					background-color: $section-highlight;
 				}
 				>.split-even {
 					display: grid;

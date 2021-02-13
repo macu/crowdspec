@@ -27,10 +27,12 @@ const maxThumbnailDims = 300
 
 // URLObject contains display information about a URL.
 type URLObject struct {
-	ID        int64     `json:"id"`
-	SpecID    int64     `json:"specId"`
-	Created   time.Time `json:"created"`
-	URL       string    `json:"url"`
+	ID      int64     `json:"id"`
+	SpecID  int64     `json:"specId"`
+	Created time.Time `json:"created"`
+	URL     string    `json:"url"`
+	// Note on omitempty: https://play.golang.org/p/Lk_FdWeL4i8
+	// empty non-nil values are not omitted
 	Title     *string   `json:"title,omitempty"`
 	Desc      *string   `json:"desc,omitempty"`
 	ImageData *string   `json:"imageData,omitempty"`

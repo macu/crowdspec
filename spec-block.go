@@ -32,6 +32,8 @@ type SpecBlock struct {
 	UnreadCount   uint `json:"unreadCount"`
 	CommentsCount uint `json:"commentsCount"`
 
+	// Note on omitempty: https://play.golang.org/p/Lk_FdWeL4i8
+	// empty slice will be omitted
 	SubBlocks []*SpecBlock `json:"subblocks,omitempty"`
 }
 

@@ -7,6 +7,7 @@ import SpecPage from './pages/spec.vue';
 import SpecViewPage from './pages/spec-view.vue';
 import SubspecPage from './pages/subspec.vue';
 import SubspecViewPage from './pages/subspec-view.vue';
+import CommunityReviewPage from './pages/community-review.vue';
 import AdminPage from './pages/admin.vue';
 import AjaxErrorPage from './pages/ajax-error.vue';
 import NotFoundPage from './pages/not-found.vue';
@@ -21,6 +22,7 @@ export const router = new VueRouter({
 				{name: 'subspec', path: '', component: SubspecViewPage},
 			]},
 		]},
+		{name: 'community-review', path: '/community-review', component: CommunityReviewPage},
 		{name: 'admin', path: '/admin', component: AdminPage},
 		{name: 'ajax-error', path: '/ajax-error/:code', component: AjaxErrorPage},
 		{path: '*', component: NotFoundPage},

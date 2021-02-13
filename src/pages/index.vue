@@ -8,6 +8,12 @@
 	</el-button>
 
 	<el-button
+		@click="$router.push({name: 'community-review'})"
+		type="default">
+		Community review
+	</el-button>
+
+	<el-button
 		v-if="$store.getters.userIsAdmin"
 		@click="$router.push({name: 'admin'})"
 		class="admin-access">
