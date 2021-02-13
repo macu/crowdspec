@@ -15,86 +15,89 @@
 
 				<h3>Your specs</h3>
 
-				<div v-for="s in specs" :key="s.id" class="spec review">
-					<div class="flex-row">
-						<div class="flex-row nowrap fill">
-							<div class="expand">
-								<template v-if="s.hasSubspecs">
-									<el-button v-if="expandedSpecs[s.id]"
-										@click="collapseSpec(s.id)"
-										type="default"
-										size="mini"
-										icon="el-icon-arrow-up"
-										circle/>
+				<template v-if="specs.length">
+					<div v-for="s in specs" :key="s.id" class="spec review">
+						<div class="flex-row">
+							<div class="flex-row nowrap fill">
+								<div class="expand">
+									<template v-if="s.hasSubspecs">
+										<el-button v-if="expandedSpecs[s.id]"
+											@click="collapseSpec(s.id)"
+											type="default"
+											size="mini"
+											icon="el-icon-arrow-up"
+											circle/>
+										<el-button v-else
+											@click="expandSpec(s.id)"
+											type="default"
+											size="mini"
+											icon="el-icon-arrow-down"
+											circle/>
+									</template>
+									<!-- claim same space with hidden button -->
 									<el-button v-else
-										@click="expandSpec(s.id)"
 										type="default"
 										size="mini"
-										icon="el-icon-arrow-down"
-										circle/>
-								</template>
-								<!-- claim same space with hidden button -->
-								<el-button v-else
-									type="default"
-									size="mini"
-									icon="el-icon-aim"
-									circle
-									style="visibility:hidden;"/>
-							</div>
-							<div class="name fill">
-								<router-link :to="{name: 'spec', params: {specId: s.id}}">
-									{{s.name}}
-								</router-link>
-							</div>
-						</div>
-						<div>
-							<el-button @click="openSpecCommunity(s.id)"
-								:type="s.unread ? 'primary': 'default'"
-								size="mini"
-								icon="el-icon-chat-dot-square">
-								{{s.unread}} unread ({{s.total}} total)
-							</el-button>
-						</div>
-						<div>
-							<el-button @click="gotoSpec(s.id)"
-								:type="s.blockUnread ? 'primary' : 'default'"
-								size="mini"
-								icon="el-icon-folder-opened">
-								{{s.blockUnread}} unread ({{s.blockTotal}} total) on blocks
-							</el-button>
-						</div>
-					</div>
-					<div v-if="expandedSpecs[s.id]" class="subspecs">
-						<template v-if="subspecsBySpecId[s.id]">
-							<div v-for="ss in subspecsBySpecId[s.id]" :key="ss.id" class="subspec review">
-								<div class="flex-row">
-									<div class="name fill">
-										<router-link :to="{name: 'subspec', params: {specId: s.id, subspecId: ss.id}}">
-											{{ss.name}}
-										</router-link>
-									</div>
-									<div>
-										<el-button @click="openSubspecCommunity(s.id, ss.id)"
-											:type="ss.unread ? 'primary' : 'default'"
-											size="mini"
-											icon="el-icon-chat-dot-square">
-											{{ss.unread}} unread ({{ss.total}} total)
-										</el-button>
-									</div>
-									<div>
-										<el-button @click="gotoSubspec(s.id, ss.id)"
-											:type="ss.blockUnread ? 'primary' : 'default'"
-											size="mini"
-											icon="el-icon-folder-opened">
-											{{ss.blockUnread}} unread ({{ss.blockTotal}} total) on blocks
-										</el-button>
-									</div>
+										icon="el-icon-aim"
+										circle
+										style="visibility:hidden;"/>
+								</div>
+								<div class="name fill">
+									<router-link :to="{name: 'spec', params: {specId: s.id}}">
+										{{s.name}}
+									</router-link>
 								</div>
 							</div>
-						</template>
-						<p v-else><i class="el-icon-loading"/></p>
+							<div>
+								<el-button @click="openSpecCommunity(s.id)"
+									:type="s.unread ? 'primary': 'default'"
+									size="mini"
+									icon="el-icon-chat-dot-square">
+									{{s.unread}} unread ({{s.total}} total)
+								</el-button>
+							</div>
+							<div>
+								<el-button @click="gotoSpec(s.id)"
+									:type="s.blockUnread ? 'primary' : 'default'"
+									size="mini"
+									icon="el-icon-folder-opened">
+									{{s.blockUnread}} unread ({{s.blockTotal}} total) on blocks
+								</el-button>
+							</div>
+						</div>
+						<div v-if="expandedSpecs[s.id]" class="subspecs">
+							<template v-if="subspecsBySpecId[s.id]">
+								<div v-for="ss in subspecsBySpecId[s.id]" :key="ss.id" class="subspec review">
+									<div class="flex-row">
+										<div class="name fill">
+											<router-link :to="{name: 'subspec', params: {specId: s.id, subspecId: ss.id}}">
+												{{ss.name}}
+											</router-link>
+										</div>
+										<div>
+											<el-button @click="openSubspecCommunity(s.id, ss.id)"
+												:type="ss.unread ? 'primary' : 'default'"
+												size="mini"
+												icon="el-icon-chat-dot-square">
+												{{ss.unread}} unread ({{ss.total}} total)
+											</el-button>
+										</div>
+										<div>
+											<el-button @click="gotoSubspec(s.id, ss.id)"
+												:type="ss.blockUnread ? 'primary' : 'default'"
+												size="mini"
+												icon="el-icon-folder-opened">
+												{{ss.blockUnread}} unread ({{ss.blockTotal}} total) on blocks
+											</el-button>
+										</div>
+									</div>
+								</div>
+							</template>
+							<p v-else><i class="el-icon-loading"/></p>
+						</div>
 					</div>
-				</div>
+				</template>
+				<p v-else>No specs</p>
 
 			</section>
 
@@ -102,7 +105,8 @@
 
 				<h3>Your comments</h3>
 
-				<div class="filters">
+				<div class="flex-row wrap-reverse">
+					<div class="fill nowraptext" v-text="formattedCommentsCount"/>
 					<el-checkbox v-model="showUnreadOnly" @change="reloadComments()">
 						Show only comments with unread replies
 					</el-checkbox>
@@ -136,6 +140,7 @@
 					<el-button v-else-if="hasMoreComments" @click="loadMoreComments()">Load more</el-button>
 				</template>
 				<p v-else-if="loadingCommentsPage"><i class="el-icon-loading"/> Loading...</p>
+				<p v-else>No comments</p>
 
 			</section>
 
@@ -188,6 +193,7 @@ export default {
 			expandedSpecs: {},
 			subspecsBySpecId: {},
 			comments: [],
+			totalComments: 0,
 			hasMoreComments: false,
 			loadingCommentsPage: false,
 			specId: null, // used as param to community-modal
@@ -205,6 +211,11 @@ export default {
 				args.updatedBefore = this.comments[this.comments.length - 1].updated;
 			}
 			return args;
+		},
+		formattedCommentsCount() {
+			let c = this.totalComments;
+			return (c + ' comment' + (c !== 1 ? 's' : '')) +
+				(this.showUnreadOnly ? ' with unread replies' : '');
 		},
 	},
 	beforeRouteEnter(to, from, next) {
@@ -224,6 +235,7 @@ export default {
 		this.expandedSpecs = {};
 		this.subspecsBySpecId = {};
 		this.comments = [];
+		this.totalComments = 0;
 		this.hasMoreComments = false;
 		this.specId = null;
 		next();
@@ -237,7 +249,8 @@ export default {
 			).then(payload => {
 				this.specs = payload.specs;
 				this.comments = payload.comments;
-				this.hasMoreComments = payload.hasMore;
+				this.totalComments = payload.totalComments;
+				this.hasMoreComments = payload.hasMoreComments;
 				this.loading = false;
 			}).fail(jqXHR => {
 				this.$router.replace({
@@ -264,6 +277,36 @@ export default {
 		},
 		collapseSpec(specId) {
 			this.$set(this.expandedSpecs, specId, false);
+		},
+		reloadComments() {
+			this.loadingCommentsPage = true;
+			this.comments = [];
+			fetchCommunity(
+				$.extend({request: 'comments'}, this.commentsPageArgs)
+			).then(response => {
+				this.loadingCommentsPage = false;
+				this.comments = response.comments;
+				this.totalComments = response.totalComments;
+				this.hasMoreComments = response.hasMoreComments;
+			}).fail(jqXHR => {
+				this.loadingCommentsPage = false;
+				alertError(jqXHR);
+			});
+		},
+		loadMoreComments() {
+			this.loadingCommentsPage = true;
+			fetchCommunity(
+				$.extend({request: 'comments'}, this.commentsPageArgs)
+			).then(response => {
+				this.loadingCommentsPage = false;
+				this.comments = this.comments.concat(response.comments);
+				// Don't update totalComments - continue to show
+				// the number of comments counted at the beginning of paging
+				this.hasMoreComments = response.hasMoreComments;
+			}).fail(jqXHR => {
+				this.loadingCommentsPage = false;
+				alertError(jqXHR);
+			});
 		},
 		openSpecCommunity(specId) {
 			this.specId = specId; // set prop for modal
@@ -345,35 +388,6 @@ export default {
 				);
 			});
 		},
-		reloadComments() {
-			this.loadingCommentsPage = true;
-			this.comments = [];
-			fetchCommunity(
-				$.extend({request: 'comments'}, this.commentsPageArgs)
-			).then(response => {
-				this.loadingCommentsPage = false;
-				this.comments = response.comments;
-				this.hasMoreComments = response.hasMore;
-			}).fail(jqXHR => {
-				this.loadingCommentsPage = false;
-				alertError(jqXHR);
-			});
-		},
-		loadMoreComments() {
-			this.loadingCommentsPage = true;
-			fetchCommunity(
-				$.extend({request: 'comments'}, this.commentsPageArgs)
-			).then(response => {
-				this.loadingCommentsPage = false;
-				this.comments = this.comments.concat(response.comments);
-				// Don't update commentsCount - continue to show
-				// the number of comments counted at the beginning of paging
-				this.hasMoreComments = response.hasMore;
-			}).fail(jqXHR => {
-				this.loadingCommentsPage = false;
-				alertError(jqXHR);
-			});
-		},
 		playVideo(urlObject) {
 			this.$refs.playVideoModal.show(urlObject);
 		},
@@ -411,53 +425,8 @@ export default {
 		margin-bottom: 100px;
 	}
 
-	.filters {
-		display: flex;
-		flex-direction: row;
-		flex-wrap: wrap;
-		align-items: center; // cross-axis (vertical alignment)
-		justify-content: flex-start; // main axis (horizontal alignment)
-		margin: 20px 0;
-		* {
-			white-space: nowrap;
-		}
-		>*:not(:first-child) {
-			margin-left: 20px;
-		}
-		.el-radio-group {
-			.el-radio:not(:last-child) {
-				margin-right: 20px;
-			}
-		}
-	}
-
 	.body {
 		white-space: pre-wrap;
-	}
-
-	.flex-row {
-		display: flex;
-		flex-direction: row;
-		align-items: flex-start;
-		justify-content: flex-end;
-		padding: 0 10px 10px;
-		&:not(.nowrap) {
-			flex-wrap: wrap;
-		}
-		>.fill {
-			flex: 1;
-		}
-		>* {
-			margin-top: 10px;
-		}
-		>*+* {
-			margin-left: 10px;
-		}
-		>.flex-row {
-			align-self: flex-start;
-			margin-top: 0;
-			padding: 0;
-		}
 	}
 
 	.review {
@@ -468,10 +437,6 @@ export default {
 		>.flex-row {
 			background-color: rgba($spec-bg, .2);
 			>.flex-row {
-				// >.expand {
-				// 	>.el-button {
-				// 	}
-				// }
 				>.name {
 					margin-left: 15px;
 					background-color: white;

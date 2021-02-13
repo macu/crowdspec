@@ -39,9 +39,8 @@
 			@update-unread="contextUpdateUnread"
 			/>
 
-
-		<div class="flex-row">
-			<div class="fill nowrap" v-text="formattedCommentsCount"/>
+		<div class="flex-row wrap-reverse">
+			<div class="fill nowraptext" v-text="formattedCommentsCount"/>
 			<el-checkbox v-model="unreadOnly" @change="reloadCommunity()">
 				Show only unread comments
 			</el-checkbox>
@@ -431,24 +430,6 @@ export default {
 					margin-bottom: 10px;
 					max-height: 60vh;
 					overflow-y: auto;
-				}
-			}
-			.flex-row {
-				display: flex;
-				flex-direction: row;
-				flex-wrap: wrap;
-				align-items: center;
-				>* {
-					margin-bottom: 5px;
-				}
-				>*+* {
-					margin-left: 20px;
-				}
-				>.fill {
-					flex: 1;
-				}
-				>.nowrap {
-					white-space: nowrap;
 				}
 			}
 		}

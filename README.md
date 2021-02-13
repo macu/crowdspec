@@ -95,6 +95,7 @@ postgres=#
 - [x] Use YouTube API for fetching video previews
 - [x] Add Markdown support
 - [x] Add community review page
+- [x] Initialize add block modal style type according to siblings
 
 ### 2021-01
 

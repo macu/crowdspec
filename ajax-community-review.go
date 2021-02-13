@@ -14,7 +14,9 @@ type communityReviewPage struct {
 	Subspecs *[]*communityReviewSubspec `json:"subspecs,omitempty"`
 	Comments *[]*communityReviewComment `json:"comments,omitempty"`
 
-	HasMoreComments *bool `json:"hasMore,omitempty"`
+	// Comments properties
+	TotalComments   *uint `json:"totalComments,omitempty"`
+	HasMoreComments *bool `json:"hasMoreComments,omitempty"`
 
 	RenderTime time.Time `json:"renderTime"`
 }
@@ -334,6 +336,21 @@ func ajaxLoadCommuntyReviewPage(db *sql.DB, userID uint, w http.ResponseWriter, 
 		} else {
 			var f = false
 			response.HasMoreComments = &f
+		}
+
+		if updatedBefore == nil {
+			// Count total number of comments on first page
+			err = db.QueryRow(
+				`SELECT COUNT(*)
+				FROM spec_community_comment AS cc
+				WHERE cc.user_id = $1
+					`+unreadOnlyCond,
+				userID,
+			).Scan(&response.TotalComments)
+			if err != nil {
+				logError(r, userID, fmt.Errorf("counting comments: %w", err))
+				return nil, http.StatusInternalServerError
+			}
 		}
 	}
 
