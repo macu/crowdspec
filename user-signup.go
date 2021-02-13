@@ -143,7 +143,7 @@ func makeRequestSignupHandler(db *sql.DB) func(w http.ResponseWriter, r *http.Re
 				executeTemplate(w, r,
 					username, email, message,
 					http.StatusBadRequest,
-					"Username unavailable",
+					"Username already claimed",
 					nil) // don't log error
 				return
 			}
@@ -173,7 +173,7 @@ func makeRequestSignupHandler(db *sql.DB) func(w http.ResponseWriter, r *http.Re
 				executeTemplate(w, r,
 					username, email, message,
 					http.StatusBadRequest,
-					"Email address unavailable",
+					"Email address already claimed",
 					nil) // don't log error
 				return
 			}
