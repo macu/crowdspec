@@ -374,11 +374,8 @@ export default {
 				line-height: 1.2em;
 			}
 			>.el-form-item__content {
-				>.el-form-item {
-					margin: 0;
-					&:not(:first-child) {
-						margin-top: 5px;
-					}
+				>*:not(:first-child) {
+					margin-top: 10px;
 				}
 			}
 			.el-alert {

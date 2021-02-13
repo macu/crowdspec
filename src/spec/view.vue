@@ -296,7 +296,7 @@ export default {
 			});
 		},
 		promptAddBlock() {
-			this.$refs.editBlockModal.showAdd(null, null, newBlock => {
+			this.$refs.editBlockModal.showAdd(null, null, true, newBlock => {
 				let $block = this.insertBlock(newBlock, true, true);
 				this.panToBlock($block);
 			});
@@ -307,8 +307,8 @@ export default {
 		openEditBlock(blockId, callback) {
 			this.$refs.editBlockModal.showEdit(blockId, callback);
 		},
-		promptAddSubblock(parentId, insertBeforeId) {
-			this.$refs.editBlockModal.showAdd(parentId, insertBeforeId, newBlock => {
+		promptAddSubblock(parentId, insertBeforeId, defaultStyleType) {
+			this.$refs.editBlockModal.showAdd(parentId, insertBeforeId, defaultStyleType, newBlock => {
 				let $block = this.insertBlock(newBlock, false, true);
 				// Add to sublist
 				if (insertBeforeId) {

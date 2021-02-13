@@ -240,6 +240,9 @@ export default {
 		getBlockId() {
 			return this.block.id;
 		},
+		getStyleType() {
+			return this.styleType;
+		},
 		getParentId() {
 			let $parent = $(this.$el).parent().closest('[data-spec-block]');
 			return $parent.length ? $parent.attr('data-spec-block') : null;
@@ -278,20 +281,23 @@ export default {
 		addBeforeThis() {
 			let parentId = this.getParentId();
 			let insertBeforeId = this.block.id;
-			this.raisePromptAddSubblock(parentId, insertBeforeId);
+			// use style type of this block for default
+			this.raisePromptAddSubblock(parentId, insertBeforeId, this.styleType);
 		},
 		addIntoThis() {
 			let parentId = this.block.id;
 			let insertBeforeId = null;
-			this.raisePromptAddSubblock(parentId, insertBeforeId);
+			// allow edit-block-modal to determine initial style type
+			this.raisePromptAddSubblock(parentId, insertBeforeId, true);
 		},
 		addAfterThis() {
 			let parentId = this.getParentId();
 			let insertBeforeId = this.getFollowingBlockId();
-			this.raisePromptAddSubblock(parentId, insertBeforeId);
+			// use style type of this block for default
+			this.raisePromptAddSubblock(parentId, insertBeforeId, this.styleType);
 		},
-		raisePromptAddSubblock(parentId, insertBeforeId) {
-			this.$emit('prompt-add-subblock', parentId, insertBeforeId);
+		raisePromptAddSubblock(parentId, insertBeforeId, defaultStyleType) {
+			this.$emit('prompt-add-subblock', parentId, insertBeforeId, defaultStyleType);
 		},
 		startMoving() {
 			this.$emit('start-moving', this.block.id);

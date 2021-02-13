@@ -137,8 +137,8 @@ export default {
 	data() {
 		return {
 			// user inputs
-			contentType: CONTENT_TYPE_PLAIN,
 			styleType: STYLE_TYPE_BULLET,
+			contentType: CONTENT_TYPE_PLAIN,
 			title: '',
 			body: '',
 			refType: null,
@@ -196,14 +196,14 @@ export default {
 			this.refFields = null;
 		},
 		body() {
-			this.renderPreview();
+			this.renderMarkdownPreview();
 		},
 		contentType() {
-			this.renderPreview();
+			this.renderMarkdownPreview();
 		},
 	},
 	methods: {
-		renderPreview() {
+		renderMarkdownPreview() {
 			if (this.contentType === CONTENT_TYPE_MARKDOWN) {
 				if (this.body.trim()) {
 					if (!this.debouncedBodyRender) {
@@ -248,7 +248,42 @@ export default {
 				}
 			}
 		},
-		showAdd(parentId, insertBeforeId, callback) {
+		showAdd(parentId, insertBeforeId, defaultStyleType, callback) {
+			if (defaultStyleType === true) {
+				// not all these routes are followed;
+				// defaultStyleType is given as a string when adding above or below a block,
+				// which overrides the behaviour defined here;
+				// but the logic here is comprehensive as a fallback in case I want to use it
+				if (insertBeforeId) {
+					// Add before an existing block
+					let $sibling = $('[data-spec-block="'+insertBeforeId+'"]', '.spec-view');
+					let $prevSibling = $sibling.prev('[data-spec-block]');
+					if ($prevSibling.length) {
+						// Copy style of preceeding block
+						defaultStyleType = $prevSibling.data('vc').getStyleType();
+					} else {
+						// Copy style of following block
+						defaultStyleType = $sibling.data('vc').getStyleType();
+					}
+				} else if (parentId) {
+					// Add at last position within parent block
+					let $parent = $('[data-spec-block="'+parentId+'"]', '.spec-view');
+					let $sibling = $('>ul>[data-spec-block]:last-child', $parent);
+					if ($sibling.length) {
+						// Copy style of last block currently in parent
+						defaultStyleType = $sibling.data('vc').getStyleType();
+					}
+				} else {
+					let $sibling = $('>ul>[data-spec-block]:last-child', '.spec-view');
+					if ($sibling.length) {
+						// Copy style of current last root block
+						defaultStyleType = $sibling.data('vc').getStyleType();
+					}
+				}
+			}
+			if (typeof defaultStyleType === 'string') {
+				this.styleType = defaultStyleType;
+			}
 			this.parentId = parentId;
 			this.insertBeforeId = insertBeforeId;
 			this.callback = callback;
@@ -379,13 +414,13 @@ export default {
 			});
 		},
 		closed() {
+			this.styleType = STYLE_TYPE_BULLET;
+			this.contentType = CONTENT_TYPE_PLAIN;
 			this.block = null;
 			this.error = null;
 			this.parentId = null;
 			this.insertBeforeId = null;
 			this.callback = null;
-			// leave styleTyle and contentType set to the last values to appear
-			// TODO initialize upon modal open according to sibling blocks
 			this.title = '';
 			this.body = '';
 			this.refType = null;
