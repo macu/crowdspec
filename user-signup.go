@@ -118,60 +118,62 @@ func makeRequestSignupHandler(db *sql.DB) func(w http.ResponseWriter, r *http.Re
 				return
 			}
 
-			var requestID int64
+			var usernameTaken bool
 			err = db.QueryRow(
-				`SELECT r.id
-				FROM user_signup_request r
-				WHERE r.username = $1 OR r.email = $2`,
-				username, email).Scan(&requestID)
-
+				`SELECT EXISTS(
+					SELECT r.id
+					FROM user_signup_request r
+					WHERE r.username = $1
+					UNION
+					SELECT u.id
+					FROM user_account u
+					WHERE u.username = $1
+				)`,
+				username,
+			).Scan(&usernameTaken)
 			if err != nil {
-				if err == sql.ErrNoRows {
-					// No existing request
-					// Ignore error
-				} else {
-					executeTemplate(w, r,
-						username, email, message,
-						http.StatusInternalServerError,
-						"Server error", err)
-					return
-				}
-			}
-
-			if requestID > 0 {
 				executeTemplate(w, r,
 					username, email, message,
-					http.StatusConflict,
-					"You already submitted a signup request",
+					http.StatusInternalServerError,
+					"Server error", err)
+				return
+			}
+
+			if usernameTaken {
+				executeTemplate(w, r,
+					username, email, message,
+					http.StatusBadRequest,
+					"Username unavailable",
 					nil) // don't log error
 				return
 			}
 
-			var userID int64
+			var emailTaken bool
 			err = db.QueryRow(
-				`SELECT a.id
-				FROM user_account a
-				WHERE a.username = $1 OR a.email = $2`,
-				username, email).Scan(&userID)
-
+				`SELECT EXISTS(
+					SELECT r.id
+					FROM user_signup_request r
+					WHERE r.email = $1
+					UNION
+					SELECT u.id
+					FROM user_account u
+					WHERE u.email = $1
+				)`,
+				email,
+			).Scan(&emailTaken)
 			if err != nil {
-				if err == sql.ErrNoRows {
-					// No existing user
-					// Ignore error
-				} else {
-					executeTemplate(w, r,
-						username, email, message,
-						http.StatusInternalServerError,
-						"Server error", err)
-					return
-				}
-			}
-
-			if userID > 0 {
 				executeTemplate(w, r,
 					username, email, message,
-					http.StatusConflict,
-					"A user already exists with the given username or email",
+					http.StatusInternalServerError,
+					"Server error", err)
+				return
+			}
+
+			if emailTaken {
+				executeTemplate(w, r,
+					username, email, message,
+					http.StatusBadRequest,
+					"Email address unavailable",
 					nil) // don't log error
 				return
 			}
@@ -189,6 +191,7 @@ func makeRequestSignupHandler(db *sql.DB) func(w http.ResponseWriter, r *http.Re
 			})
 
 			// save the request for review
+			var requestID int64
 			err = db.QueryRow(
 				`INSERT INTO user_signup_request (username, email, created_at)
 				VALUES ($1, $2, $3)
