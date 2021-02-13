@@ -58,7 +58,7 @@
 
 		</div>
 
-		<h2 @click="gotoSpec()">{{spec.name}}</h2>
+		<h2 @click="gotoSpec()" class="name">{{spec.name}}</h2>
 
 		<div v-if="spec.desc" class="desc">{{spec.desc}}</div>
 
@@ -304,7 +304,7 @@ export default {
 			}
 		}
 
-		>h2 {
+		>h2.name {
 			margin: 0;
 			cursor: pointer;
 		}

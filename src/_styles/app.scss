@@ -1,3 +1,5 @@
+@import './_app.scss';
+
 * {
 	box-sizing: border-box;
 }
@@ -13,11 +15,7 @@ html, body {
 	word-break: normal;
 	white-space: normal;
 
-	// Also break links and long words
-	// https://css-tricks.com/snippets/css/prevent-long-urls-from-breaking-out-of-container/
-	word-break: normal;
-	overflow-wrap: break-word; // required for IE and Safari;
-	overflow-wrap: anywhere; // soft wrap considered in intrinsic min content size calculation
+	@include break-anywhere;
 }
 
 .el-checkbox {
@@ -68,9 +66,7 @@ html, body {
 .markdown {
 	// Styles for rendered markdown
 
-	word-break: normal;
-	overflow-wrap: break-word; // required for IE and Safari;
-	overflow-wrap: anywhere; // soft wrap considered in intrinsic min content size calculation
+	@include break-anywhere;
 
 	h1, h2, h3, h4, h5, h6 {
 		margin: 10px 0;
@@ -129,4 +125,8 @@ html, body {
 	>:last-child {
 		margin-bottom: 0;
 	}
+}
+
+.title, .name, .desc, .body {
+	@include break-anywhere;
 }

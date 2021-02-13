@@ -79,7 +79,7 @@
 			</el-button>
 		</div>
 	</div>
-	<div v-else class="content">{{body}}</div>
+	<div v-else class="body">{{body}}</div>
 
 </div>
 </template>
@@ -248,7 +248,7 @@ export default {
 		}
 	}
 
-	>.content {
+	>.body {
 		white-space: pre-wrap;
 	}
 

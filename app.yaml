@@ -15,7 +15,7 @@ env_variables:
   MAILJET_SECRET: "projects/178253280892/secrets/MAILJET_SECRET_KEY"
   YOUTUBE_API_KEY: "AIzaSyDF6SEQrNQZWXmLjO-8fNX5qdwnpmui7yE"
   HTTP_CLIENT_REFERER: "https://crowdspec.dev"
-  VERSION_STAMP: "202102130220"
+  VERSION_STAMP: "202102130258"
 
 handlers:
 - url: /css

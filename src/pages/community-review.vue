@@ -476,6 +476,7 @@ export default {
 					margin-left: 15px;
 					background-color: white;
 					padding: 5px 15px;
+					min-width: 145px; // prevent squash
 				}
 			}
 		}
@@ -487,6 +488,7 @@ export default {
 					>.name {
 						background-color: white;
 						padding: 5px 15px;
+						min-width: 145px; // prevent squash
 					}
 				}
 			}

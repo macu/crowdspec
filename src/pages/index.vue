@@ -1,24 +1,26 @@
 <template>
 <div class="index-page">
 
-	<el-button
-		@click="promptCreateSpec()"
-		type="primary">
-		New spec
-	</el-button>
+	<div class="actions">
+		<el-button
+			@click="promptCreateSpec()"
+			type="primary">
+			New spec
+		</el-button>
 
-	<el-button
-		@click="$router.push({name: 'community-review'})"
-		type="default">
-		Community review
-	</el-button>
+		<el-button
+			@click="$router.push({name: 'community-review'})"
+			type="default">
+			Community review
+		</el-button>
 
-	<el-button
-		v-if="$store.getters.userIsAdmin"
-		@click="$router.push({name: 'admin'})"
-		class="admin-access">
-		Admin
-	</el-button>
+		<el-button
+			v-if="$store.getters.userIsAdmin"
+			@click="$router.push({name: 'admin'})"
+			class="admin-access">
+			Admin
+		</el-button>
+	</div>
 
 	<div class="user-specs">
 		<h2>Your specs</h2>
@@ -141,10 +143,22 @@ export default {
 		padding: $content-area-padding-sm;
 	}
 
+	.actions {
+		margin-top: -10px;
+		.el-button {
+			margin-top: 10px;
+		}
+		.el-button.admin-access {
+			color: white;
+			background-color: $admin-bg;
+			border-color: $admin-bg;
+		}
+	}
+
 	.user-specs, .public-specs {
-		margin-top: $content-area-padding;
+		margin-top: 70px;
 		@include mobile {
-			margin-top: $content-area-padding-sm;
+			margin-top: 60px;
 		}
 	}
 
@@ -217,12 +231,6 @@ export default {
 
 		}
 	} // ul.specs-list
-
-	.el-button.admin-access {
-		color: white;
-		background-color: $admin-bg;
-		border-color: $admin-bg;
-	}
 
 } // .index-page
 </style>

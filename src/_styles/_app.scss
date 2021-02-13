@@ -13,3 +13,11 @@ $content-area-padding-sm: 32px;
 
 // spacing between icons and surrounding text
 $icon-spacing: .5ex;
+
+@mixin break-anywhere {
+	// Also break links and long words
+	// https://css-tricks.com/snippets/css/prevent-long-urls-from-breaking-out-of-container/
+	word-break: normal;
+	overflow-wrap: break-word; // required for IE and Safari;
+	overflow-wrap: anywhere; // soft wrap considered in intrinsic min content size calculation
+}

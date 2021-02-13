@@ -40,7 +40,7 @@
 
 		</div>
 
-		<h3>{{subspec.name}}</h3>
+		<h3 class="name">{{subspec.name}}</h3>
 
 		<div v-if="subspec.desc" class="desc">{{subspec.desc}}</div>
 
