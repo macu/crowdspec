@@ -409,7 +409,9 @@ export default {
 				margin-top: 0;
 			}
 			>section {
-				margin-top: 40px;
+				&:not(:first-child) {
+					margin-top: 40px;
+				}
 				>*+* {
 					margin-top: 20px;
 				}
