@@ -1,5 +1,5 @@
 <template>
-<li :data-spec-block="block.id" class="spec-block" :class="classes" @click.stop.prevent="clearSelection()">
+<li :data-spec-block="block.id" class="spec-block" :class="classes" @touchstart="touchstart" @selectstart="selectstart">
 
 	<div class="content" :class="{'clear-ref': clearRef, 'mobile-adjust': mobileAdjust}">
 
@@ -116,6 +116,8 @@ import {
 	REF_TYPE_URL, REF_TYPE_SUBSPEC,
 } from './const.js';
 import {idsEq} from '../utils.js';
+
+const TOUCH_DELAY_CLEAR_SELECTION = 200;
 
 export default {
 	components: {
@@ -352,15 +354,18 @@ export default {
 		updateHasSubblocks() {
 			this.hasSubblocks = this.$refs.sublist.childElementCount > 0;
 		},
-		clearSelection() {
-			// @click.stop.prevent should prevent selections on tap on mobile;
-			// text selection should still be possible through long press;
-			// clear selection if any
-			let s = window.getSelection(); // IE9+
-			if (s) {
-				this.$nextTick(() => {
-					s.removeAllRanges();
-				});
+		touchstart(e) {
+			this.lastTouchStartTime = Date.now();
+		},
+		selectstart(e) {
+			if (!this.lastTouchStartTime) {
+				return;
+			}
+			if ((Date.now() - this.lastTouchStartTime) < TOUCH_DELAY_CLEAR_SELECTION) {
+				// disable select text on click block;
+				// text selection should still be possible through long press
+				e.preventDefault();
+				e.stopPropagation();
 			}
 		},
 	},

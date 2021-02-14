@@ -18,9 +18,6 @@ func init() {
 	// Use bluemonday policy for life of program
 	htmlPolicy = bluemonday.NewPolicy()
 
-	// Validate URLs using net/url.Parse and require 'mailto:', 'http://' or 'https://'
-	htmlPolicy.AllowStandardURLs()
-
 	// Disallow images
 
 	// Allow elements
@@ -35,6 +32,12 @@ func init() {
 
 	// Allow links
 	htmlPolicy.AllowAttrs("href", "title").OnElements("a")
+
+	// Validate URLs using net/url.Parse and require 'mailto:', 'http://' or 'https://'
+	htmlPolicy.AllowURLSchemes("mailto", "http", "https")
+	htmlPolicy.RequireParseableURLs(true)
+	htmlPolicy.RequireNoFollowOnLinks(true)
+	htmlPolicy.AddTargetBlankToFullyQualifiedLinks(true)
 
 	// Allow code blocks with language class
 	htmlPolicy.AllowAttrs("class").Matching(regexp.MustCompile("^language-[a-zA-Z0-9]+$")).OnElements("code")
