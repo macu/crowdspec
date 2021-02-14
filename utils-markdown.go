@@ -35,6 +35,7 @@ func init() {
 
 	// Validate URLs using net/url.Parse and require 'mailto:', 'http://' or 'https://'
 	htmlPolicy.AllowURLSchemes("mailto", "http", "https")
+	htmlPolicy.AllowRelativeURLs(true) // links within crowdspec
 	htmlPolicy.RequireParseableURLs(true)
 	htmlPolicy.RequireNoFollowOnLinks(true)
 	htmlPolicy.AddTargetBlankToFullyQualifiedLinks(true)
