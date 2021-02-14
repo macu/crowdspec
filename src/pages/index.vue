@@ -10,8 +10,9 @@
 
 		<el-button
 			@click="$router.push({name: 'community-review'})"
-			type="default">
+			:type="unreadCommunity ? 'primary' : 'default'">
 			Community review
+			<template v-if="unreadCommunity">({{unreadCommunity}} unread)</template>
 		</el-button>
 
 		<el-button
@@ -97,6 +98,7 @@ export default {
 	},
 	data() {
 		return {
+			unreadCommunity: 0,
 			userSpecs: [],
 			publicSpecs: [],
 			loading: true,
@@ -113,6 +115,7 @@ export default {
 		reloadSpecs() {
 			this.loading = true;
 			$.get('/ajax/home').then(payload => {
+				this.unreadCommunity = payload.unread;
 				this.userSpecs = payload.userSpecs;
 				this.publicSpecs = payload.publicSpecs;
 				this.loading = false;

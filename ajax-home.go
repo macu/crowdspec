@@ -68,12 +68,51 @@ func ajaxUserHome(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 		publicSpecs = append(publicSpecs, s)
 	}
 
+	var unreadComments uint
+	err = db.QueryRow(
+		`SELECT (
+			-- count unread comments on user's own specs
+			SELECT COUNT(*)
+			FROM spec_community_comment cc
+			INNER JOIN spec
+			ON spec.id = cc.spec_id
+			WHERE cc.target_type != 'comment' -- counted separately
+				AND spec.owner_type = $1 AND spec.owner_id = $2
+				AND NOT EXISTS(
+					SELECT * FROM spec_community_read cr
+					WHERE cr.user_id = $2
+						AND cr.target_type = 'comment'
+						AND cr.target_id = cc.id
+				)
+		) + (
+			-- count comments by current user with unread replies
+			SELECT COUNT(*)
+			FROM spec_community_comment cc
+			INNER JOIN spec_community_comment cc_parent
+			ON cc.target_type = 'comment' AND cc_parent.id = cc.id
+			WHERE cc_parent.user_id = $2
+				AND NOT EXISTS(
+					SELECT * FROM spec_community_read cr
+					WHERE cr.user_id = $2
+						AND cr.target_type = 'comment'
+						AND cr.target_id = cc.id
+				)
+		)`,
+		OwnerTypeUser, userID,
+	).Scan(&unreadComments)
+	if err != nil {
+		logError(r, userID, fmt.Errorf("counting unread comments: %w", err))
+		return nil, http.StatusInternalServerError
+	}
+
 	payload := struct {
-		UserSpecs   []Spec `json:"userSpecs"`
-		PublicSpecs []Spec `json:"publicSpecs"`
+		UnreadCommentCount uint   `json:"unread"`
+		UserSpecs          []Spec `json:"userSpecs"`
+		PublicSpecs        []Spec `json:"publicSpecs"`
 	}{
-		UserSpecs:   userSpecs,
-		PublicSpecs: publicSpecs,
+		UnreadCommentCount: unreadComments,
+		UserSpecs:          userSpecs,
+		PublicSpecs:        publicSpecs,
 	}
 
 	return payload, http.StatusOK
