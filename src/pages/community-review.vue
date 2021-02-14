@@ -23,13 +23,13 @@
 									<template v-if="s.hasSubspecs">
 										<el-button v-if="expandedSpecs[s.id]"
 											@click="collapseSpec(s.id)"
-											type="default"
+											:type="s.hasUnreadSubspec ? 'primary' : 'default'"
 											size="mini"
 											icon="el-icon-arrow-up"
 											circle/>
 										<el-button v-else
 											@click="expandSpec(s.id)"
-											type="default"
+											:type="s.hasUnreadSubspec ? 'primary' : 'default'"
 											size="mini"
 											icon="el-icon-arrow-down"
 											circle/>
@@ -345,6 +345,24 @@ export default {
 						for (var i = 0; i < subspecs.length; i++) {
 							if (idsEq(subspecId, subspecs[i].id)) {
 								this.$set(subspecs[i], 'unread', subspecs[i].unread + adjustUnread);
+								break;
+							}
+						}
+						// Update spec.hasUnreadSubspec
+						let hasUnreadSubspec = false;
+						if (adjustUnread > 0) {
+							hasUnreadSubspec = true;
+						} else {
+							for (var i = 0; i < subspecs.length; i++) {
+								if (subspecs[i].unread > 0 || subspecs[i].blockUnread > 0) {
+									hasUnreadSubspec = true;
+									break;
+								}
+							}
+						}
+						for (var i = 0; i < this.specs.length; i++) {
+							if (idsEq(specId, this.specs[i].id)) {
+								this.$set(this.specs[i], 'hasUnreadSubspec', hasUnreadSubspec);
 								break;
 							}
 						}

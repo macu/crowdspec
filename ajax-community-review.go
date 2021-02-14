@@ -32,7 +32,8 @@ type communityReviewSpec struct {
 	BlockUnreadComments uint `json:"blockUnread"`
 	BlockTotalComments  uint `json:"blockTotal"`
 
-	HasSubspecs bool `json:"hasSubspecs"`
+	HasSubspecs              bool `json:"hasSubspecs"`
+	HasUnreadSubspecComments bool `json:"hasUnreadSubspec"`
 }
 
 type communityReviewSubspec struct {
@@ -125,7 +126,39 @@ func ajaxLoadCommuntyReviewPage(db *sql.DB, userID uint, w http.ResponseWriter, 
 						SELECT * FROM spec_subspec
 						WHERE spec_id = spec.id
 					)
-				) AS has_subspecs
+				) AS has_subspecs,
+				(
+					SELECT EXISTS(
+						SELECT ss.*
+						FROM spec_subspec ss
+						INNER JOIN spec_community_comment cc
+							ON cc.target_type = 'subspec'
+							AND cc.target_id = ss.id
+						WHERE ss.spec_id = spec.id
+							AND NOT EXISTS(
+								SELECT *
+								FROM spec_community_read cr
+								WHERE cr.user_id = $2
+									AND cr.target_type = 'comment'
+									AND cr.target_id = cc.id
+							)
+					) OR EXISTS(
+						SELECT sb.*
+						FROM spec_block sb
+						INNER JOIN spec_community_comment cc
+							ON cc.target_type = 'block'
+							AND cc.target_id = sb.id
+						WHERE sb.spec_id = spec.id
+							AND sb.subspec_id IS NOT NULL
+							AND NOT EXISTS(
+								SELECT *
+								FROM spec_community_read cr
+								WHERE cr.user_id = $2
+									AND cr.target_type = 'comment'
+									AND cr.target_id = cc.id
+							)
+					)
+				) AS has_subspec_unread_comments
 			FROM spec
 			WHERE spec.owner_type = $1 AND spec.owner_id = $2
 			ORDER BY spec.spec_name ASC`,
@@ -141,7 +174,7 @@ func ajaxLoadCommuntyReviewPage(db *sql.DB, userID uint, w http.ResponseWriter, 
 			err = rows.Scan(&review.ID, &review.Name, &review.Updated,
 				&review.UnreadComments, &review.TotalComments,
 				&review.BlockUnreadComments, &review.BlockTotalComments,
-				&review.HasSubspecs)
+				&review.HasSubspecs, &review.HasUnreadSubspecComments)
 			if err != nil {
 				logError(r, userID, fmt.Errorf("scanning specs review row: %w", err))
 				return nil, http.StatusInternalServerError
