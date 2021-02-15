@@ -108,6 +108,7 @@ func fetchMetadata(url string) (*URLMetadata, error) {
 
 	data := &URLMetadata{}
 
+	// metabolize reads meta tags from head and returns before parsing body
 	err = m.Metabolize(res.Body, data)
 	if err != nil {
 		return nil, fmt.Errorf("reading meta tags: %w", err)

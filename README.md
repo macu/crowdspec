@@ -96,6 +96,7 @@ postgres=#
 - [x] Add Markdown support
 - [x] Add community review page
 - [x] Initialize add block modal style type according to siblings
+- [x] Add code highlighting
 
 ### 2021-01
 

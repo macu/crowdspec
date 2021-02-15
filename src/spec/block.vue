@@ -95,6 +95,7 @@
 			<div v-if="contentType === CONTENT_TYPE_PLAIN"
 				class="body plain" v-text="body"></div>
 			<div v-else-if="contentType === CONTENT_TYPE_MARKDOWN"
+				ref="renderedHtml"
 				class="body markdown" v-html="renderedHtml"></div>
 		</template>
 
@@ -116,6 +117,10 @@ import {
 	REF_TYPE_URL, REF_TYPE_SUBSPEC,
 } from './const.js';
 import {idsEq} from '../utils.js';
+import {
+	SCRIPT_HLJS,
+	loadScript,
+} from '../widgets/script-loader.js';
 
 const TOUCH_DELAY_CLEAR_SELECTION = 200;
 
@@ -230,9 +235,15 @@ export default {
 				(!this.showUnreadOnly && !!this.commentsCount);
 		},
 	},
+	watch: {
+		renderedHtml() {
+			this.addCodeHighlighting();
+		},
+	},
 	mounted() {
 		this.eventBus.$on('url-updated', this.urlUpdated);
 		this.eventBus.$on('url-deleted', this.urlDeleted);
+		this.addCodeHighlighting();
 	},
 	beforeDestroy() {
 		this.eventBus.$off('url-updated', this.urlUpdated);
@@ -244,6 +255,21 @@ export default {
 		},
 		getStyleType() {
 			return this.styleType;
+		},
+		addCodeHighlighting() {
+			if (!(this.contentType === CONTENT_TYPE_MARKDOWN && this.renderedHtml)) {
+				return;
+			}
+			this.$nextTick(() => {
+				let $codeblocks = $('pre>code[class*="language-"]', this.$refs.renderedHtml);
+				if ($codeblocks.length) {
+					loadScript(SCRIPT_HLJS).then(hljs => {
+						$codeblocks.each((i, e) => {
+							hljs.highlightBlock(e);
+						});
+					});
+				}
+			});
 		},
 		getParentId() {
 			let $parent = $(this.$el).parent().closest('[data-spec-block]');

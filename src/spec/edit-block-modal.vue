@@ -80,7 +80,7 @@
 					<label>
 						Preview
 						<div v-if="previewError" class="error">{{previewError}}</div>
-						<div v-else class="markdown" v-html="previewHtml" v-loading="loadingPreview"/>
+						<div v-else ref="renderedHtml" class="markdown" v-html="previewHtml" v-loading="loadingPreview"/>
 					</label>
 				</div>
 			</template>
@@ -120,6 +120,10 @@ import {
 import {
 	debounce,
 } from '../utils.js';
+import {
+	SCRIPT_HLJS,
+	loadScript,
+} from '../widgets/script-loader.js';
 
 export default {
 	components: {
@@ -201,6 +205,9 @@ export default {
 		contentType() {
 			this.renderMarkdownPreview();
 		},
+		previewHtml(html) {
+			this.addCodeHighlighting();
+		},
 	},
 	methods: {
 		renderMarkdownPreview() {
@@ -247,6 +254,21 @@ export default {
 					this.previewHtml = '';
 				}
 			}
+		},
+		addCodeHighlighting() {
+			if (!this.previewHtml) {
+				return;
+			}
+			this.$nextTick(() => {
+				let $codeblocks = $('pre>code[class*="language-"]', this.$refs.renderedHtml);
+				if ($codeblocks.length) {
+					loadScript(SCRIPT_HLJS).then(hljs => {
+						$codeblocks.each((i, e) => {
+							hljs.highlightBlock(e);
+						});
+					});
+				}
+			});
 		},
 		showAdd(parentId, insertBeforeId, defaultStyleType, callback) {
 			if (defaultStyleType === true) {
