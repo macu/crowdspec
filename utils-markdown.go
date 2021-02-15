@@ -43,8 +43,8 @@ func init() {
 	// Allow code blocks with language class
 	htmlPolicy.AllowAttrs("class").Matching(regexp.MustCompile("^language-[a-zA-Z0-9]+$")).OnElements("code")
 
-	// Allow simple styles
-	htmlPolicy.AllowAttrs("style").OnElements("table", "th", "td")
+	// Allow simple styles to dress up tables
+	htmlPolicy.AllowAttrs("style").OnElements("table", "thead", "tbody", "th", "td")
 
 	// style="border-spacing:50px;" and style="border-spacing:3em;" on table
 	var matchValue = regexp.MustCompile("^(\\d{1,3})(px|rem|em)(?: (\\d{1,3})(px|rem|em))?$")
@@ -85,28 +85,33 @@ func init() {
 		return false
 	}).OnElements("table")
 
-	// style="width:100%;" on table
-	htmlPolicy.AllowStyles("width").MatchingEnum("100%").OnElements("table")
-
-	// style="width:1000px;" and style="width:5%;" on th, td
+	// style="width:1000px;" and style="width:5%;" on table, th, td
 	htmlPolicy.AllowStyles("width").MatchingHandler(func(w string) bool {
 		w = strings.TrimSpace(w)
 		if strings.HasSuffix(w, "%") {
 			i, err := AtoInt(w[:len(w)-1])
-			return err == nil && i >= 1 && i <= 100
+			return err == nil && i >= 5 && i <= 100
 		} else if strings.HasSuffix(w, "px") {
 			i, err := AtoInt(w[:len(w)-2])
 			return err == nil && i >= 25 && i <= 1000
 		}
 		return false
-	}).OnElements("th", "td")
+	}).OnElements("table", "th", "td")
 
-	// style="white-space:nowrap;" on th, td
-	htmlPolicy.AllowStyles("white-space").MatchingEnum("nowrap").OnElements("th", "td")
+	// style="white-space:nowrap;" on applicable elements
+	htmlPolicy.AllowStyles("white-space").MatchingEnum(
+		"nowrap", "pre", "pre-wrap", "pre-line",
+	).OnElements("table", "thead", "tbody", "tr", "th", "td")
 
-	// style="text-align:center;" and align="center" on th, td
-	htmlPolicy.AllowStyles("text-align").MatchingEnum("left", "center", "right").OnElements("th", "td")
-	htmlPolicy.AllowAttrs("align").Matching(regexp.MustCompile("^(?:left|center|right)$")).OnElements("th", "td")
+	// style="text-align:left;" on applicable elements
+	htmlPolicy.AllowStyles("text-align").MatchingEnum(
+		"left", "center", "right",
+	).OnElements("table", "thead", "tbody", "tr", "th", "td")
+
+	// style="vertival-align:top;" on applicable elements
+	htmlPolicy.AllowStyles("vertical-align").MatchingEnum(
+		"top", "middle", "bottom",
+	).OnElements("table", "thead", "tbody", "tr", "th", "td")
 }
 
 func renderMarkdown(markdown string) (string, error) {
