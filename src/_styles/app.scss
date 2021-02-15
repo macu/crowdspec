@@ -105,6 +105,10 @@ html, body {
 		overflow-y: auto;
 	}
 
+	code {
+		background-color: rgba(0,0,0,.10);
+	}
+
 	pre {
 		margin: 10px 0;
 		overflow-x: auto;
@@ -114,7 +118,6 @@ html, body {
 			padding: 5px;
 			width: 100%;
 			overflow-x: auto;
-			background-color: rgba(0,0,0,.10);
 		}
 	}
 
