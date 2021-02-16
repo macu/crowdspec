@@ -197,25 +197,29 @@ func ajaxLoadBlockForEditing(db *sql.DB, userID uint, w http.ResponseWriter, r *
 func ajaxRenderMarkdown(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
 	// POST
 
-	var markdown = AtoPointerNilIfEmpty(strings.TrimSpace(r.FormValue("markdown")))
+	// trim now as blackfriday trims the output anyway
+	var markdown = strings.TrimSpace(r.FormValue("markdown"))
 
-	if markdown != nil {
-		html, err := renderMarkdown(*markdown)
-		if err != nil {
-			// don't log error;
-			// return validation error to client
-			return struct {
-				Error string `json:"error"`
-			}{err.Error()}, http.StatusOK
-		}
+	if markdown == "" {
 		return struct {
 			HTML string `json:"html"`
-		}{html}, http.StatusOK
+		}{""}, http.StatusOK
 	}
 
+	// renderMarkdown will report errors in XML with line numbers,
+	// which won't be accurate as blackfriday drops leading and trailing whitespace
+	// and produces other transformations from source lines to html
+	html, err := renderMarkdown(markdown)
+	if err != nil {
+		// don't log error;
+		// return validation error to client
+		return struct {
+			Error string `json:"error"`
+		}{err.Error()}, http.StatusOK
+	}
 	return struct {
 		HTML string `json:"html"`
-	}{""}, http.StatusOK
+	}{html}, http.StatusOK
 }
 
 func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {

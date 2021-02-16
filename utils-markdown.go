@@ -23,11 +23,11 @@ func init() {
 	// Allow elements
 	htmlPolicy.AllowElements(
 		"h1", "h2", "h3", "h4", "h5", "h6",
-		"p", "span", "em", "strong", "del",
+		"p", "span", "em", "strong", "del", "sup", "sub",
 		"ul", "ol", "li",
 		"table", "thead", "tbody", "th", "tr", "td",
 		"blockquote",
-		"pre",
+		"pre", "code",
 		"hr", "br")
 
 	// Allow links
