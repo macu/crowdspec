@@ -24,7 +24,6 @@ module.exports = {
 		'vue': 'Vue',
 		'vuex': 'Vuex',
 		'vue-router': 'VueRouter',
-		'dragula': 'dragula',
 		'moment': 'moment',
 	},
 	module: {

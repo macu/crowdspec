@@ -45,7 +45,6 @@
 <script>
 import $ from 'jquery';
 import Vue from 'vue';
-import Dragula from 'dragula';
 import SpecBlock from './block.vue';
 import EditBlockModal from './edit-block-modal.vue';
 import EditUrlModal from './edit-url-modal.vue';
@@ -54,6 +53,7 @@ import {TARGET_TYPE_BLOCK} from './const.js';
 import store from '../store.js';
 import router from '../router.js';
 import {idsEq, startAutoscroll} from '../utils.js';
+import {SCRIPT_DRAGULA, loadScript} from '../widgets/script-loader.js';
 
 const SpecBlockClass = Vue.extend(SpecBlock);
 
@@ -257,42 +257,44 @@ export default {
 			if (this.drake) {
 				return;
 			}
-			console.debug('create drake');
-			this.drake = Dragula({
-				isContainer(el) {
-					return $(el).is('.spec-block-list');
-				},
-				accepts(el, target, source, sibling) {
-					// Don't allow dropping in the transit node
-					return !$(target).closest('.gu-transit').length;
-				},
-				moves(el, source, handle, sibling) {
-					return $(handle).is('.drag-handle');
-				},
-				// revertOnSpill: true,
-				mirrorContainer: this.$refs.mirrorList,
-			}).on('drag', (el, source) => {
-				this.$store.commit('startDragging');
-				this.transitRelativeScroll($(el).attr('data-spec-block'));
-			}).on('dragend', (el) => {
-				this.$store.commit('endDragging');
-				this.transitRelativeScroll($(el).attr('data-spec-block'));
-			}).on('drop', (el, target, source, sibling) => {
-				let blockId = $(el).data('vc').getBlockId();
-				let $sourceParentBlock = $(source).closest('[data-spec-block]');
-				if ($sourceParentBlock.length) {
-					$sourceParentBlock.data('vc').updateHasSubblocks();
-				}
-				let parentId = null;
-				let $parentBlock = $(target).closest('[data-spec-block]');
-				if ($parentBlock.length) {
-					let parentVc = $parentBlock.data('vc');
-					parentId = parentVc.getBlockId();
-					parentVc.updateHasSubblocks();
-				}
-				let insertBeforeId = sibling ? $(sibling).data('vc').getBlockId() : null;
-				// TODO Revert on error?
-				ajaxMoveBlocks([blockId], this.subspecId, parentId, insertBeforeId);
+			loadScript(SCRIPT_DRAGULA).then(Dragula => {
+				console.debug('create drake');
+				this.drake = Dragula({
+					isContainer(el) {
+						return $(el).is('.spec-block-list');
+					},
+					accepts(el, target, source, sibling) {
+						// Don't allow dropping in the transit node
+						return !$(target).closest('.gu-transit').length;
+					},
+					moves(el, source, handle, sibling) {
+						return $(handle).is('.drag-handle');
+					},
+					// revertOnSpill: true,
+					mirrorContainer: this.$refs.mirrorList,
+				}).on('drag', (el, source) => {
+					this.$store.commit('startDragging');
+					this.transitRelativeScroll($(el).attr('data-spec-block'));
+				}).on('dragend', (el) => {
+					this.$store.commit('endDragging');
+					this.transitRelativeScroll($(el).attr('data-spec-block'));
+				}).on('drop', (el, target, source, sibling) => {
+					let blockId = $(el).data('vc').getBlockId();
+					let $sourceParentBlock = $(source).closest('[data-spec-block]');
+					if ($sourceParentBlock.length) {
+						$sourceParentBlock.data('vc').updateHasSubblocks();
+					}
+					let parentId = null;
+					let $parentBlock = $(target).closest('[data-spec-block]');
+					if ($parentBlock.length) {
+						let parentVc = $parentBlock.data('vc');
+						parentId = parentVc.getBlockId();
+						parentVc.updateHasSubblocks();
+					}
+					let insertBeforeId = sibling ? $(sibling).data('vc').getBlockId() : null;
+					// TODO Revert on error?
+					ajaxMoveBlocks([blockId], this.subspecId, parentId, insertBeforeId);
+				});
 			});
 		},
 		promptAddBlock() {

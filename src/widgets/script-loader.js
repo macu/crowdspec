@@ -2,6 +2,7 @@ import $ from 'jquery';
 import {alertError} from '../utils.js';
 
 export const SCRIPT_HLJS = 'highlight';
+export const SCRIPT_DRAGULA = 'dragula';
 
 let loadedScripts = {};
 
@@ -70,6 +71,23 @@ export function loadScript(scriptKey) {
 				return window.hljs;
 			}).fail(function() {
 				alertError('Failed to load highlight.js code highlighting library');
+			});
+		case SCRIPT_DRAGULA:
+			return loadedScripts[scriptKey] = loadAssets([
+				{
+					src: 'https://cdnjs.cloudflare.com/ajax/libs/dragula/3.7.3/dragula.min.css',
+					integrity: 'sha512-zlYhSecphd+kwRzeCOyj7/u3HZIQ3Q0NP7AN7ZEKhYTdi0AQOGGbc7eA3I/mUffqjdr8G1/9xoS478h+I0MQGg==',
+				},
+				{
+					src: 'https://cdnjs.cloudflare.com/ajax/libs/dragula/3.7.3/dragula.min.js',
+					integrity: 'sha512-NgXVRE+Mxxf647SqmbB9wPS5SEpWiLFp5G7ItUNFi+GVUyQeP+7w4vnKtc2O/Dm74TpTFKXNjakd40pfSKNulg==',
+				},
+			]).then(function() {
+				console.debug('dragula.js loaded');
+				// Resolve library reference
+				return window.dragula;
+			}).fail(function() {
+				alertError('Failed to load dragula.js drag and drop library');
 			});
 	}
 }
