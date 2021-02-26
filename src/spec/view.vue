@@ -349,7 +349,7 @@ export default {
 		addToMovingBlocks(blockId) {
 			this.$store.commit('setMovingBlocks', {
 				subspecId: this.subspecId,
-				blockIds: this.$store.state.movingBlockIds.concat([blockId]),
+				blockIds: this.$store.state.movingBlockIds.concat(blockId),
 			});
 		},
 		removeFromMovingBlocks(blockId) {

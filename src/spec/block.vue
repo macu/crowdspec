@@ -35,14 +35,14 @@
 							<template v-if="$store.getters.mobileViewport">Context</template>
 							<template v-else>Change context</template>
 						</el-button>
-						<el-checkbox :data-moving-block-id="block.id" :value="true" @click.native="removeThisFromMovingBlocks()" size="mini"/>
+						<el-checkbox key="removeFromMoving" :data-moving-block-id="block.id" :value="true" @click.native="removeThisFromMovingBlocks()" size="mini"/>
 					</template>
 					<template v-else-if="movingOtherBlocks">
 						<el-button @click="cancelMoving()" type="warning" size="mini" icon="el-icon-close" circle/>
 						<el-button @click="moveBeforeThis()" type="success" size="mini" icon="el-icon-top" circle/>
 						<el-button @click="moveIntoThis()" type="success" size="mini" icon="el-icon-bottom-right" circle/>
 						<el-button @click="moveAfterThis()" type="success" size="mini" icon="el-icon-bottom" circle/>
-						<el-checkbox v-if="showAddToMoving" :value="false" @click.native="addThisToMovingBlocks()" size="mini"/>
+						<el-checkbox key="addToMoving" v-if="showAddToMoving" :value="false" @click.native="addThisToMovingBlocks()" size="mini"/>
 					</template>
 					<template v-else>
 						<el-button @click="openCommunity()"
