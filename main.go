@@ -149,10 +149,10 @@ func main() {
 	}
 
 	// Confirm connection
-	err = db.Ping()
-	if err != nil {
-		logErrorFatal(err)
-	}
+	// err = db.Ping()
+	// if err != nil {
+	// 	logErrorFatal(err)
+	// }
 
 	if isLocal() && *initDB {
 		// Load initializing SQL

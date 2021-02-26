@@ -21,3 +21,24 @@ $icon-spacing: .5ex;
 	overflow-wrap: break-word; // required for IE and Safari;
 	overflow-wrap: anywhere; // soft wrap considered in intrinsic min content size calculation
 }
+
+// https://github.com/ElemeFE/element/blob/188605c383638909caf7e5975448de51d86c20c9/packages/theme-chalk/src/common/var.scss#L591
+$button-hover-tint-percent: 20%;
+$button-active-shade-percent: 10%;
+
+// Add styles to el-button
+@mixin custom-button($font-color, $bg-color) {
+	color: $font-color;
+	background-color: $bg-color;
+	border-color: $bg-color;
+	&:hover {
+		$tint: lighten($bg-color, $button-hover-tint-percent);
+		background-color: $tint;
+		border-color: $tint;
+	}
+	&:active {
+		$shade: darken($bg-color, $button-active-shade-percent);
+		background-color: $shade;
+		border-color: $shade;
+	}
+}

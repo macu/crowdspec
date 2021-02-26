@@ -85,8 +85,6 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 		return nil, http.StatusBadRequest
 	}
 
-	// TODO Html sanitize title and body
-
 	var renderedHTML *string
 	if body != nil && contentType == TextContentMarkdown {
 		html, err := renderMarkdown(*body)
@@ -277,8 +275,6 @@ func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 		logError(r, userID, fmt.Errorf("empty blocks are not currently allowed"))
 		return nil, http.StatusBadRequest
 	}
-
-	// TODO Html sanitize title and body
 
 	var renderedHTML *string
 	if body != nil && contentType == TextContentMarkdown {

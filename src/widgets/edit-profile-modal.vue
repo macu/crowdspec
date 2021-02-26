@@ -11,7 +11,53 @@
 		<username :username="username" :highlight="highlight"/>
 	</span>
 
-	<el-form v-if="changePasswordMode"
+	<el-form v-if="updateSettingsMode"
+		ref="changePasswordForm"
+		:model="settingsForm"
+		v-loading="waiting"
+		label-position="top">
+		<el-form-item>
+			<strong slot="label" class="section-heading">Profile</strong>
+			<div class="flex-input">
+				<el-color-picker
+					v-model="settingsForm.userProfile.highlightUsername"
+					:predefine="predefinedUsernameHighlights"
+					color-format="rgb"
+					/>
+				<el-button
+					v-if="settingsForm.userProfile.highlightUsername"
+					@click="settingsForm.userProfile.highlightUsername = null"
+					size="mini"
+					icon="el-icon-close"
+					/>
+				<username username="Username colour" :highlight="settingsForm.userProfile.highlightUsername"/>
+			</div>
+		</el-form-item>
+		<el-form-item>
+			<strong slot="label" class="section-heading">Block editing</strong>
+			<el-select v-model="settingsForm.blockEditing.deleteButton">
+				<el-option label="Show delete button only in edit block modal" value="modal"/>
+				<el-option label="Show delete button on newly added blocks" value="recent"/>
+				<el-option label="Show delete button on all blocks" value="all"/>
+			</el-select>
+		</el-form-item>
+		<el-form-item>
+			<strong slot="label" class="section-heading">Community</strong>
+			<el-checkbox v-model="settingsForm.community.unreadOnly">
+				Show only unread comments by default
+			</el-checkbox>
+		</el-form-item>
+		<el-form-item>
+			<el-button type="primary" @click="submitSettings()">
+				Update
+			</el-button>
+			<el-button @click="clearMode()">
+				Cancel
+			</el-button>
+		</el-form-item>
+	</el-form>
+
+	<el-form v-else-if="changePasswordMode"
 		ref="changePasswordForm"
 		:model="changePasswordForm"
 		:rules="changePasswordRules"
@@ -65,59 +111,13 @@
 		</el-form-item>
 	</el-form>
 
-	<el-form v-else-if="updateSettingsMode"
-		ref="changePasswordForm"
-		:model="settingsForm"
-		v-loading="waiting"
-		label-position="top">
-		<el-form-item>
-			<strong slot="label" class="section-heading">Profile</strong>
-			<div class="flex-input">
-				<el-color-picker
-					v-model="settingsForm.userProfile.highlightUsername"
-					:predefine="predefinedUsernameHighlights"
-					color-format="rgb"
-					/>
-				<el-button
-					v-if="settingsForm.userProfile.highlightUsername"
-					@click="settingsForm.userProfile.highlightUsername = null"
-					size="mini"
-					icon="el-icon-close"
-					/>
-				<username username="Username colour" :highlight="settingsForm.userProfile.highlightUsername"/>
-			</div>
-		</el-form-item>
-		<el-form-item>
-			<strong slot="label" class="section-heading">Block editing</strong>
-			<el-select v-model="settingsForm.blockEditing.deleteButton">
-				<el-option label="Show delete button only in edit block modal" value="modal"/>
-				<el-option label="Show delete button on newly added blocks" value="recent"/>
-				<el-option label="Show delete button on all blocks" value="all"/>
-			</el-select>
-		</el-form-item>
-		<el-form-item>
-			<strong slot="label" class="section-heading">Community</strong>
-			<el-checkbox v-model="settingsForm.community.unreadOnly">
-				Show only unread comments by default
-			</el-checkbox>
-		</el-form-item>
-		<el-form-item>
-			<el-button type="primary" @click="submitSettings()">
-				Update
-			</el-button>
-			<el-button @click="clearMode()">
-				Cancel
-			</el-button>
-		</el-form-item>
-	</el-form>
-
 	<div v-else class="options">
 		<p>Your email address on file is <span class="email">{{$store.getters.emailAddress}}</span>.</p>
-		<el-button @click="enterChangePasswordMode()">
-			Change password
-		</el-button>
 		<el-button @click="enterUpdateSettingsMode()">
 			Update settings
+		</el-button>
+		<el-button @click="enterChangePasswordMode()">
+			Change password
 		</el-button>
 	</div>
 
@@ -133,8 +133,8 @@ import $ from 'jquery';
 import Username from './username.vue';
 import {alertError, defaultUserSettings} from '../utils.js';
 
-const MODE_CHANGE_PASSWORD = 1;
-const MODE_UPDATE_SETTINGS = 2;
+const MODE_UPDATE_SETTINGS = 1;
+const MODE_CHANGE_PASSWORD = 2;
 
 const SUCCESS_MESSAGE_TIMEOUT = 1200;
 const ERROR_MESSAGE_TIMEOUT = 4000;
@@ -147,12 +147,12 @@ export default {
 		return {
 			showing: false,
 			mode: null,
+			settingsForm: defaultUserSettings(),
 			changePasswordForm: {
 				oldPass: '',
 				newPass: '',
 				newPass2: '',
 			},
-			settingsForm: defaultUserSettings(),
 			waiting: false,
 		};
 	},
@@ -163,11 +163,20 @@ export default {
 		highlight() {
 			return this.$store.getters.userSettings.userProfile.highlightUsername;
 		},
+		updateSettingsMode() {
+			return this.mode === MODE_UPDATE_SETTINGS;
+		},
 		changePasswordMode() {
 			return this.mode === MODE_CHANGE_PASSWORD;
 		},
-		updateSettingsMode() {
-			return this.mode === MODE_UPDATE_SETTINGS;
+		predefinedUsernameHighlights() {
+			return [
+				'rgb(50, 205, 50)', // limegreen
+				'rgb(255, 192, 203)', // pink
+				'rgb(240, 255, 255)', // azure
+				'rgb(255, 255, 0)', // yellow
+				'rgb(255, 250, 250)', // snow
+			];
 		},
 		changePasswordRules() {
 			return {
@@ -209,23 +218,10 @@ export default {
 				}],
 			};
 		},
-		predefinedUsernameHighlights() {
-			return [
-				'rgb(50, 205, 50)', // limegreen
-				'rgb(255, 192, 203)', // pink
-				'rgb(240, 255, 255)', // azure
-				'rgb(255, 255, 0)', // yellow
-				'rgb(255, 250, 250)', // snow
-			];
-		},
 	},
 	methods: {
 		show() {
 			this.showing = true;
-		},
-		enterChangePasswordMode() {
-			this.mode = MODE_CHANGE_PASSWORD;
-			this.selectOldPassword();
 		},
 		enterUpdateSettingsMode() {
 			this.mode = MODE_UPDATE_SETTINGS;
@@ -236,6 +232,29 @@ export default {
 			}).fail(jqXHR => {
 				this.waiting = false;
 				this.clearMode();
+				alertError(jqXHR);
+			});
+		},
+		enterChangePasswordMode() {
+			this.mode = MODE_CHANGE_PASSWORD;
+			this.selectOldPassword();
+		},
+		submitSettings() {
+			this.waiting = true;
+			$.post('/ajax/user/save-settings', {
+				settings: JSON.stringify(this.settingsForm),
+			}).then(settings => {
+				this.waiting = false;
+				this.$message({
+					message: 'Settings updated',
+					type: 'success',
+					showClose: true,
+					duration: SUCCESS_MESSAGE_TIMEOUT,
+				});
+				this.clearMode();
+				this.$store.commit('setUserSettings', settings);
+			}).fail(jqXHR => {
+				this.waiting = false;
 				alertError(jqXHR);
 			});
 		},
@@ -304,25 +323,6 @@ export default {
 				if (this.$refs.oldPass) {
 					$('input', this.$refs.oldPass.$el).focus().select();
 				}
-			});
-		},
-		submitSettings() {
-			this.waiting = true;
-			$.post('/ajax/user/save-settings', {
-				settings: JSON.stringify(this.settingsForm),
-			}).then(settings => {
-				this.waiting = false;
-				this.$message({
-					message: 'Settings updated',
-					type: 'success',
-					showClose: true,
-					duration: SUCCESS_MESSAGE_TIMEOUT,
-				});
-				this.clearMode();
-				this.$store.commit('setUserSettings', settings);
-			}).fail(jqXHR => {
-				this.waiting = false;
-				alertError(jqXHR);
 			});
 		},
 		clearMode() {

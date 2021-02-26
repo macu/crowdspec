@@ -152,9 +152,7 @@ export default {
 			margin-top: 10px;
 		}
 		.el-button.admin-access {
-			color: white;
-			background-color: $admin-bg;
-			border-color: $admin-bg;
+			@include custom-button(white, $admin-bg);
 		}
 	}
 

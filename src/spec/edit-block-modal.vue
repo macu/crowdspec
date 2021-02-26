@@ -375,15 +375,14 @@ export default {
 					});
 					return;
 				}
-			}
-			if (this.contentType === CONTENT_TYPE_MARKDOWN && this.previewError) {
-				this.$alert('Error rendering preview. Please check your HTML syntax.', {
+			} else if (!this.refType && !(this.title.trim() || this.body.trim())) {
+				this.$alert('A title, body, or attachment is required.', {
 					type: 'error',
 				});
 				return;
 			}
-			if (!(this.title.trim() || this.body.trim())) {
-				this.$alert('A title, body, or attachment is required.', {
+			if (this.contentType === CONTENT_TYPE_MARKDOWN && this.previewError) {
+				this.$alert('Error rendering preview. Please check your HTML syntax.', {
 					type: 'error',
 				});
 				return;
