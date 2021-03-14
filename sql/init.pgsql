@@ -157,6 +157,8 @@ CREATE TABLE spec_community_comment (
 	comment_body TEXT NOT NULL
 );
 CREATE INDEX comment_updated_by_target ON spec_community_comment (target_type, target_id, updated_at);
+CREATE INDEX comment_by_spec ON spec_community_comment (spec_id);
+CREATE INDEX comment_updated_by_user ON spec_community_comment (user_id, updated_at);
 CREATE TABLE spec_community_read (
 	user_id INTEGER NOT NULL REFERENCES user_account (id),
 	target_type spec_community_target_type NOT NULL,

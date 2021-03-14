@@ -328,15 +328,13 @@ func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 			(SELECT COUNT(*) FROM spec_community_comment AS c
 				LEFT JOIN spec_community_read AS r
 					ON r.user_id = $1 AND r.target_type = 'comment' AND r.target_id = c.id
-				WHERE c.spec_id = spec_block.spec_id
-					AND c.target_type = 'block' AND c.target_id = spec_block.id
+				WHERE c.target_type = 'block' AND c.target_id = spec_block.id
 					AND r.user_id IS NULL
 			) AS unread_count,
 			-- select total number of comments
 			(SELECT COUNT(*)
 				FROM spec_community_comment AS c
-				WHERE c.spec_id = spec_block.id
-					AND c.target_type = 'block' AND c.target_id = spec_block.id
+				WHERE c.target_type = 'block' AND c.target_id = spec_block.id
 			) AS comments_count`,
 			userID, specID, blockID, time.Now(),
 			styleType, contentType, refType, refID, title, body, renderedHTML,

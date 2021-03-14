@@ -43,15 +43,13 @@ func ajaxSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (
 			FROM spec_community_comment AS c
 			LEFT JOIN spec_community_read AS r
 				ON r.user_id = $3 AND r.target_type = 'comment' AND r.target_id = c.id
-			WHERE c.spec_id = spec.id
-				AND c.target_type = 'spec' AND c.target_id = spec.id
+			WHERE c.target_type = 'spec' AND c.target_id = spec.id
 				AND r.user_id IS NULL
 		) AS unread_count,
 		-- select total number of comments
 		(SELECT COUNT(*)
 			FROM spec_community_comment AS c
-			WHERE c.spec_id = spec.id
-				AND c.target_type = 'spec' AND c.target_id = spec.id
+			WHERE c.target_type = 'spec' AND c.target_id = spec.id
 		) AS comments_count
 		FROM spec
 		LEFT JOIN user_account
@@ -163,15 +161,13 @@ func ajaxSaveSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 			(SELECT COUNT(*) FROM spec_community_comment AS c
 				LEFT JOIN spec_community_read AS r
 					ON r.user_id = $1 AND r.target_type = 'comment' AND r.target_id = c.id
-				WHERE c.spec_id = spec.id
-					AND c.target_type = 'spec' AND c.target_id = spec.id
+				WHERE c.target_type = 'spec' AND c.target_id = spec.id
 					AND r.user_id IS NULL
 			) AS unread_count,
 			-- select total number of comments
 			(SELECT COUNT(*)
 				FROM spec_community_comment AS c
-				WHERE c.spec_id = spec.id
-					AND c.target_type = 'spec' AND c.target_id = spec.id
+				WHERE c.target_type = 'spec' AND c.target_id = spec.id
 			) AS comments_count`,
 			specID, time.Now(), name, desc, isPublic,
 		).Scan(&spec.Updated, &spec.Name, &spec.Desc, &spec.UnreadCount, &spec.CommentsCount)
