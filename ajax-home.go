@@ -14,7 +14,7 @@ func ajaxUserHome(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 			GREATEST(spec.updated_at, spec.blocks_updated_at) AS last_updated
 		FROM spec
 		WHERE owner_type=$1 AND owner_id=$2
-		ORDER BY created_at ASC
+		ORDER BY is_public DESC, GREATEST(updated_at, blocks_updated_at) DESC
 		`, OwnerTypeUser, userID)
 	if err != nil {
 		logError(r, userID, fmt.Errorf("querying user specs: %w", err))
@@ -45,7 +45,7 @@ func ajaxUserHome(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 		LEFT JOIN user_account
 		ON spec.owner_type=$1 AND user_account.id=owner_id
 		WHERE is_public
-		ORDER BY spec.created_at ASC
+		ORDER BY GREATEST(spec.updated_at, spec.blocks_updated_at) DESC
 		`, OwnerTypeUser)
 	if err != nil {
 		logError(r, userID, fmt.Errorf("querying public specs: %w", err))
