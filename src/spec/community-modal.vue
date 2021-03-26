@@ -17,6 +17,10 @@
 
 	<template v-else-if="target">
 
+		<div v-if="targetType !== TARGET_TYPE_COMMENT" class="updated">
+			Last modified <strong><moment :datetime="targetUpdated" :offset="true"/></strong>
+		</div>
+
 		<preview-spec
 			v-if="targetType === TARGET_TYPE_SPEC"
 			:spec="target"
@@ -105,6 +109,7 @@
 <script>
 import $ from 'jquery';
 import ContextStack from './community-context-stack.vue';
+import Moment from '../widgets/moment.vue';
 import PreviewSpec from './preview-spec.vue';
 import PreviewSubspec from './preview-subspec.vue';
 import PreviewBlock from './preview-block.vue';
@@ -127,6 +132,7 @@ import {
 export default {
 	components: {
 		ContextStack,
+		Moment,
 		PreviewSpec,
 		PreviewSubspec,
 		PreviewBlock,
@@ -181,6 +187,12 @@ export default {
 					return 'Comment community';
 			}
 			return 'Community space';
+		},
+		targetUpdated() {
+			if (this.target && this.targetType !== TARGET_TYPE_COMMENT) {
+				return this.target.updated;
+			}
+			return null;
 		},
 		disablePostComment() {
 			return !this.newCommentBody.trim();
@@ -415,7 +427,7 @@ export default {
 .spec-block-community-modal {
 	>.el-dialog {
 		>.el-dialog__body {
-			>*:not(:last-child) {
+			>*:not(.updated, :last-child) {
 				margin-bottom: 20px;
 			}
 			>.community-context-stack {
@@ -423,6 +435,11 @@ export default {
 				&.empty {
 					display: none;
 				}
+			}
+			>.updated {
+				text-align: right;
+				font-size: smaller;
+				margin-bottom: 5px;
 			}
 			>.new-comment-area {
 				margin: 45px 0 40px;

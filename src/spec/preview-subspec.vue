@@ -24,6 +24,7 @@ export default {
 
 	>.name {
 		font-weight: bold;
+		font-size: larger;
 	}
 
 	>.desc {

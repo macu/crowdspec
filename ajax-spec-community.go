@@ -12,9 +12,11 @@ const commentsPageSize = 5
 
 type specCommunity struct {
 	Spec struct {
-		ID   int64   `json:"id"`
-		Name string  `json:"name"`
-		Desc *string `json:"desc"`
+		ID      int64     `json:"id"`
+		Created time.Time `json:"created"`
+		Updated time.Time `json:"updated"`
+		Name    string    `json:"name"`
+		Desc    *string   `json:"desc"`
 	} `json:"spec"`
 
 	Tags          []*Tag     `json:"tags,omitempty"`
@@ -185,11 +187,13 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID uint, w http.ResponseWriter, r *ht
 		}
 
 		err = db.QueryRow(`
-			SELECT id, spec_name, spec_desc
+			SELECT id, created_at,
+				GREATEST(updated_at, blocks_updated_at) AS last_updated,
+				spec_name, spec_desc
 			FROM spec
 			WHERE id=$1`,
 			specID,
-		).Scan(&sc.Spec.ID, &sc.Spec.Name, &sc.Spec.Desc)
+		).Scan(&sc.Spec.ID, &sc.Spec.Created, &sc.Spec.Updated, &sc.Spec.Name, &sc.Spec.Desc)
 		if err != nil {
 			logError(r, userID, fmt.Errorf("reading spec: %w", err))
 			return nil, http.StatusInternalServerError
@@ -212,11 +216,13 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID uint, w http.ResponseWriter, r *ht
 		}
 
 		err = db.QueryRow(`
-			SELECT id, subspec_name, subspec_desc
+			SELECT id, created_at,
+				GREATEST(updated_at, blocks_updated_at) AS last_updated,
+				subspec_name, subspec_desc
 			FROM spec_subspec
 			WHERE id=$1`,
 			targetID,
-		).Scan(&sc.Subspec.ID, &sc.Subspec.Name, &sc.Subspec.Desc)
+		).Scan(&sc.Subspec.ID, &sc.Subspec.Created, &sc.Subspec.Updated, &sc.Subspec.Name, &sc.Subspec.Desc)
 		if err != nil {
 			logError(r, userID, fmt.Errorf("reading subspec: %w", err))
 			return nil, http.StatusInternalServerError
