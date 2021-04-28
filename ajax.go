@@ -29,6 +29,7 @@ var ajaxHandlers = map[string]map[string]AjaxRoute{
 
 		// admin
 		"/ajax/admin/signup-requests": ajaxAdminLoadSignupRequests,
+		"/ajax/admin/users":           ajaxAdminLoadUsers,
 	},
 	http.MethodPost: {
 		"/ajax/user/change-password": ajaxUserChangePassword,
@@ -63,6 +64,7 @@ var ajaxHandlers = map[string]map[string]AjaxRoute{
 }
 
 func ajaxHandler(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) {
+	// var rt = NewResponseTracker(w)
 	handlers, foundMethod := ajaxHandlers[r.Method]
 	if foundMethod {
 		handler, fouundPath := handlers[r.URL.Path]

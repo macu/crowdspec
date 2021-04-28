@@ -19,6 +19,15 @@ type signupRequest struct {
 	UserID       *uint     `json:"userId"`
 }
 
+type adminUserView struct {
+	ID           int64     `json:"id"`
+	Username     string    `json:"username"`
+	Highlight    string    `json:"highlight"`
+	EmailAddress string    `json:"email"`
+	CreatedAt    time.Time `json:"created"`
+	SpecCount    int       `json:"specs"`
+}
+
 func ajaxAdminLoadSignupRequests(db *sql.DB,
 	userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
 
@@ -142,4 +151,38 @@ func ajaxAdminSubmitSignupRequestReview(db *sql.DB,
 	}
 
 	return nil, http.StatusOK
+}
+
+func ajaxAdminLoadUsers(db *sql.DB,
+	userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
+
+	var users = []*adminUserView{}
+
+	rows, err := db.Query(
+		`SELECT id, username, email, created_at,
+			(SELECT COUNT(*) FROM spec WHERE owner_type=$1 AND owner_id=user_account.id) AS spec_count
+		FROM user_account
+		ORDER BY id`,
+		OwnerTypeUser)
+	if err != nil {
+		logError(r, userID, fmt.Errorf("loading signup requests: %w", err))
+		return nil, http.StatusInternalServerError
+	}
+
+	for rows.Next() {
+		var u adminUserView
+		err = rows.Scan(&u.ID, &u.Username, &u.EmailAddress, &u.CreatedAt,
+			&u.SpecCount)
+		if err != nil {
+			if err2 := rows.Close(); err2 != nil {
+				logError(r, userID, fmt.Errorf("closing rows: %s; on scan error: %w", err2, err))
+				return nil, http.StatusInternalServerError
+			}
+			logError(r, userID, fmt.Errorf("scanning user: %w", err))
+			return nil, http.StatusInternalServerError
+		}
+		users = append(users, &u)
+	}
+
+	return users, http.StatusOK
 }

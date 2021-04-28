@@ -7,7 +7,7 @@
 			<el-button v-if="showPlay" @click="$emit('play')" size="mini" type="primary" class="play-button">Play</el-button>
 		</div>
 		<div class="title">
-			<span><i class="el-icon-link"></i> URL</span>
+			<span><i class="el-icon-link"></i> {{showPlay ? 'Video' : 'URL'}}</span>
 			<a :href="item.url" target="_blank" @click.stop>{{(item.title && item.title.trim()) || item.url}}</a>
 		</div>
 		<div v-if="item.desc" class="desc">{{item.desc.trim()}}</div>

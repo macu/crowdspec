@@ -20,8 +20,7 @@
 			<el-table
 				v-else-if="signupRequests.length"
 				:data="signupRequests"
-				:max-height=".80 * $store.state.windowHeight"
-				style="width:100%;">
+				:max-height=".80 * $store.state.windowHeight">
 				<el-table-column fixed prop="id" label="ID" width="40"/>
 				<el-table-column fixed prop="username" label="Username" width="150"/>
 				<el-table-column prop="email" label="Email address" width="300"/>
@@ -30,6 +29,18 @@
 						<moment :datetime="scope.row.created" :offset="true"/>
 					</template>
 				</el-table-column>
+				<template v-if="showAllSignupRequests">
+					<el-table-column label="Status" width="120">
+						<template slot-scope="scope">
+							<template v-if="scope.row.reviewed">
+								<el-tag v-if="scope.row.approved" type="success">Approved</el-tag>
+								<el-tag v-else type="warning">Denied</el-tag>
+							</template>
+							<el-tag v-else>Pending</el-tag>
+						</template>
+					</el-table-column>
+					<el-table-column prop="userId" label="User ID" width="120"/>
+				</template>
 				<el-table-column label="Actions" width="200">
 					<template slot-scope="scope">
 						<el-button v-if="!scope.row.reviewed"
@@ -39,26 +50,33 @@
 						</el-button>
 					</template>
 				</el-table-column>
-				<template v-if="showAllSignupRequests">
-					<el-table-column label="Reviewed" width="120">
-						<template slot-scope="scope">
-							<el-tag v-if="scope.row.reviewed" type="success">Yes</el-tag>
-							<el-tag v-else type="warning">No</el-tag>
-						</template>
-					</el-table-column>
-					<el-table-column label="Approved" width="120">
-						<template slot-scope="scope">
-							<template v-if="scope.row.reviewed">
-								<el-tag v-if="scope.row.approved" type="success">Yes</el-tag>
-								<el-tag v-else type="warning">No</el-tag>
-							</template>
-						</template>
-					</el-table-column>
-					<el-table-column prop="userId" label="User ID" width="120"/>
-				</template>
 			</el-table>
 			<p v-else-if="showAllSignupRequests">No data</p>
 			<p v-else>No pending requests</p>
+		</section>
+
+		<section class="users">
+			<h3>Users</h3>
+			<p v-if="loadingUsers">Loading...</p>
+			<el-table
+				v-else
+				:data="users"
+				:max-height=".80 * $store.state.windowHeight">
+				<el-table-column fixed label="Username" width="190">
+					<template slot-scope="scope">
+						<username :username="scope.row.username" :highlight="scope.row.highlight"/>
+					</template>
+				</el-table-column>
+				<el-table-column prop="email" label="Email address" width="300"/>
+				<el-table-column label="Created" width="200">
+					<template slot-scope="scope">
+						<moment :datetime="scope.row.created" :offset="true"/>
+					</template>
+				</el-table-column>
+				<el-table-column prop="specs" label="Spec count" width="100"/>
+				<el-table-column label="Actions" width="200">
+				</el-table-column>
+			</el-table>
 		</section>
 
 	</div>
@@ -132,21 +150,25 @@
 
 <script>
 import Moment from '../widgets/moment.vue';
+import Username from '../widgets/username.vue';
 import {idsEq, alertError} from '../utils.js';
 
 export default {
 	components: {
 		Moment,
+		Username,
 	},
 	data() {
 		return {
 			loadingSignupRequests: true,
+			loadingUsers: true,
 			error: null,
 			showAllSignupRequests: false,
 			signupRequests: null,
 			reviewingSignupRequest: null,
 			signupRequestResponse: '',
 			sendingSignupRequestReview: false,
+			users: [],
 		};
 	},
 	computed: {
@@ -159,7 +181,7 @@ export default {
 	},
 	watch: {
 		showAllSignupRequests() {
-			this.loadAdmin();
+			this.loadSignupRequests();
 		},
 	},
 	beforeRouteEnter(to, from, next) {
@@ -173,8 +195,12 @@ export default {
 	},
 	methods: {
 		loadAdmin() {
-			this.loadingSignupRequests = true;
 			this.error = null;
+			this.loadSignupRequests();
+			this.loadUsers();
+		},
+		loadSignupRequests() {
+			this.loadingSignupRequests = true;
 			$.get('/ajax/admin/signup-requests', {
 				all: this.showAllSignupRequests,
 			}).then(requests => {
@@ -182,6 +208,17 @@ export default {
 				this.signupRequests = requests;
 			}).fail(jqXHR => {
 				this.loadingSignupRequests = false;
+				this.error = jqXHR.status;
+				alertError(jqXHR);
+			});
+		},
+		loadUsers() {
+			this.loadingUsers = true;
+			$.get('/ajax/admin/users').then(users => {
+				this.loadingUsers = false;
+				this.users = users;
+			}).fail(jqXHR => {
+				this.loadingUsers = false;
 				this.error = jqXHR.status;
 				alertError(jqXHR);
 			});
