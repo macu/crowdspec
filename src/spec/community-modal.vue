@@ -43,13 +43,6 @@
 			@update-unread="contextUpdateUnread"
 			/>
 
-		<div class="flex-row wrap-reverse">
-			<div class="fill nowraptext" v-text="formattedCommentsCount"/>
-			<el-checkbox v-model="unreadOnly" @change="reloadCommunity()">
-				Show only unread comments
-			</el-checkbox>
-		</div>
-
 		<div class="new-comment-area">
 			<p v-if="sendingComment"><i class="el-icon-loading"/> Posting comment...</p>
 			<template v-else-if="addingComment">
@@ -70,8 +63,15 @@
 				</div>
 			</template>
 			<el-button v-else @click="addComment()" type="primary">
-				Add comment
+				Comment on this {{targetType}}
 			</el-button>
+		</div>
+
+		<div class="controls-area flex-row wrap-reverse">
+			<div class="fill nowraptext" v-text="formattedCommentsCount"/>
+			<el-checkbox v-model="unreadOnly" @change="reloadCommunity()">
+				Show only unread comments
+			</el-checkbox>
 		</div>
 
 		<p v-if="reloadingComments"><i class="el-icon-loading"/> Reloading...</p>
@@ -442,12 +442,17 @@ export default {
 				margin-bottom: 5px;
 			}
 			>.new-comment-area {
-				margin: 45px 0 40px;
+				margin: 45px 0;
 				>.el-textarea {
 					margin-bottom: 10px;
 					max-height: 60vh;
 					overflow-y: auto;
 				}
+			}
+			>.controls-area {
+				// Adjust for padding in .flex-row;
+				// result is 20px spacing
+				margin-bottom: 10px;
 			}
 		}
 	}
