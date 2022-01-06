@@ -67,9 +67,25 @@ func AtoTimeNilIfEmpty(s string) (*time.Time, error) {
 	return &t, nil
 }
 
+// AtoStringArray is for JSON string arrays.
+func AtoStringArray(s string) ([]string, error) {
+	var out []string
+	if len(s) == 0 {
+		return out, nil
+	}
+	err := json.Unmarshal([]byte(s), &out)
+	if err != nil {
+		return []string{}, fmt.Errorf("parsing string array: %w", err)
+	}
+	return out, nil
+}
+
 // AtoInt64Array is for parsing ID lists where the input is a JSON encoded array of ints.
 func AtoInt64Array(s string) ([]int64, error) {
 	var out []int64
+	if len(s) == 0 {
+		return out, nil
+	}
 	err := json.Unmarshal([]byte(s), &out)
 	if err != nil {
 		return []int64{}, fmt.Errorf("parsing int array: %w", err)

@@ -431,17 +431,19 @@ func ajaxSpecMoveBlocks(db *sql.DB, userID uint, w http.ResponseWriter, r *http.
 
 		var args = []interface{}{parentID}
 
-		var orderNumbers []interface{}
+		// build values map for order numbers
+		var valuesMap = [][]interface{}{}
 		for i := 0; i < len(blockIDs); i++ {
-			orderNumbers = append(orderNumbers, insertAt+i)
+			valuesMap = append(valuesMap, []interface{}{
+				blockIDs[i],
+				insertAt + i,
+			})
 		}
-
-		var values = createIDsValuesMap(&args, blockIDs, orderNumbers)
 
 		_, err = tx.Query(
 			`UPDATE spec_block
 			SET parent_id = $1, order_number = v.order_number
-			FROM (`+values+`) AS v(id, order_number)
+			FROM (`+argValuesMap(&args, valuesMap)+`) AS v(id, order_number)
 			WHERE spec_block.id = v.id`,
 			args...)
 		if err != nil {

@@ -7,6 +7,59 @@ import (
 	"strings"
 )
 
+const (
+	// BlockRefOrg indicates a reference to an organisation.
+	// BlockRefOrg = "org"
+
+	// BlockRefSpec indicates a reference to a spec.
+	// BlockRefSpec = "spec"
+
+	// BlockRefSubspec indicates a reference to a subspec in this or another spec.
+	BlockRefSubspec = "subspec"
+
+	// BlockRefBlock indicates a reference to a block in this or another spec.
+	// BlockRefBlock = "block"
+
+	// BlockRefImage indicates an image reference owned by the spec owner.
+	BlockRefImage = "image"
+
+	// BlockRefVideo indicates a reference to an external video.
+	// BlockRefVideo = "video"
+
+	// BlockRefURL indicates a reference to a URL.
+	BlockRefURL = "url"
+
+	// BlockRefFile indicates a reference to a file owned by the spec owner.
+	// BlockRefFile = "file"
+)
+
+func isValidBlockRefType(t string) bool {
+	return stringInSlice(t, []string{
+		BlockRefSubspec,
+		BlockRefURL,
+	})
+}
+
+// TODO Delete
+func isRefIDRequiredForRefType(t *string) bool {
+	if t == nil {
+		return false
+	}
+	return stringInSlice(*t, []string{
+		BlockRefSubspec,
+	})
+}
+
+// TODO Delete
+func isURLRequiredForRefType(t *string) bool {
+	if t == nil {
+		return false
+	}
+	return stringInSlice(*t, []string{
+		BlockRefURL,
+	})
+}
+
 // Returns nil if fields are valid for creating or setting a ref item during block create or update.
 func validateCreateRefItemFields(fields url.Values) (*string, *int64, error) {
 	refType := AtoPointerNilIfEmpty(fields.Get("refType"))
@@ -84,7 +137,7 @@ func loadRefItem(db DBConn, refType string, refID int64) (interface{}, error) {
 	switch refType {
 
 	case BlockRefURL:
-		return loadURLObject(db, refID)
+		return loadURLHeader(db, refID)
 
 	case BlockRefSubspec:
 		return loadSubspecHeader(db, refID)

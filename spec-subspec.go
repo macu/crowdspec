@@ -34,19 +34,9 @@ type SpecSubspec struct {
 	Blocks []*SpecBlock `json:"blocks,omitempty"`
 }
 
-// SpecSubspecHeader represents a subspec preview in the community modal.
-type SpecSubspecHeader struct {
-	ID      int64     `json:"id"`
-	SpecID  int64     `json:"specId"`
-	Created time.Time `json:"created"`
-	Updated time.Time `json:"updated"`
-	Name    string    `json:"name"`
-	Desc    *string   `json:"desc"`
-}
-
 // called when creating or saving block with new subspec params
-func createSubspec(tx *sql.Tx, specID int64, name string, desc *string) (*SpecSubspecHeader, error) {
-	var s = &SpecSubspecHeader{
+func createSubspec(tx *sql.Tx, specID int64, name string, desc *string) (*SpecSubspec, error) {
+	var s = &SpecSubspec{
 		SpecID: specID,
 	}
 
@@ -68,8 +58,8 @@ func createSubspec(tx *sql.Tx, specID int64, name string, desc *string) (*SpecSu
 }
 
 // currently used in loading block ref headers piecewise
-func loadSubspecHeader(db DBConn, subspecID int64) (*SpecSubspecHeader, error) {
-	var s = &SpecSubspecHeader{
+func loadSubspecHeader(db DBConn, subspecID int64) (*SpecSubspec, error) {
+	var s = &SpecSubspec{
 		ID: subspecID,
 	}
 	var err = db.QueryRow(

@@ -49,25 +49,6 @@ const (
 	TextContentPlain = "plaintext"
 	// TextContentMarkdown indicates markdown processing is required for rendering.
 	TextContentMarkdown = "markdown"
-	// TextContentHTML indicates content should be sanitized and rendered as HTML.
-	TextContentHTML = "html"
-
-	// BlockRefOrg indicates a reference to an organisation.
-	BlockRefOrg = "org"
-	// BlockRefSpec indicates a reference to a spec.
-	BlockRefSpec = "spec"
-	// BlockRefSubspec indicates a reference to a subspec in this or another spec.
-	BlockRefSubspec = "subspec"
-	// BlockRefBlock indicates a reference to a block in this or another spec.
-	BlockRefBlock = "block"
-	// BlockRefImage indicates an image reference owned by the spec owner.
-	BlockRefImage = "image"
-	// BlockRefVideo indicates a reference to an external video.
-	BlockRefVideo = "video"
-	// BlockRefURL indicates a reference to a URL.
-	BlockRefURL = "url"
-	// BlockRefFile indicates a reference to a file owned by the spec owner.
-	BlockRefFile = "file"
 )
 
 func isValidListStyleType(t string) bool {
@@ -82,42 +63,6 @@ func isValidTextContentType(t string) bool {
 	return stringInSlice(t, []string{
 		TextContentPlain,
 		TextContentMarkdown,
-		// TextContentHTML,
-	})
-}
-
-func isValidBlockRefType(t string) bool {
-	return stringInSlice(t, []string{
-		// BlockRefOrg,
-		// BlockRefSpec,
-		BlockRefSubspec,
-		// BlockRefBlock,
-		// BlockRefImage,
-		// BlockRefVideo,
-		BlockRefURL,
-		// BlockRefFile,
-	})
-}
-
-func isRefIDRequiredForRefType(t *string) bool {
-	if t == nil {
-		return false
-	}
-	return stringInSlice(*t, []string{
-		BlockRefOrg,
-		BlockRefSpec,
-		BlockRefSubspec,
-		BlockRefBlock,
-		BlockRefFile,
-	})
-}
-
-func isURLRequiredForRefType(t *string) bool {
-	if t == nil {
-		return false
-	}
-	return stringInSlice(*t, []string{
-		BlockRefURL,
 	})
 }
 
@@ -179,22 +124,22 @@ func loadBlocksByID(db DBConn, userID uint, specID int64, blockIDs ...int64) ([]
 
 	var args = []interface{}{specID, userID}
 
-	var orderNumbers []interface{}
+	// build values map for order numbers
+	var valuesMap = [][]interface{}{}
 	for i := 0; i < len(blockIDs); i++ {
-		orderNumbers = append(orderNumbers, i)
+		valuesMap = append(valuesMap, []interface{}{
+			blockIDs[i],
+			i,
+		})
 	}
-
-	// Used to sort blocks by order requested
-	var values = createIDsValuesMap(&args, blockIDs, orderNumbers)
 
 	// Ref items are only loaded if belonging to the same spec.
 	// TODO Allow linking to any ref item, but verify current user's access when joining info.
-	query := `
-		WITH RECURSIVE block_tree(id) AS (
+	var query = `WITH RECURSIVE block_tree(id) AS (
 			-- Anchor
 			SELECT spec_block.id, selected.order_number
 			FROM spec_block
-			INNER JOIN (` + values + `) AS selected(id, order_number)
+			INNER JOIN (` + argValuesMap(&args, valuesMap) + `) AS selected(id, order_number)
 				ON selected.id = spec_block.id
 			WHERE spec_id = $1
 			UNION ALL
@@ -264,8 +209,8 @@ func loadContextBlocks(db *sql.DB, userID uint, specID int64, subspecID *int64) 
 
 	// Ref items are only loaded if belonging to the same spec.
 	// TODO Allow linking to any ref item, but verify current user's access when joining info.
-	args := []interface{}{userID, specID}
-	query := `SELECT spec_block.id, spec_block.spec_id, spec_block.created_at, spec_block.updated_at,
+	var args = []interface{}{userID, specID}
+	var query = `SELECT spec_block.id, spec_block.spec_id, spec_block.created_at, spec_block.updated_at,
 		spec_block.subspec_id, spec_block.parent_id, spec_block.order_number,
 		spec_block.style_type, spec_block.content_type, spec_block.ref_type, spec_block.ref_id,
 		spec_block.block_title,
@@ -402,15 +347,14 @@ func makeInsertAt(tx *sql.Tx,
 	if insertBeforeID == nil {
 		// Insert at end - get next order_number
 
-		args := []interface{}{specID}
+		var args = []interface{}{specID}
 
-		query := `
-			SELECT COALESCE(MAX(order_number), -1) + 1 AS insert_at FROM spec_block
+		var query = `SELECT COALESCE(MAX(order_number), -1) + 1 AS insert_at FROM spec_block
 			WHERE spec_id = $1
 			AND ` + eqCond("subspec_id", subspecID, &args) + `
 			AND ` + eqCond("parent_id", parentID, &args)
 
-		err := tx.QueryRow(query, args...).Scan(&insertAt)
+		var err = tx.QueryRow(query, args...).Scan(&insertAt)
 		if err != nil {
 			return 0, http.StatusInternalServerError, fmt.Errorf("selecting next order number: %w", err)
 		}
@@ -420,9 +364,9 @@ func makeInsertAt(tx *sql.Tx,
 
 	// Increase order numbers of following blocks
 
-	args := []interface{}{specID, requiredPositions}
+	var args = []interface{}{specID, requiredPositions}
 
-	query := `UPDATE spec_block
+	var query = `UPDATE spec_block
 		SET order_number = order_number + $2
 		WHERE spec_id = $1
 		AND ` + eqCond("subspec_id", subspecID, &args) + `

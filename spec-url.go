@@ -23,20 +23,20 @@ import (
 const urlMaxLen = 1024
 const urlTitleMaxLen = 255
 const urlDescMaxLen = 255
-const maxThumbnailDims = 300
+const urlThumbnailMaxDims = 300
 
 // URLObject contains display information about a URL.
 type URLObject struct {
 	ID      int64     `json:"id"`
 	SpecID  int64     `json:"specId"`
 	Created time.Time `json:"created"`
+	Updated time.Time `json:"updated"`
 	URL     string    `json:"url"`
 	// Note on omitempty: https://play.golang.org/p/Lk_FdWeL4i8
 	// empty non-nil values are not omitted
-	Title     *string   `json:"title,omitempty"`
-	Desc      *string   `json:"desc,omitempty"`
-	ImageData *string   `json:"imageData,omitempty"`
-	Updated   time.Time `json:"updated"`
+	Title     *string `json:"title,omitempty"`
+	Desc      *string `json:"desc,omitempty"`
+	ImageData *string `json:"imageData,omitempty"`
 }
 
 // URLMetadata represents metadata extracted from a request to a URL.
@@ -206,12 +206,12 @@ func loadImageThumbData(imageURL string) (string, error) {
 	defer res.Body.Close()
 
 	// Load image
-	image, _, err := image.Decode(res.Body)
+	img, _, err := image.Decode(res.Body)
 	if err != nil {
 		return "", fmt.Errorf("decoding image: %w", err)
 	}
 
-	thumb := resize.Thumbnail(maxThumbnailDims, maxThumbnailDims, image, resize.Lanczos3)
+	thumb := resize.Thumbnail(urlThumbnailMaxDims, urlThumbnailMaxDims, img, resize.Lanczos3)
 
 	stringBuilder := new(strings.Builder)
 	base64Writer := base64.NewEncoder(base64.StdEncoding, stringBuilder)
@@ -310,16 +310,18 @@ func updateURLObject(tx *sql.Tx, id int64, url string) (*URLObject, error) {
 }
 
 // currently used in loading block ref headers piecewise
-func loadURLObject(db DBConn, id int64) (*URLObject, error) {
+func loadURLHeader(db DBConn, id int64) (*URLObject, error) {
 
-	urlObject := &URLObject{
+	var urlObject = &URLObject{
 		ID: id,
 	}
 
 	err := db.QueryRow(
-		`SELECT spec_id, created_at, url, url_title, url_desc, url_image_data, updated_at
-		FROM spec_url WHERE id=$1`, id).Scan(&urlObject.SpecID, &urlObject.Created,
-		&urlObject.URL, &urlObject.Title, &urlObject.Desc, &urlObject.ImageData, &urlObject.Updated)
+		`SELECT spec_id, created_at, updated_at, url, url_title, url_desc, url_image_data
+		FROM spec_url WHERE id=$1`,
+		id,
+	).Scan(&urlObject.SpecID, &urlObject.Created, &urlObject.Updated,
+		&urlObject.URL, &urlObject.Title, &urlObject.Desc, &urlObject.ImageData)
 	if err != nil {
 		return nil, fmt.Errorf("reading spec_url: %w", err)
 	}

@@ -1,6 +1,7 @@
 runtime: go114
 
 env_variables:
+  PROJECT_ID: "crowdspec-dev"
   DOMAIN: "crowdspec.dev"
   DEV_ENV: "appengine"
   MAINTENANCE_MODE: "false"
@@ -9,13 +10,14 @@ env_variables:
   DB_USER: "postgres"
   DB_PASS_SECRET: "projects/178253280892/secrets/DB_PASS"
   ADMIN_USER_ID: "1"
+  STORAGE_LOCATION: "NORTHAMERICA-NORTHEAST1"
   RECAPTCHA_SITE_KEY: "6Lfg_8UZAAAAABHHDDBZfQVED-glpgYUjQjwjpb0"
   RECAPTCHA_SECRET: "projects/178253280892/secrets/RECAPTCHA"
   MAILJET_API_KEY: "b0334490baa0138d74375c16998277a0"
   MAILJET_SECRET: "projects/178253280892/secrets/MAILJET_SECRET_KEY"
   YOUTUBE_API_KEY: "AIzaSyDF6SEQrNQZWXmLjO-8fNX5qdwnpmui7yE"
   HTTP_CLIENT_REFERER: "https://crowdspec.dev"
-  VERSION_STAMP: "202105081058"
+  VERSION_STAMP: "202201052025"
 
 handlers:
 - url: /css

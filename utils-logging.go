@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log"
@@ -129,4 +130,33 @@ func logErrorFatal(err error) {
 
 	_, fn, line, _ := runtime.Caller(1)
 	log.Fatalln(fmt.Sprintf("[fatal] %s:%d %v", fn, line, err))
+}
+
+// ResponseTracker tracks bytes written in an HTTP response.
+// Thanks https://www.reddit.com/r/golang/comments/ffwkh9/api_measure_response_size_in_bytes/fk6we0b
+type ResponseTracker struct {
+	http.ResponseWriter
+	total int
+}
+
+// NewResponseTracker wraps the given writer in ResponseTracker.
+func NewResponseTracker(w http.ResponseWriter) *ResponseTracker {
+	return &ResponseTracker{ResponseWriter: w}
+}
+
+// WriteHeader counts the bytes written in headers.
+// Always call this manually before calling Write
+// to ensure the headers get counted.
+func (t *ResponseTracker) WriteHeader(code int) {
+	t.ResponseWriter.WriteHeader(code)
+	var buf bytes.Buffer
+	t.Header().Write(&buf)
+	t.total += buf.Len()
+}
+
+// Write counts the bytes written.
+func (t *ResponseTracker) Write(b []byte) (int, error) {
+	n, err := t.ResponseWriter.Write(b)
+	t.total += n
+	return n, err
 }

@@ -9,8 +9,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"regexp"
-	"strings"
 
 	"github.com/gorilla/mux" // (BSD-3-Clause) https://github.com/gorilla/mux/blob/master/LICENSE
 
@@ -65,7 +63,6 @@ func main() {
 		os.Exit(0)
 	}
 
-	initDB := flag.Bool("initDB", false, "Initialize a fresh database")
 	createNewUser := flag.Bool("createUser", false, "Whether to create a user on startup")
 	newUserUsername := flag.String("username", "", "Login username for new user")
 	newUserPassword := flag.String("password", "", "Password for new user")
@@ -153,35 +150,6 @@ func main() {
 	// if err != nil {
 	// 	logErrorFatal(err)
 	// }
-
-	if isLocal() && *initDB {
-		// Load initializing SQL
-		initFileContents, err := ioutil.ReadFile("sql/init.pgsql")
-		if err != nil {
-			logErrorFatal(err)
-		}
-
-		// Remove comments
-		blockCommentMatcher := regexp.MustCompile("(?s)/\\*.*?\\*/")
-		// Match dashed comment lines and trailing dashed comments
-		dashedCommentMatcher := regexp.MustCompile("(?m)(^\\s*--.*$[\r\n]*)|(\\s*--.*$)")
-		// Remove block comments first
-		withoutComments := dashedCommentMatcher.ReplaceAllString(
-			blockCommentMatcher.ReplaceAllString(string(initFileContents), ""), "")
-
-		// Split into statements
-		lines := strings.Split(withoutComments, ";")
-
-		// Execute each statement
-		for i := 0; i < len(lines); i++ {
-			line := strings.TrimSpace(lines[i])
-			_, err = db.Exec(line)
-			if err != nil {
-				logErrorFatal(err)
-			}
-		}
-		log.Println("Database initialized")
-	}
 
 	if isLocal() && *createNewUser {
 		if _, err := createUser(&http.Request{}, // request needed for r.Context()

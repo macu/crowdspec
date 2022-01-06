@@ -103,10 +103,10 @@ func ajaxSubspecs(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 		return nil, http.StatusInternalServerError
 	}
 
-	subspecs := []*SpecSubspecHeader{}
+	subspecs := []*SpecSubspec{}
 
 	for rows.Next() {
-		s := &SpecSubspecHeader{
+		s := &SpecSubspec{
 			SpecID: specID,
 		}
 		err = rows.Scan(&s.ID, &s.Created, &s.Updated, &s.Name, &s.Desc)

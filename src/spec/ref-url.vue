@@ -1,5 +1,5 @@
 <template>
-<div class="ref-url">
+<div class="ref-url ref-item">
 	<img v-if="item.imageData" :src="item.imageData"/>
 	<div>
 		<div v-if="showEdit || showPlay" class="right">

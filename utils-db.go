@@ -66,23 +66,34 @@ func createArgsListInt64s(args *[]interface{}, values ...int64) string {
 	return out
 }
 
-func createIDsValuesMap(args *[]interface{}, ids []int64, values ...[]interface{}) string {
-	out := `VALUES `
+// create a VALUES (), (), ... postgres string using argument placeholders
+func argValuesMap(args *[]interface{}, values [][]interface{}) string {
+	var out = `VALUES `
 
-	for i := 0; i < len(ids); i++ {
+	for i := 0; i < len(values); i++ {
 		if i > 0 {
 			out += `,`
 		}
-		// include types with placeholders to be clear
-		out += `(` + argPlaceholder(ids[i], args) + `::int`
-		for j := 0; j < len(values); j++ {
-			v := values[j][i]
-			out += `,` + argPlaceholder(v, args)
+
+		out += `(`
+
+		for j := 0; j < len(values[i]); j++ {
+			if j > 0 {
+				out += `,`
+			}
+
+			var v = values[i][j]
+			out += argPlaceholder(v, args)
+
+			// include type casts with placeholders
 			switch v.(type) {
 			case int, uint, int64:
 				out += `::int`
+			case string:
+				out += `::text`
 			}
 		}
+
 		out += `)`
 	}
 

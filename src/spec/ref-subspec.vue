@@ -1,5 +1,5 @@
 <template>
-<div class="ref-subspec">
+<div class="ref-subspec ref-item">
 	<div>
 		<div class="title">
 			<span><i class="el-icon-s-unfold"></i> Subspec</span>

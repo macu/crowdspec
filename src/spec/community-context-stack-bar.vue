@@ -15,7 +15,6 @@ import {
 	TARGET_TYPE_BLOCK,
 	TARGET_TYPE_COMMENT,
 	REF_TYPE_SUBSPEC,
-	REF_TYPE_VIDEO,
 	REF_TYPE_URL,
 } from './const.js';
 import {
@@ -54,7 +53,6 @@ export default {
 						switch (this.target.refType) {
 							case REF_TYPE_SUBSPEC:
 								return this.target.refItem.name;
-							case REF_TYPE_VIDEO:
 							case REF_TYPE_URL:
 								return this.target.refItem.title || this.target.refItem.url;
 						}
