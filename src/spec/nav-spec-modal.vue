@@ -10,11 +10,7 @@
 
 	<template v-else-if="subspecs.length">
 
-		<el-select v-model="selectedSubspecId" placeholder="Choose subspec">
-			<el-option v-for="s in subspecs" :key="s.id" :value="s.id" :label="s.name"/>
-		</el-select>
-
-		<ref-subspec v-if="selectedSubspec" :item="selectedSubspec"/>
+		<ref-subspec v-for="s in subspecs" :key="s.id" :item="s"/>
 
 	</template>
 
@@ -28,13 +24,6 @@
 			type="primary">
 			Go to spec
 		</el-button>
-		<el-button
-			v-if="subspecs.length"
-			@click="goToSubspec()"
-			type="primary"
-			:disabled="disableGoToSubspec">
-			Go to subspec
-		</el-button>
 	</span>
 
 </el-dialog>
@@ -42,7 +31,7 @@
 
 <script>
 import RefSubspec from './ref-subspec.vue';
-import {alertError, idsEq} from '../utils.js';
+import {alertError} from '../utils.js';
 
 export default {
 	components: {
@@ -55,24 +44,17 @@ export default {
 	data() {
 		return {
 			subspecs: [],
-			selectedSubspecId: null,
 			loading: false,
 			showing: false,
 		};
 	},
-	computed: {
-		disableGoToSubspec() {
-			return this.loading || !this.subspecs.length || !this.selectedSubspecId;
-		},
-		selectedSubspec() {
-			if (this.selectedSubspecId) {
-				for (var i = 0; i < this.subspecs.length; i++) {
-					if (this.subspecs[i].id === this.selectedSubspecId) {
-						return this.subspecs[i];
-					}
-				}
-			}
-			return null;
+	watch: {
+		'$route': {
+			deep: true,
+			handler() {
+				// Hide modal on route changes
+				this.showing = false;
+			},
 		},
 	},
 	methods: {
@@ -103,25 +85,9 @@ export default {
 			}
 			this.showing = false;
 		},
-		goToSubspec() {
-			if (
-				this.$route.name !== 'subspec' ||
-				!idsEq(this.$route.params.subspecId, this.selectedSubspecId)
-			) {
-				this.$router.push({
-					name: 'subspec',
-					params: {
-						specId: this.specId,
-						subspecId: this.selectedSubspecId,
-					},
-				});
-			}
-			this.showing = false;
-		},
 		closed() {
 			this.loading = false;
 			this.subspecs = [];
-			this.selectedSubspecId = null;
 		},
 	},
 };
@@ -132,8 +98,8 @@ export default {
 	.el-select {
 		width: 100%;
 	}
-	.ref-subspec {
-		margin-top: 20px;
+	.ref-subspec+.ref-subspec {
+		margin-top: 10px;
 	}
 }
 </style>

@@ -19,7 +19,7 @@ postgres=# SELECT table_catalog, table_schema, table_name, privilege_type FROM i
 ```
 $ psql crowdspec
 postgres=# \dt
-postgres=# \d spec
+postgres=# \d+ spec
 ```
 
 ## Set up `env.json` for local development
@@ -69,14 +69,6 @@ Update cron jobs:
 $ gcloud app deploy cron.yaml
 ```
 
-## Access dev database through GCloud
-
-```
-gcloud sql connect crowdspec-dev --user=postgres --quiet
-postgres=# \c crowdspec
-postgres=# \i <migration>.pgsql
-```
-
 ## Vacuum
 
 ```
@@ -86,6 +78,11 @@ postgres=#
 ```
 
 ## Changelog
+
+### 2022-01
+
+- [x] Refactoring
+- [x] Jump to subspec modal update
 
 ### 2021-02
 
