@@ -298,7 +298,7 @@ export default {
 			});
 		},
 		promptAddBlock() {
-			this.$refs.editBlockModal.showAdd(null, null, true, newBlock => {
+			this.$refs.editBlockModal.showAddBlock(null, null, true, newBlock => {
 				let $block = this.insertBlock(newBlock, true, true);
 				this.panToBlock($block);
 			});
@@ -307,10 +307,10 @@ export default {
 			this.$emit('open-community', TARGET_TYPE_BLOCK, blockId, onAdjustUnread, onAdjustComments);
 		},
 		openEditBlock(blockId, callback) {
-			this.$refs.editBlockModal.showEdit(blockId, callback);
+			this.$refs.editBlockModal.showEditBlock(blockId, callback);
 		},
 		promptAddSubblock(parentId, insertBeforeId, defaultStyleType) {
-			this.$refs.editBlockModal.showAdd(parentId, insertBeforeId, defaultStyleType, newBlock => {
+			this.$refs.editBlockModal.showAddBlock(parentId, insertBeforeId, defaultStyleType, newBlock => {
 				let $block = this.insertBlock(newBlock, false, true);
 				// Add to sublist
 				if (insertBeforeId) {

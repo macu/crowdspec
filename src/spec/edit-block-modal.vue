@@ -19,7 +19,7 @@
 
 	</template>
 
-	<template v-else>
+	<template v-else-if="showing">
 
 		<p v-if="block">
 			Created <strong><moment :datetime="block.created"/></strong>;
@@ -46,22 +46,16 @@
 				<el-radio :label="REF_TYPE_URL">URL</el-radio>
 			</el-radio-group>
 
-			<ref-url-form
-				v-if="refType === REF_TYPE_URL"
+			<ref-form
+				v-show="!!refType"
 				:spec-id="specId"
-				:initial-url-object="existingUrlRefItem"
-				:valid.sync="refFieldsValid"
+				:ref-type="refType"
+				:existing-ref-type="existingRefType"
+				:existing-ref-item="existingRefItem"
 				:fields.sync="refFields"
+				:valid.sync="refFieldsValid"
 				@open-edit-url="openEditUrl"
 				@play-video="raisePlayVideo"
-				/>
-
-			<ref-subspec-form
-				v-else-if="refType === REF_TYPE_SUBSPEC"
-				:spec-id="specId"
-				:initial-subspec="existingSubspecRefItem"
-				:valid.sync="refFieldsValid"
-				:fields.sync="refFields"
 				/>
 		</section>
 
@@ -106,8 +100,7 @@
 <script>
 import $ from 'jquery';
 import Moment from '../widgets/moment.vue';
-import RefUrlForm from './ref-url-form.vue';
-import RefSubspecForm from './ref-subspec-form.vue';
+import RefForm from './ref-form.vue';
 import {
 	ajaxLoadBlockForEditing, ajaxCreateBlock, ajaxSaveBlock,
 	ajaxRenderMarkdown,
@@ -128,8 +121,7 @@ import {
 export default {
 	components: {
 		Moment,
-		RefUrlForm,
-		RefSubspecForm,
+		RefForm,
 	},
 	props: {
 		specId: {
@@ -188,17 +180,14 @@ export default {
 		titleMaxLength() {
 			return window.const.blockTitleMaxLength;
 		},
-		existingUrlRefItem() {
-			return this.block && this.block.refType === REF_TYPE_URL && this.block.refItem || null;
+		existingRefType() {
+			return this.block && this.block.refType;
 		},
-		existingSubspecRefItem() {
-			return this.block && this.block.refType === REF_TYPE_SUBSPEC && this.block.refItem || null;
+		existingRefItem() {
+			return this.block && this.block.refType && this.block.refItem || null;
 		},
 	},
 	watch: {
-		refType() {
-			this.refFields = null;
-		},
 		body() {
 			this.renderMarkdownPreview();
 		},
@@ -210,6 +199,72 @@ export default {
 		},
 	},
 	methods: {
+		showAddBlock(parentId, insertBeforeId, defaultStyleType, callback) {
+			if (defaultStyleType === true) {
+				// not all these routes are followed;
+				// defaultStyleType is given as a string when adding above or below a block,
+				// which overrides the behaviour defined here;
+				// but the logic here is comprehensive as a fallback in case I want to use it
+				if (insertBeforeId) {
+					// Add before an existing block
+					let $sibling = $('[data-spec-block="'+insertBeforeId+'"]', '.spec-view');
+					let $prevSibling = $sibling.prev('[data-spec-block]');
+					if ($prevSibling.length) {
+						// Copy style of preceeding block
+						defaultStyleType = $prevSibling.data('vc').getStyleType();
+					} else {
+						// Copy style of following block
+						defaultStyleType = $sibling.data('vc').getStyleType();
+					}
+				} else if (parentId) {
+					// Add at last position within parent block
+					let $parent = $('[data-spec-block="'+parentId+'"]', '.spec-view');
+					let $sibling = $('>ul>[data-spec-block]:last-child', $parent);
+					if ($sibling.length) {
+						// Copy style of last block currently in parent
+						defaultStyleType = $sibling.data('vc').getStyleType();
+					}
+				} else {
+					let $sibling = $('>ul>[data-spec-block]:last-child', '.spec-view');
+					if ($sibling.length) {
+						// Copy style of current last root block
+						defaultStyleType = $sibling.data('vc').getStyleType();
+					}
+				}
+			}
+			if (typeof defaultStyleType === 'string') {
+				this.styleType = defaultStyleType;
+			}
+			this.parentId = parentId;
+			this.insertBeforeId = insertBeforeId;
+			this.callback = callback;
+			this.showing = true;
+			this.focusTitleInput();
+		},
+		showEditBlock(blockId, callback) {
+			this.loading = true;
+			this.error = null;
+			this.showing = true;
+			ajaxLoadBlockForEditing(this.specId, blockId).then(block => {
+				this.loading = false;
+				this.block = block;
+				this.styleType = block.styleType;
+				this.contentType = block.contentType;
+				this.title = block.title || '';
+				this.body = block.body || '';
+				this.refType = block.refType;
+				this.callback = callback;
+				this.focusTitleInput();
+			}).fail(() => {
+				this.error = 'Error loading block';
+				this.loading = false;
+			});
+		},
+		focusTitleInput() {
+			this.$nextTick(() => {
+				$('input', this.$refs.titleInput.$el).focus();
+			});
+		},
 		renderMarkdownPreview() {
 			if (this.contentType === CONTENT_TYPE_MARKDOWN) {
 				if (this.body.trim()) {
@@ -268,72 +323,6 @@ export default {
 						});
 					});
 				}
-			});
-		},
-		showAdd(parentId, insertBeforeId, defaultStyleType, callback) {
-			if (defaultStyleType === true) {
-				// not all these routes are followed;
-				// defaultStyleType is given as a string when adding above or below a block,
-				// which overrides the behaviour defined here;
-				// but the logic here is comprehensive as a fallback in case I want to use it
-				if (insertBeforeId) {
-					// Add before an existing block
-					let $sibling = $('[data-spec-block="'+insertBeforeId+'"]', '.spec-view');
-					let $prevSibling = $sibling.prev('[data-spec-block]');
-					if ($prevSibling.length) {
-						// Copy style of preceeding block
-						defaultStyleType = $prevSibling.data('vc').getStyleType();
-					} else {
-						// Copy style of following block
-						defaultStyleType = $sibling.data('vc').getStyleType();
-					}
-				} else if (parentId) {
-					// Add at last position within parent block
-					let $parent = $('[data-spec-block="'+parentId+'"]', '.spec-view');
-					let $sibling = $('>ul>[data-spec-block]:last-child', $parent);
-					if ($sibling.length) {
-						// Copy style of last block currently in parent
-						defaultStyleType = $sibling.data('vc').getStyleType();
-					}
-				} else {
-					let $sibling = $('>ul>[data-spec-block]:last-child', '.spec-view');
-					if ($sibling.length) {
-						// Copy style of current last root block
-						defaultStyleType = $sibling.data('vc').getStyleType();
-					}
-				}
-			}
-			if (typeof defaultStyleType === 'string') {
-				this.styleType = defaultStyleType;
-			}
-			this.parentId = parentId;
-			this.insertBeforeId = insertBeforeId;
-			this.callback = callback;
-			this.showing = true;
-			this.focusTitleInput();
-		},
-		showEdit(blockId, callback) {
-			this.loading = true;
-			this.error = null;
-			this.showing = true;
-			ajaxLoadBlockForEditing(this.specId, blockId).then(block => {
-				this.loading = false;
-				this.block = block;
-				this.styleType = block.styleType;
-				this.contentType = block.contentType;
-				this.title = block.title || '';
-				this.body = block.body || '';
-				this.refType = block.refType;
-				this.callback = callback;
-				this.focusTitleInput();
-			}).fail(() => {
-				this.error = 'Error loading block';
-				this.loading = false;
-			});
-		},
-		focusTitleInput() {
-			this.$nextTick(() => {
-				$('input', this.$refs.titleInput.$el).focus();
 			});
 		},
 		openEditUrl(urlObject, updated = null, deleted = null) {

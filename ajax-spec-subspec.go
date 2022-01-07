@@ -153,23 +153,24 @@ func ajaxSpecCreateSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *ht
 
 	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
 
-		var subspecID int64
+		var subspec = &SpecSubspec{}
 
 		err = tx.QueryRow(
 			`INSERT INTO spec_subspec (
 				spec_id, created_at, updated_at, subspec_name, subspec_desc
 			) VALUES (
 				$1, $2, $2, $3, $4
-			) RETURNING id`,
+			) RETURNING id, spec_id, created_at, updated_at, subspec_name, subspec_desc`,
 			specID, time.Now(), name, desc,
-		).Scan(&subspecID)
+		).Scan(&subspec.ID, &subspec.SpecID, &subspec.Created, &subspec.Updated,
+			&subspec.Name, &subspec.Desc)
 
 		if err != nil {
 			logError(r, userID, fmt.Errorf("creating subspec: %w", err))
 			return nil, http.StatusInternalServerError
 		}
 
-		return subspecID, http.StatusCreated
+		return subspec, http.StatusCreated
 	})
 }
 

@@ -121,8 +121,8 @@ export default {
 				this.specId,
 				this.name,
 				this.desc
-			).then(newSubspecId => {
-				callback(newSubspecId);
+			).then(newSubspec => {
+				callback(newSubspec.id);
 				this.showing = false;
 				this.sending = false;
 			}).fail(() => {

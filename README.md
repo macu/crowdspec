@@ -83,6 +83,7 @@ postgres=#
 
 - [x] Refactoring
 - [x] Jump to subspec modal update
+- [x] Edit block modal ref form updates
 
 ### 2021-02
 

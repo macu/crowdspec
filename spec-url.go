@@ -225,14 +225,29 @@ func loadImageThumbData(imageURL string) (string, error) {
 }
 
 func createURLObject(tx *sql.Tx, specID int64, url string) (*URLObject, error) {
+
+	var urlObject = &URLObject{
+		SpecID: specID,
+		URL:    url,
+	}
+
+	// Look up exisitng (don't create duplicates)
+	var err = tx.QueryRow(
+		`SELECT id, created_at, updated_at, url_title, url_desc, url_image_data
+		FROM spec_url
+		WHERE spec_id = $1 AND url = $2`,
+		specID, url,
+	).Scan(&urlObject.ID, &urlObject.Created, &urlObject.Updated,
+		&urlObject.Title, &urlObject.Desc, &urlObject.ImageData)
+	if err == nil {
+		return urlObject, nil
+	} else if err != sql.ErrNoRows {
+		return nil, fmt.Errorf("querying for existing spec_url: %w", err)
+	}
+
 	data, err := fetchMetadata(url)
 	if err != nil {
 		return nil, fmt.Errorf("loading url metadata: %w", err)
-	}
-
-	urlObject := &URLObject{
-		SpecID: specID,
-		URL:    url,
 	}
 
 	if strings.TrimSpace(data.Title) != "" {
@@ -255,10 +270,12 @@ func createURLObject(tx *sql.Tx, specID int64, url string) (*URLObject, error) {
 
 	// Save URLObject
 	err = tx.QueryRow(
-		`INSERT INTO spec_url (spec_id, created_at, url, url_title, url_desc, url_image_data, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $2) RETURNING id, created_at, url_title, url_desc, updated_at`,
+		`INSERT INTO spec_url
+		(spec_id, created_at, updated_at, url, url_title, url_desc, url_image_data)
+		VALUES ($1, $2, $2, $3, $4, $5, $6)
+		RETURNING id, created_at, updated_at, url_title, url_desc`,
 		specID, time.Now(), url, urlObject.Title, urlObject.Desc, urlObject.ImageData,
-	).Scan(&urlObject.ID, &urlObject.Created, &urlObject.Title, &urlObject.Desc, &urlObject.Updated)
+	).Scan(&urlObject.ID, &urlObject.Created, &urlObject.Updated, &urlObject.Title, &urlObject.Desc)
 	if err != nil {
 		return nil, fmt.Errorf("creating spec_url: %w", err)
 	}
