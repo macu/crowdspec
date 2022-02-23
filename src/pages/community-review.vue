@@ -7,7 +7,9 @@
 
 	<div class="content-page">
 
-		<p v-if="loading"><i class="el-icon-loading"/> Loading...</p>
+		<p v-if="loading">
+			<loading-message message="Loading..."/>
+		</p>
 
 		<template v-else>
 
@@ -24,23 +26,23 @@
 										<el-button v-if="expandedSpecs[s.id]"
 											@click="collapseSpec(s.id)"
 											:type="s.hasUnreadSubspec ? 'primary' : 'default'"
-											size="mini"
-											icon="el-icon-arrow-up"
-											circle/>
+											circle>
+											<i class="material-icons">expand_less</i>
+										</el-button>
 										<el-button v-else
 											@click="expandSpec(s.id)"
 											:type="s.hasUnreadSubspec ? 'primary' : 'default'"
-											size="mini"
-											icon="el-icon-arrow-down"
-											circle/>
+											circle>
+											<i class="material-icons">expand_more</i>
+										</el-button>
 									</template>
 									<!-- claim same space with hidden button -->
 									<el-button v-else
 										type="default"
-										size="mini"
-										icon="el-icon-aim"
 										circle
-										style="visibility:hidden;"/>
+										style="visibility:hidden;">
+										<i class="material-icons">filter_center_focus</i>
+									</el-button>
 								</div>
 								<div class="name fill">
 									<router-link :to="{name: 'spec', params: {specId: s.id}}">
@@ -50,18 +52,22 @@
 							</div>
 							<div>
 								<el-button @click="openSpecCommunity(s.id)"
-									:type="s.unread ? 'primary': 'default'"
-									size="mini"
-									icon="el-icon-chat-dot-square">
-									{{s.unread}} unread ({{s.total}} total)
+									:type="s.unread ? 'primary': 'default'">
+									<i class="material-icons">forum</i>
+									<span>
+										{{s.unread}} unread
+										({{s.total}} total)
+									</span>
 								</el-button>
 							</div>
 							<div>
 								<el-button @click="gotoSpec(s.id)"
-									:type="s.blockUnread ? 'primary' : 'default'"
-									size="mini"
-									icon="el-icon-folder-opened">
-									{{s.blockUnread}} unread ({{s.blockTotal}} total) on blocks
+									:type="s.blockUnread ? 'primary' : 'default'">
+									<i class="material-icons">folder</i>
+									<span>
+										{{s.blockUnread}} unread
+										({{s.blockTotal}} total) on blocks
+									</span>
 								</el-button>
 							</div>
 						</div>
@@ -76,24 +82,30 @@
 										</div>
 										<div>
 											<el-button @click="openSubspecCommunity(s.id, ss.id)"
-												:type="ss.unread ? 'primary' : 'default'"
-												size="mini"
-												icon="el-icon-chat-dot-square">
-												{{ss.unread}} unread ({{ss.total}} total)
+												:type="ss.unread ? 'primary' : 'default'">
+												<i class="material-icons">forum</i>
+												<span>
+													{{ss.unread}} unread
+													({{ss.total}} total)
+												</span>
 											</el-button>
 										</div>
 										<div>
 											<el-button @click="gotoSubspec(s.id, ss.id)"
-												:type="ss.blockUnread ? 'primary' : 'default'"
-												size="mini"
-												icon="el-icon-folder-opened">
-												{{ss.blockUnread}} unread ({{ss.blockTotal}} total) on blocks
+												:type="ss.blockUnread ? 'primary' : 'default'">
+												<i class="material-icons">folder</i>
+												<span>
+													{{ss.blockUnread}} unread
+													({{ss.blockTotal}} total) on blocks
+												</span>
 											</el-button>
 										</div>
 									</div>
 								</div>
 							</template>
-							<p v-else><i class="el-icon-loading"/></p>
+							<p v-else>
+								<loading-message/>
+							</p>
 						</div>
 					</div>
 				</template>
@@ -127,19 +139,26 @@
 							<div>
 								<el-button @click="openCommentCommunity(c.specId, c.id)"
 									:type="c.unread ? 'primary' : 'default'"
-									size="mini"
-									icon="el-icon-chat-dot-square">
-									{{c.unread}} unread ({{c.total}} total)
+									size="small">
+									<i class="material-icons">forum</i>
+									<span>
+										{{c.unread}} unread
+										({{c.total}} total)
+									</span>
 								</el-button>
 							</div>
 						</div>
 						<div class="body" v-text="c.body"/>
 					</div>
 
-					<p v-if="loadingCommentsPage"><i class="el-icon-loading"/> Loading more comments...</p>
+					<p v-if="loadingCommentsPage">
+						<loading-message message="Loading more comments..."/>
+					</p>
 					<el-button v-else-if="hasMoreComments" @click="loadMoreComments()">Load more</el-button>
 				</template>
-				<p v-else-if="loadingCommentsPage"><i class="el-icon-loading"/> Loading...</p>
+				<p v-else-if="loadingCommentsPage">
+					<loading-message message="Loading..."/>
+				</p>
 				<p v-else>No comments</p>
 
 			</section>
@@ -167,7 +186,8 @@ import Moment from '../widgets/moment.vue';
 import CommunityModal from '../spec/community-modal.vue';
 import PlayVideoModal from '../widgets/play-video-modal.vue';
 import Username from '../widgets/username.vue';
-import {alertError, idsEq, dateToTimestampz} from '../utils.js';
+import LoadingMessage from '../widgets/loading.vue';
+import {alertError, idsEq} from '../utils.js';
 import {
 	TARGET_TYPE_SPEC,
 	TARGET_TYPE_SUBSPEC,
@@ -184,6 +204,7 @@ export default {
 		CommunityModal,
 		PlayVideoModal,
 		Username,
+		LoadingMessage,
 	},
 	data() {
 		return {
@@ -262,15 +283,15 @@ export default {
 		},
 		expandSpec(specId) {
 			var prevVal = this.expandedSpecs[specId];
-			this.$set(this.expandedSpecs, specId, true);
+			this.expandedSpecs[specId] = true;
 			if (typeof prevVal === 'undefined') {
 				fetchCommunity({
 					request: 'subspecs',
 					specId,
 				}).then(payload => {
-					this.$set(this.subspecsBySpecId, specId, payload.subspecs);
+					this.subspecsBySpecId[specId] = payload.subspecs;
 				}).fail(jqXHR => {
-					this.$delete(this.expandedSpecs, specId);
+					this.expandedSpecs[specId] = false;
 					alertError(jqXHR);
 				});
 			}

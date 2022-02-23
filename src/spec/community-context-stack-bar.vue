@@ -1,6 +1,8 @@
 <template>
 <div class="community-context-stack-bar" :class="targetType">
-	<el-button size="mini" icon="el-icon-top-left" type="primary" circle/>
+	<el-button size="small" type="primary" circle>
+		<i class="material-icons">north_west</i>
+	</el-button>
 	<span class="bar">
 		<span class="label">{{label || '...'}}</span>
 		<span class="content" v-text="content || '...'"/>
@@ -31,6 +33,7 @@ export default {
 			let label = ucFirst(this.targetType);
 			if (this.targetType === TARGET_TYPE_BLOCK) {
 				if (this.target.refType) {
+					// Show "(URL)" or "(Subspec)", etc.
 					label += ' (' + ucFirst(this.target.refType) + ')';
 				}
 			}

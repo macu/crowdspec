@@ -1,5 +1,5 @@
 import $ from 'jquery';
-import Vue from 'vue';
+import {ElMessageBox, ElMessage} from 'element-plus';
 import moment from 'moment';
 
 const VERSION_STAMP_RESPONSE = /^VersionStamp: (.+)$/m;
@@ -26,16 +26,24 @@ export function alertError(error) {
 		message = 'An error occurred.';
 	}
 	if (error && error.responseText &&
-			VERSION_STAMP_RESPONSE.test(error.responseText)) {
+		VERSION_STAMP_RESPONSE.test(error.responseText)) {
 		let match = VERSION_STAMP_RESPONSE.exec(error.responseText);
 		if (match[1] !== window.const.appVersion) {
-			message += ' (A new version is available. Reload this page to use the latest client code.)'
+			message += ' (A new update is available. Reload this page to use the latest client code.)'
 		}
 	}
-	Vue.prototype.$alert(message, 'Error', {
+	ElMessageBox.alert(message, 'Error', {
 		confirmButtonText: 'Ok',
 		type: 'error',
 	});
+}
+
+export function notifySuccess(message, duration = 3000) {
+	ElMessage.success({message, duration});
+}
+
+export function notifyInfo(message, duration = 3000) {
+	ElMessage.info({message, duration});
 }
 
 export function defaultUserSettings() {
@@ -63,6 +71,7 @@ export function idsEq(id1, id2) {
 // unless the returned function is called again during the delay and then the delay is extended.
 export function debounce(callback, timeoutMs = 500) {
 	var timeout;
+
 	function invoker() {
 		timeout = null;
 		callback.apply(this, arguments);
@@ -101,7 +110,8 @@ export function startAutoscroll() {
 
 	function handleScroll() {
 		if (clientY !== null) {
-			let viewportHeight = $window.height(), delta = 0;
+			let viewportHeight = $window.height(),
+				delta = 0;
 			if (clientY < GUTTER_SIZE) { // Scroll up
 				let factor = (GUTTER_SIZE - clientY) / GUTTER_SIZE;
 				delta = -((factor * SCALE_RANGE) + 1);
@@ -162,9 +172,9 @@ export function extractVid(url) {
 		return null;
 	}
 	if (url.indexOf('youtube.com') || url.indexOf('youtu.be')) {
-		return {type: 'youtube', id: match[1]};
+		return { type: 'youtube', id: match[1] };
 	} else if (url.indexOf('vimeo.com')) {
-		return {type: 'vimeo', id: match[1]};
+		return { type: 'vimeo', id: match[1] };
 	}
 	return null;
 }

@@ -1,6 +1,6 @@
 <template>
 <span class="username">
-	<i class="el-icon-user" :style="style"></i>
+	<i class="material-icons" :style="style">person</i>
 	<span>{{username}}</span>
 </span>
 </template>
@@ -47,14 +47,14 @@ export default {
 @import '../_styles/_app.scss';
 
 .username {
+	white-space: nowrap;
 	>i {
 		display: inline-block;
 		font-weight: bold;
-		margin-right: $icon-spacing;
 	}
-	>[class*="el-icon-"]+span {
-		// Override Element theme
-		margin-left: 0;
+	>span {
+		display: inline-block;
+		margin-left: $icon-spacing;
 	}
 }
 </style>

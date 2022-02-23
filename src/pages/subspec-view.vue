@@ -1,6 +1,8 @@
 <template>
 <div class="subspec-view-page" :class="{loading}">
-	<p v-if="loading">Loading...</p>
+	<p v-if="loading">
+		<loading-message message="Loading..."/>
+	</p>
 	<spec-view
 		v-else-if="subspec"
 		:key="subspec.renderTime"
@@ -16,16 +18,19 @@
 
 <script>
 import SpecView from '../spec/view.vue';
+import LoadingMessage from '../widgets/loading.vue';
 
 export default {
+	components: {
+		SpecView,
+		LoadingMessage,
+	},
 	props: {
 		loading: Boolean,
 		subspec: Object,
 		enableEditing: Boolean,
 	},
-	components: {
-		SpecView,
-	},
+	emits: ['rendered', 'prompt-nav-spec', 'open-community', 'play-video'],
 	methods: {
 		promptNavSpec() {
 			this.$emit('prompt-nav-spec');
@@ -41,12 +46,13 @@ export default {
 </script>
 
 <style lang="scss">
+@use "sass:math";
 @import '../_styles/_app.scss';
 @import '../_styles/_breakpoints.scss';
 
 .subspec-view-page {
 	padding: $content-area-padding;
-	padding-top: $content-area-padding / 2;
+	padding-top: math.div($content-area-padding, 2);
 
 	@include mobile {
 		padding: $content-area-padding-sm 0;

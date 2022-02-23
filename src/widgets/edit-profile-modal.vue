@@ -1,15 +1,17 @@
 <template>
 <el-dialog
-	:visible.sync="showing"
+	v-model="showing"
 	:width="$store.getters.dialogTinyWidth"
 	:close-on-click-modal="mode === null"
 	@closed="clearMode()"
-	class="edit-profile-modal">
+	custom-class="edit-profile-modal">
 
-	<span slot="title">
-		Account options for
-		<username :username="username" :highlight="highlight"/>
-	</span>
+	<template #title>
+		<span>
+			Account options for
+			<username :username="username" :highlight="highlight"/>
+		</span>
+	</template>
 
 	<el-form v-if="updateSettingsMode"
 		ref="changePasswordForm"
@@ -17,7 +19,9 @@
 		v-loading="waiting"
 		label-position="top">
 		<el-form-item>
-			<strong slot="label" class="section-heading">Profile</strong>
+			<template #label>
+				<strong class="section-heading">Profile</strong>
+			</template>
 			<div class="flex-input">
 				<el-color-picker
 					v-model="settingsForm.userProfile.highlightUsername"
@@ -27,14 +31,16 @@
 				<el-button
 					v-if="settingsForm.userProfile.highlightUsername"
 					@click="settingsForm.userProfile.highlightUsername = null"
-					size="mini"
-					icon="el-icon-close"
-					/>
+					size="small">
+					<i class="material-icons">close</i>
+				</el-button>
 				<username username="Username colour" :highlight="settingsForm.userProfile.highlightUsername"/>
 			</div>
 		</el-form-item>
 		<el-form-item>
-			<strong slot="label" class="section-heading">Block editing</strong>
+			<template #label>
+				<strong class="section-heading">Block editing</strong>
+			</template>
 			<el-select v-model="settingsForm.blockEditing.deleteButton">
 				<el-option label="Show delete button only in edit block modal" value="modal"/>
 				<el-option label="Show delete button on newly added blocks" value="recent"/>
@@ -42,7 +48,9 @@
 			</el-select>
 		</el-form-item>
 		<el-form-item>
-			<strong slot="label" class="section-heading">Community</strong>
+			<template #label>
+				<strong class="section-heading">Community</strong>
+			</template>
 			<el-checkbox v-model="settingsForm.community.unreadOnly">
 				Show only unread comments by default
 			</el-checkbox>
@@ -70,7 +78,7 @@
 				name="old_password"
 				v-model="changePasswordForm.oldPass"
 				autocomplete="current-password"
-				@keyup.enter.native="handleChangePasswordReturn($refs.oldPass)"/>
+				@keyup.enter="handleChangePasswordReturn($refs.oldPass)"/>
 		</el-form-item>
 		<el-form-item label="New password" prop="newPass">
 			<el-input
@@ -79,7 +87,7 @@
 				name="new_password"
 				v-model="changePasswordForm.newPass"
 				autocomplete="new-password"
-				@keyup.enter.native="handleChangePasswordReturn($refs.newPass)"/>
+				@keyup.enter="handleChangePasswordReturn($refs.newPass)"/>
 		</el-form-item>
 		<el-form-item label="Confirm new password" prop="newPass2">
 			<el-input
@@ -88,7 +96,7 @@
 				name="verify_password"
 				v-model="changePasswordForm.newPass2"
 				autocomplete="new-password"
-				@keyup.enter.native="handleChangePasswordReturn($refs.newPass2)"/>
+				@keyup.enter="handleChangePasswordReturn($refs.newPass2)"/>
 		</el-form-item>
 		<el-form-item>
 			<el-alert type="info" :closable="false">
@@ -121,9 +129,11 @@
 		</el-button>
 	</div>
 
-	<span slot="footer" class="dialog-footer">
-		<el-button @click="showing = false">Close</el-button>
-	</span>
+	<template #footer>
+		<span class="dialog-footer">
+			<el-button @click="showing = false">Close</el-button>
+		</span>
+	</template>
 
 </el-dialog>
 </template>
@@ -375,7 +385,7 @@ export default {
 			}
 			>.el-form-item__content {
 				>*:not(:first-child) {
-					margin-top: 10px;
+					margin-top: 2px;
 				}
 			}
 			.el-alert {

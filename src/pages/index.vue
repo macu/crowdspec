@@ -25,24 +25,29 @@
 
 	<div class="user-specs">
 		<h2>Your specs</h2>
-		<p v-if="loading">Loading...</p>
+		<p v-if="loading">
+			<loading-message message="Loading..."/>
+		</p>
 		<ul v-else-if="userSpecs && userSpecs.length" class="specs-list">
 			<router-link
 				v-for="s in userSpecs"
 				:key="s.id"
-				tag="li"
-				:to="{name: 'spec', params: {specId: s.id}}">
-				<div class="info">
-					<span class="status" :class="{public: s.public}">
-						<template v-if="s.public"><i class="el-icon-umbrella"></i> Public</template>
-						<template v-else><i class="el-icon-lock"></i> Private</template>
-					</span>
-				</div>
-				<router-link :to="{name: 'spec', params: {specId: s.id}}" class="name">{{s.name}}</router-link>
-				<div class="info">
-					<span class="updated">Last modified <strong><moment :datetime="s.updated" :offset="true"/></strong></span>
-				</div>
-				<div v-if="s.desc" class="desc">{{s.desc}}</div>
+				:to="{name: 'spec', params: {specId: s.id}}"
+				custom
+				v-slot="{ navigate, href }">
+				<li @click="navigate">
+					<div class="info">
+						<span class="status" :class="{public: s.public}">
+							<template v-if="s.public"><i class="material-icons">beach_access</i> Public</template>
+							<template v-else><i class="material-icons">lock</i> Private</template>
+						</span>
+					</div>
+					<a :href="href" @click="navigate" class="name">{{s.name}}</a>
+					<div class="info">
+						<span class="updated">Last modified <strong><moment :datetime="s.updated" :offset="true"/></strong></span>
+					</div>
+					<div v-if="s.desc" class="desc">{{s.desc}}</div>
+				</li>
 			</router-link>
 		</ul>
 		<p v-else>You do not have any specs.</p>
@@ -50,29 +55,34 @@
 
 	<div class="public-specs" :class="{'adjust-margin': !!userSpecs.length}">
 		<h2>Public specs</h2>
-		<p v-if="loading">Loading...</p>
+		<p v-if="loading">
+			<loading-message message="Loading..."/>
+		</p>
 		<ul v-else-if="publicSpecs && publicSpecs.length" class="specs-list">
 			<router-link
 				v-for="s in publicSpecs"
 				:key="s.id"
-				tag="li"
-				:to="{name: 'spec', params: {specId: s.id}}">
-				<div class="info">
-					<username :username="s.username" :highlight="s.highlight"/>
-				</div>
-				<router-link :to="{name: 'spec', params: {specId: s.id}}" class="name">{{s.name}}</router-link>
-				<div class="info">
-					<span class="updated">Last modified <strong><moment :datetime="s.updated" :offset="true"/></strong></span>
-				</div>
-				<!--<div class="tags">
-					<el-tag size="mini" :closable="false" type="success">dsf</el-tag>
-					<el-tag size="mini" :closable="false" type="primary">d</el-tag>
-					<el-tag size="mini" :closable="false">asdfsadf</el-tag>
-					<el-tag size="mini" :closable="false">asd</el-tag>
-					<el-tag size="mini" :closable="false">fghfdghsdfg</el-tag>
-					<el-tag size="mini" :closable="false">rtrgegrae</el-tag>
-				</div>-->
-				<div v-if="s.desc" class="desc">{{s.desc}}</div>
+				:to="{name: 'spec', params: {specId: s.id}}"
+				custom
+				v-slot="{ navigate, href }">
+				<li @click="navigate">
+					<div class="info">
+						<username :username="s.username" :highlight="s.highlight"/>
+					</div>
+					<a :href="href" @click="navigate" class="name">{{s.name}}</a>
+					<div class="info">
+						<span class="updated">Last modified <strong><moment :datetime="s.updated" :offset="true"/></strong></span>
+					</div>
+					<!--<div class="tags">
+						<el-tag size="mini" :closable="false" type="success">dsf</el-tag>
+						<el-tag size="mini" :closable="false" type="primary">d</el-tag>
+						<el-tag size="mini" :closable="false">asdfsadf</el-tag>
+						<el-tag size="mini" :closable="false">asd</el-tag>
+						<el-tag size="mini" :closable="false">fghfdghsdfg</el-tag>
+						<el-tag size="mini" :closable="false">rtrgegrae</el-tag>
+					</div>-->
+					<div v-if="s.desc" class="desc">{{s.desc}}</div>
+				</li>
 			</router-link>
 		</ul>
 		<p v-else>There are no public specs......</p>
@@ -88,6 +98,7 @@ import $ from 'jquery';
 import Moment from '../widgets/moment.vue';
 import Username from '../widgets/username.vue';
 import EditSpecModal from '../spec/edit-spec-modal.vue';
+import LoadingMessage from '../widgets/loading.vue';
 import {alertError} from '../utils.js';
 
 export default {
@@ -95,6 +106,7 @@ export default {
 		Moment,
 		Username,
 		EditSpecModal,
+		LoadingMessage,
 	},
 	data() {
 		return {

@@ -6,20 +6,20 @@
 		<div class="right">
 
 			<el-checkbox
-				:value="userRead"
+				:modelValue="userRead"
 				:disabled="sendingRead"
 				@change="setUserRead"
-				size="mini"/>
+				size="small"/>
 
 			<el-tag
 				v-if="userRead"
-				size="mini" type="success"
+				size="small" type="success"
 				@click="setUserRead(false)">
 				Read
 			</el-tag>
 			<el-tag
 				v-else
-				size="mini" type="info"
+				size="small" type="info"
 				@click="setUserRead(true)">
 				Unread
 			</el-tag>
@@ -28,28 +28,33 @@
 				v-if="showCommunity"
 				@click="openComments()"
 				:type="!!unreadCount ? 'primary' : 'default'"
-				size="mini"
-				icon="el-icon-chat-dot-square">
-				<template v-if="showUnreadOnly || unreadCount">
-					<template v-if="unreadCount">{{unreadCount}} unread</template>
-				</template>
-				<template v-else-if="commentsCount">{{commentsCount}}</template>
+				size="small"
+				round>
+				<i class="material-icons">forum</i>
+				<span v-if="(showUnreadOnly || unreadCount) || commentsCount">
+					<template v-if="showUnreadOnly || unreadCount">
+						<template v-if="unreadCount">{{unreadCount}} unread</template>
+					</template>
+					<template v-else-if="commentsCount">{{commentsCount}}</template>
+				</span>
 			</el-button>
 
 			<el-button
 				v-if="userCanEdit"
 				@click="edit()"
 				type="default"
-				size="mini"
-				icon="el-icon-edit"
-				circle/>
+				size="small"
+				circle>
+				<i class="material-icons">edit</i>
+			</el-button>
 			<el-button
 				v-else-if="userCanDelete"
 				@click="promptDelete()"
 				type="warning"
-				size="mini"
-				icon="el-icon-delete"
-				circle/>
+				size="small"
+				circle>
+				<i class="material-icons">delete</i>
+			</el-button>
 
 		</div>
 
@@ -63,8 +68,12 @@
 
 	</div>
 
-	<div v-if="sendingDelete"><i class="el-icon-loading"/> Deleting...</div>
-	<div v-else-if="sendingEdit"><i class="el-icon-loading"/> Saving...</div>
+	<div v-if="sendingDelete">
+		<loading-message message="Deleting..."/>
+	</div>
+	<div v-else-if="sendingEdit">
+		<loading-message message="Saving..."/>
+	</div>
 	<div v-else-if="editing" class="edit-comment-area">
 		<el-input ref="editCommentInput" type="textarea" v-model="editingBody" :autosize="{minRows: 2}"/>
 		<div>
@@ -88,6 +97,7 @@
 import $ from 'jquery';
 import Username from '../widgets/username.vue';
 import Moment from '../widgets/moment.vue';
+import LoadingMessage from '../widgets/loading.vue';
 import {TARGET_TYPE_COMMENT} from './const.js';
 import {ajaxMarkRead, ajaxUpdateComment, ajaxDeleteComment} from './ajax.js';
 
@@ -95,6 +105,7 @@ export default {
 	components: {
 		Username,
 		Moment,
+		LoadingMessage,
 	},
 	props: {
 		specId: Number,
@@ -102,6 +113,7 @@ export default {
 		showCommunity: Boolean, // show unread count
 		showUnreadOnly: Boolean,
 	},
+	emits: ['update-unread', 'open-comments', 'deleted'],
 	data() {
 		return {
 			userRead: this.comment.userRead || false,
@@ -224,8 +236,11 @@ export default {
 			white-space: nowrap;
 			margin-left: 10px;
 			margin-bottom: 10px;
+			display: inline-flex;
+			flex-direction: row;
+			flex-wrap: nowrap;
+			align-items: center;
 			>* {
-				display: inline-block;
 				margin: 0;
 			}
 			* {
@@ -237,8 +252,6 @@ export default {
 			}
 			>.el-button {
 				margin-left: 10px;
-				padding: 3px;
-				font-size: 12px;
 			}
 			.el-checkbox__input.is-checked .el-checkbox__inner {
 				color: white;

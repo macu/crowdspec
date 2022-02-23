@@ -8,9 +8,11 @@
 
 <link rel="shortcut icon" href="/img/favicon.png"/>
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/element-ui/2.15.0/theme-chalk/index.min.css"
-	integrity="sha512-VJoGnoawFQ6KWebgnIV11okzXf+sJ4V2TZ6G3odIV4+TSlFuT1qnb2x996xYJc5Ni5tRarZgnmuE5AMjmUWiEA=="
-	crossorigin="anonymous" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/element-plus/2.0.2/theme-chalk/index.min.css"
+	integrity="sha512-Y8C5XJsoLG6DBXLx9DhWNyRkMzyVNB5NNyZy/XpATFUZIcwnrTfvcjn0HOgDNgF2HdeGkoVIfZA894Dm4xZhOQ=="
+	crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons"/>
 
 <link rel="stylesheet" href="/css/compiled.css?v={{.VersionStamp}}"/>
 
@@ -41,40 +43,40 @@ window.const = {
 
 <div id="app"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"
-	integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg=="
-	crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"
+	integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ=="
+	crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 {{if .Local}}
 <!-- Enable Vue DevTools -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.12/vue.runtime.js"
-	integrity="sha512-MbDBUqdp/G2JUxGdahQfbrfMSHqCp5f+6BK9fKshXb43f44GWCkw5ilQXqi1rZ1h9V8NgOWQh8VW3BdxQDDLpg=="
-	crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vuex/3.5.1/vuex.js"
-	integrity="sha512-LRJP5e30Cahm/OH4lAao+BwWtz7gcz8GDWKQh4aVzHZnTG6RKpVthb17/nBEcBMK5aSgGkI6XjCNRPY221esvQ=="
-	crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vue-router/3.4.3/vue-router.js"
-	integrity="sha512-3y+1622sE9JcYGIob4bKvJI6qMHpzrsloehokHVZBk1Lx7lr7H5p6IOqIkRQzB0Ids5l11W3n+vK50xArypH5g=="
-	crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.2.31/vue.runtime.global.min.js"
+	integrity="sha512-sLnWjeRLoLvPveULQs+k3w4KE8NA5v83F5OMV9RY99kZtJkDZZcq2g+z0UxkAIc2wBPR6J9hDg5lkc6PoAIxpg=="
+	crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vuex/4.0.2/vuex.global.js"
+	integrity="sha512-gQOia3DNhTH7NddBFw36zq5kyHx8viwZj0bC4I6Vx2+L3twl7WoRZ5FbiPmPKdj/uh9jeG1IB8hF/gjayPavig=="
+	crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue-router/4.0.12/vue-router.global.js"
+	integrity="sha512-OcwuEqOp3inNUnSPs3R7XvEg3ieFeTlx7WoXzi9IHLGPOGqdUKuLodBh8MvSSj4cDnovEe/eD59NN4/JIv3Gvw=="
+	crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 {{else}}
 <!-- Production Vue -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.12/vue.runtime.min.js"
-	integrity="sha512-lioAd6C8U3XVaN4Zy5HEtE6KfEZ8KAqUvRekxUfRGby3UeYF8ZhfzhsnKWazWEGS1RM0R3glU5oXXQN1dCQUnQ=="
-	crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vuex/3.5.1/vuex.min.js"
-	integrity="sha512-n/iV5SyKXzLRbRczKU75fMgHO0A1DWJSWbK5llLNAqdcoxtUK3NfgfszYpjhvcEqS6nEXwu7gQ5bIkx6z8/lrA=="
-	crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vue-router/3.4.3/vue-router.min.js"
-	integrity="sha512-mVyZZ423iwLddhRdWCJeQSysHfnDZZPJRlY9HJI6/39e6D8Myz3nQCelJmSMOf8MOreTzWDmh8bYftrBnTau1Q=="
-	crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.2.31/vue.runtime.global.prod.min.js"
+	integrity="sha512-EpVg3t4U+HlWyCTlzQjwvKh8qjbHbxqIghWifD+gFL68Os7z4Y0JIpS3z8xdsrsQBKu38BPyFeNOeAb1rB4PGQ=="
+	crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vuex/4.0.2/vuex.global.prod.min.js"
+	integrity="sha512-6qTR+Lfgwi+S5KFpSBVNXu/OXZszhGyc2Fw7a2yM07+k5EUkOQwcPdTr+FmyLb5A9MbQaQ5vhpoNIIj93Ik8IA=="
+	crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue-router/4.0.12/vue-router.global.prod.min.js"
+	integrity="sha512-V4wJo2tPFlrTfeFqrlPDJG/iKkcwX+RywJqiL/I5pfxucomceV5KC0Plqispv2Qav2KqZ8BfayOlsPTEhz5QAA=="
+	crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 {{end}}
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/element-ui/2.15.0/index.min.js"
-	integrity="sha512-vsazkQ1TJCRDeXTkMNQ2eZKLaEje9gw+Xq9SOa4sadPpprNJDuZksspvMY3gXxdp8s4GX7/CNk9I1ZclN1YyTg=="
-	crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/element-ui/2.15.0/locale/en.min.js"
-	integrity="sha512-wTedtMlNjqON7BEYO+seaiwvTZek/crcOifMLn9rm428m6FeoqHgJzYUVORgUbKNwDkAOhsTaKvTN8tIQ+LIoA=="
-	crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/element-plus/2.0.2/index.full.min.js"
+	integrity="sha512-Ay6Suh1S4b0nSf+VELzS3ReztEa+NdA0sRlUlY5fJPclnxO9lIiYfNd//kqyLyD7PoL4ibvBFBgRFJVkwzXbNw=="
+	crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/element-plus/2.0.2/locale/en.min.js"
+	integrity="sha512-cPDlFu1Cydq08fYTw2kSpIlYcegrA4XN0LiC+huZX8yNAbCE8o5TNSWX97upywhG/ma/koepednt/iMyZKnGww=="
+	crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"
 	integrity="sha512-qTXRIMyZIFb8iQcfjXWCO8+M5Tbc38Qi5WzdPOYZHIlZpzBHG3L3by84BBBOiRGiEb7KKtAOAs5qYdUiZiQNNQ=="
 	crossorigin="anonymous"></script>

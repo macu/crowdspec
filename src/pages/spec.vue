@@ -19,14 +19,14 @@
 					</span>
 					<span v-else>
 						<el-tooltip content="Unpublished" placement="left">
-							<i class="el-icon-lock"></i>
+							<i class="material-icons">lock</i>
 						</el-tooltip>
 					</span>
 					<el-button
 						@click="openSpecCommunity()"
 						:type="!!unreadCount ? 'primary' : 'default'"
-						:disabled="choosingAddPosition"
-						size="mini" icon="el-icon-chat-dot-square">
+						:disabled="choosingAddPosition">
+						<i class="material-icons">forum</i>
 						<template v-if="showUnreadOnly || unreadCount">
 							<template v-if="unreadCount">{{unreadCount}} unread</template>
 						</template>
@@ -34,9 +34,9 @@
 					</el-button>
 					<el-button
 						@click="openManageSpec()"
-						:disabled="choosingAddPosition"
-						size="mini" icon="el-icon-setting"
-						/>
+						:disabled="choosingAddPosition">
+						<i class="material-icons">settings</i>
+					</el-button>
 				</template>
 				<template v-else>
 					<span>
@@ -44,8 +44,8 @@
 					</span>
 					<el-button
 						@click="openSpecCommunity()"
-						:type="!!unreadCount ? 'primary' : 'default'"
-						size="mini" icon="el-icon-chat-dot-square">
+						:type="!!unreadCount ? 'primary' : 'default'">
+						<i class="material-icons">forum</i>
 						<template v-if="showUnreadOnly || unreadCount">
 							<template v-if="unreadCount">{{unreadCount}} unread</template>
 						</template>
@@ -54,7 +54,9 @@
 				</template>
 			</template>
 
-			<el-button @click="promptNavSpec()" size="mini" icon="el-icon-folder"/>
+			<el-button @click="promptNavSpec()">
+				<i class="material-icons">folder</i>
+			</el-button>
 
 		</div>
 
@@ -64,25 +66,36 @@
 
 	</header>
 
-	<router-view
-		ref="view"
-		:loading="loading"
-		:spec="spec"
-		:enable-editing="enableEditing"
-		@prompt-nav-spec="promptNavSpec"
-		@open-community="openCommunity"
-		@play-video="playVideo"
-		/>
+	<router-view v-slot="{ Component }">
+		<component
+			:is="Component"
+			:loading="loading"
+			:spec="spec"
+			:enable-editing="enableEditing"
+			@rendered="handleViewRendered"
+			@prompt-nav-spec="promptNavSpec"
+			@open-community="openCommunity"
+			@play-video="playVideo"
+			@open-manage-subspec="openManageSubspec"
+			/>
+	</router-view>
 
 	<edit-spec-modal
 		v-if="enableEditing"
 		ref="editSpecModal"
 		/>
 
+	<edit-subspec-modal
+	 	v-if="enableEditing"
+		ref="editSubspecModal"
+		:spec-id="specId"
+		/>
+
 	<nav-spec-modal
 		ref="navSpecModal"
 		:spec-id="specId"
 		:subspec-id="subspecId"
+		@open-create-subspec="openCreateSubspec()"
 		/>
 
 	<community-modal
@@ -103,6 +116,7 @@ import $ from 'jquery';
 import Username from '../widgets/username.vue';
 import Moment from '../widgets/moment.vue';
 import EditSpecModal from '../spec/edit-spec-modal.vue';
+import EditSubspecModal from '../spec/edit-subspec-modal.vue';
 import NavSpecModal from '../spec/nav-spec-modal.vue';
 import CommunityModal from '../spec/community-modal.vue';
 import PlayVideoModal from '../widgets/play-video-modal.vue';
@@ -115,6 +129,7 @@ export default {
 		Username,
 		Moment,
 		EditSpecModal,
+		EditSubspecModal,
 		NavSpecModal,
 		CommunityModal,
 		PlayVideoModal,
@@ -122,6 +137,7 @@ export default {
 	data() {
 		return {
 			loading: true,
+			scrollOnRender: true,
 			spec: null,
 			unreadCount: 0,
 			commentsCount: 0,
@@ -183,7 +199,7 @@ export default {
 				this.commentsCount = spec.commentsCount || 0;
 				setWindowSubtitle(spec.name);
 				this.loading = false;
-				this.$refs.view.$once('rendered', this.restoreScroll);
+				this.scrollOnRendered();
 				this.$store.commit('saveCurrentSpec', spec);
 			}).fail(jqXHR => {
 				this.$router.replace({
@@ -192,6 +208,15 @@ export default {
 					query: {url: encodeURIComponent(this.$route.fullPath)},
 				});
 			});
+		},
+		scrollOnRendered() {
+			this.scrollOnRender = true;
+		},
+		handleViewRendered() {
+			if (this.scrollOnRender) {
+				this.scrollOnRender = false;
+				this.restoreScroll();
+			}
 		},
 		gotoSpec() {
 			if (this.$route.name !== 'spec') {
@@ -213,6 +238,9 @@ export default {
 				setWindowSubtitle(updatedSpec.name);
 			});
 		},
+		openManageSubspec(subspec, callback) {
+			this.$refs.editSubspecModal.showEdit(subspec, callback);
+		},
 		openSpecCommunity() {
 			this.$refs.communityModal.openCommunity(TARGET_TYPE_SPEC, this.spec.id, adjustUnreadCount => {
 				this.unreadCount += adjustUnreadCount;
@@ -229,13 +257,18 @@ export default {
 		promptNavSpec() {
 			this.$refs.navSpecModal.show();
 		},
+		openCreateSubspec() {
+			this.$refs.editSubspecModal.showCreate(newSubspecId => {
+				this.$router.push({name: 'subspec', params: {specId: this.specId, subspecId: newSubspecId}});
+			});
+		},
 		restoreScroll() {
 			if (this.onSpecRoute) {
 				let savedPosition = this.$store.state.savedScrollPosition;
 				if (savedPosition) {
 					console.debug('restoreScroll spec');
 					// Restore scroll position from history
-					$(window).scrollTop(savedPosition.y).scrollLeft(savedPosition.x);
+					$(window).scrollTop(savedPosition.top).scrollLeft(savedPosition.left);
 				} else if (
 					idsEq(this.$store.getters.currentSpecId, this.spec.id) &&
 					!!this.$store.state.currentSpecScrollTop

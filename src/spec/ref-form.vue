@@ -4,10 +4,10 @@
 	<template v-if="refType === REF_TYPE_URL">
 		<el-card v-if="urlMode === MODE_CREATE">
 			<p v-if="creatingUrlObject">
-				<i class="el-icon-loading"/> Creating...
+				<loading-message message="Creating..."/>
 			</p>
 			<label v-else>
-				New link URL
+				<div>New link URL</div>
 				<el-input
 					v-model="newUrl"
 					:maxlength="urlMaxLength"
@@ -29,20 +29,19 @@
 			<el-button
 				@click="createUrl()"
 				:disabled="disableCreateUrl"
-				type="primary"
-				size="small">
+				type="primary">
 				Create
 			</el-button>
-			<el-button v-if="urlSelectModeAvailable" @click="urlMode = MODE_SELECT" size="small">
+			<el-button v-if="urlSelectModeAvailable" @click="urlMode = MODE_SELECT">
 				Select an existing link
 			</el-button>
-			<el-button v-if="initialUrlObject" @click="urlMode = MODE_KEEP" size="small">
+			<el-button v-if="initialUrlObject" @click="urlMode = MODE_KEEP">
 				Cancel
 			</el-button>
 		</el-card>
 		<template v-else-if="urlMode === MODE_SELECT">
 			<p v-if="loadingUrlObjects">
-				<i class="el-icon-loading"/> Loading links...
+				<loading-message message="Loading links..."/>
 			</p>
 			<template v-else-if="urlObjects && urlObjects.length">
 				<el-select
@@ -66,10 +65,10 @@
 					/>
 			</template>
 			<div key="url-select-actions">
-				<el-button @click="urlMode = MODE_CREATE" size="small">
+				<el-button @click="urlMode = MODE_CREATE">
 					Create new link
 				</el-button>
-				<el-button v-if="initialUrlObject" @click="urlMode = MODE_KEEP" size="small">
+				<el-button v-if="initialUrlObject" @click="urlMode = MODE_KEEP">
 					Cancel
 				</el-button>
 			</div>
@@ -83,10 +82,10 @@
 				@play="raisePlayVideo(initialUrlObject)"
 				/>
 			<div key="url-keep-actions">
-				<el-button @click="urlMode = MODE_CREATE" size="small">
+				<el-button @click="urlMode = MODE_CREATE">
 					Create new link
 				</el-button>
-				<el-button v-if="urlSelectModeAvailable" @click="urlMode = MODE_SELECT" size="small">
+				<el-button v-if="urlSelectModeAvailable" @click="urlMode = MODE_SELECT">
 					Select a different link
 				</el-button>
 			</div>
@@ -96,11 +95,11 @@
 	<template v-else-if="refType === REF_TYPE_SUBSPEC">
 		<el-card v-if="subspecMode === MODE_CREATE">
 			<p v-if="creatingSubspec">
-				<i class="el-icon-loading"/> Creating...
+				<loading-message message="Creating..."/>
 			</p>
 			<template v-else>
 				<label>
-					New subspec name
+					<div>New subspec name</div>
 					<el-input ref="newSubspecNameInput"
 						v-model="newSubspecName"
 						:maxlength="subspecNameMaxLength"
@@ -108,7 +107,7 @@
 						/>
 				</label>
 				<label>
-					Description
+					<div>Description</div>
 					<el-input type="textarea"
 						v-model="newSubspecDesc"
 						:autosize="{minRows: 2}"
@@ -118,20 +117,19 @@
 			<el-button
 				@click="createSubspec()"
 				:disabled="disableCreateSubspec"
-				type="primary"
-				size="small">
+				type="primary">
 				Create
 			</el-button>
-			<el-button v-if="subspecSelectModeAvailable" @click="subspecMode = MODE_SELECT" size="small">
+			<el-button v-if="subspecSelectModeAvailable" @click="subspecMode = MODE_SELECT">
 				Select an existing subspec
 			</el-button>
-			<el-button v-if="initialSubspec" @click="subspecMode = MODE_KEEP" size="small">
+			<el-button v-if="initialSubspec" @click="subspecMode = MODE_KEEP">
 				Cancel
 			</el-button>
 		</el-card>
 		<template v-else-if="subspecMode === MODE_SELECT">
 			<p v-if="loadingSubspecs">
-				<i class="el-icon-loading"/> Loading subspecs...
+				<loading-message message="Loading subspecs..."/>
 			</p>
 			<template v-else-if="subspecs && subspecs.length">
 				<el-select v-model="subspecId" filterable placeholder="Select subspec">
@@ -167,6 +165,7 @@
 <script>
 import RefUrl from './ref-url.vue';
 import RefSubspec from './ref-subspec.vue';
+import LoadingMessage from '../widgets/loading.vue';
 import {
 	ajaxLoadUrls,
 	ajaxLoadSubspecs,
@@ -179,6 +178,7 @@ import {
 import {
 	isValidURL, isVideoURL,
 	debounce,
+	notifySuccess, notifyInfo,
 } from '../utils.js';
 
 const MODE_KEEP = 'keep';
@@ -193,6 +193,7 @@ export default {
 	components: {
 		RefUrl,
 		RefSubspec,
+		LoadingMessage,
 	},
 	props: {
 		specId: {
@@ -202,9 +203,10 @@ export default {
 		refType: String, // selected in edit-block-modal
 		existingRefType: String, // existing
 		existingRefItem: Object, // existing
-		valid: Boolean, // sync
-		fields: Object, // sync
+		valid: Boolean, // v-model:valid
+		fields: Object, // v-model:fields
 	},
+	emits: ['update:valid', 'update:fields', 'open-edit-url', 'play-video'],
 	data() {
 		return {
 
@@ -434,6 +436,7 @@ export default {
 		},
 		refFields: {
 			immediate: true,
+			deep: true,
 			handler(fields) {
 				// update sync prop value
 				this.$emit('update:fields', fields);
@@ -454,6 +457,7 @@ export default {
 				if (!urls.length) {
 					// Enter create mode - none to select or keep
 					this.urlMode = MODE_CREATE;
+					notifyInfo('No URLs available.');
 				}
 				this.urlObjectsLoaded = true;
 				this.loadingUrlObjects = false;
@@ -532,6 +536,7 @@ export default {
 				} else {
 					this.urlObjects = [urlObject];
 				}
+				notifySuccess('URL created.');
 			}).fail(() => {
 				this.creatingUrlObject = false;
 			});
@@ -548,6 +553,7 @@ export default {
 				if (!subspecs.length) {
 					// Enter create mode - none to select or keep
 					this.subspecMode = MODE_CREATE;
+					notifyInfo('No subspecs available.');
 				}
 				this.subspecsLoaded = true;
 				this.loadingSubspecs = false;
@@ -581,11 +587,21 @@ export default {
 				} else {
 					this.subspecs = [subspec];
 				}
+				notifySuccess('Subspec created.');
 			}).fail(() => {
 				this.creatingSubspec = false;
 			});
 		},
-
+		urlUpdated(urlObject) {
+			if (this.urlObjects) {
+				for (let i = 0; i < this.urlObjects.length; i++) {
+					if (this.urlObjects[i].id === urlObject.id) {
+						this.urlObjects[i] = urlObject;
+						break;
+					}
+				}
+			}
+		},
 	},
 };
 </script>
@@ -615,6 +631,10 @@ export default {
 	>.el-select {
 		display: block;
 		width: 100%;
+	}
+	.materian-icons {
+		display: inline-block;
+		margin-right: 1ex;
 	}
 }
 </style>

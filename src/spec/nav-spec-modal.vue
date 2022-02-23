@@ -1,12 +1,14 @@
 <template>
 <el-dialog
 	title="Navigate spec"
-	:visible.sync="showing"
+	v-model="showing"
 	:width="$store.getters.dialogTinyWidth"
 	@closed="closed()"
-	class="nav-spec-modal">
+	custom-class="nav-spec-modal">
 
-	<p v-if="loading">Loading...</p>
+	<p v-if="loading">
+		<loading-message message="Loading..."/>
+	</p>
 
 	<template v-else-if="subspecs.length">
 
@@ -16,31 +18,38 @@
 
 	<p v-else>No subspecs.</p>
 
-	<span slot="footer" class="dialog-footer">
-		<el-button @click="showing = false">Close</el-button>
-		<el-button
-			v-if="subspecId"
-			@click="goToSpec()"
-			type="primary">
-			Go to spec
-		</el-button>
-	</span>
+	<el-button @click="openCreateSubspec()" class="new-subspec-button">New subspec</el-button>
+
+	<template #footer>
+		<span class="dialog-footer">
+			<el-button @click="showing = false">Close</el-button>
+			<el-button
+				v-if="subspecId"
+				@click="goToSpec()"
+				type="primary">
+				Go to spec
+			</el-button>
+		</span>
+	</template>
 
 </el-dialog>
 </template>
 
 <script>
 import RefSubspec from './ref-subspec.vue';
+import LoadingMessage from '../widgets/loading.vue';
 import {alertError} from '../utils.js';
 
 export default {
 	components: {
 		RefSubspec,
+		LoadingMessage,
 	},
 	props: {
 		specId: Number,
 		subspecId: Number,
 	},
+	emits: ['open-create-subspec'],
 	data() {
 		return {
 			subspecs: [],
@@ -72,6 +81,10 @@ export default {
 				alertError(error);
 			})
 		},
+		openCreateSubspec() {
+			this.$emit('open-create-subspec');
+			this.showing = false;
+		},
 		goToSpec() {
 			if (
 				this.$route.name !== 'spec'
@@ -100,6 +113,10 @@ export default {
 	}
 	.ref-subspec+.ref-subspec {
 		margin-top: 10px;
+	}
+	.new-subspec-button {
+		width: 100%;
+		margin-top: 20px;
 	}
 }
 </style>

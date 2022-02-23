@@ -1,9 +1,9 @@
 <template>
 <el-dialog
-	:visible.sync="showing"
+	v-model="showing"
 	:width="$store.getters.dialogSmallWidth"
 	@closed="closed()"
-	class="play-video-modal">
+	custom-class="play-video-modal">
 
 	<div v-if="vid" class="embed-responsive">
 
@@ -46,30 +46,28 @@ export default {
 </script>
 
 <style lang="scss">
-.play-video-modal {
-	>.el-dialog {
-		>.el-dialog__body {
-			>.embed-responsive {
-				// adapted from Bootstrap embed-responsive embed-responsive-16by9
-				position: relative;
+.play-video-modal.el-dialog {
+	>.el-dialog__body {
+		>.embed-responsive {
+			// adapted from Bootstrap embed-responsive embed-responsive-16by9
+			position: relative;
+			display: block;
+			width: 100%;
+			padding: 0;
+			overflow: hidden;
+			&::before {
 				display: block;
+				content: "";
+				padding-top: 56.25%; // 16x9
+			}
+			>iframe {
+				position: absolute;
+				top: 0;
+				bottom: 0;
+				left: 0;
 				width: 100%;
-				padding: 0;
-				overflow: hidden;
-				&::before {
-					display: block;
-					content: "";
-					padding-top: 56.25%; // 16x9
-				}
-				>iframe {
-					position: absolute;
-					top: 0;
-					bottom: 0;
-					left: 0;
-					width: 100%;
-					height: 100%;
-					border: 0;
-				}
+				height: 100%;
+				border: 0;
 			}
 		}
 	}

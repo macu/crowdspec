@@ -37,10 +37,9 @@
 </template>
 
 <script>
-import $ from 'jquery';
 import RefUrl from './ref-url.vue';
 import RefSubspec from './ref-subspec.vue';
-import DynamicStylesheet from '@macu/dynamic-stylesheet-vue/index.js';
+import DynamicStylesheet from '@macu/dynamic-stylesheet-vue/dynamic-stylesheet.vue';
 import {
 	CONTENT_TYPE_PLAIN, CONTENT_TYPE_MARKDOWN,
 	REF_TYPE_URL, REF_TYPE_SUBSPEC,
@@ -55,6 +54,7 @@ export default {
 	props: {
 		block: Object,
 	},
+	emits: ['play-video'],
 	computed: {
 		CONTENT_TYPE_PLAIN() {
 			return CONTENT_TYPE_PLAIN;

@@ -5,10 +5,12 @@
 		<span class="part">{{tag.name}}</span>
 		<el-tooltip placement="bottom">
 			<span class="part">{{voteSum}}</span>
-			<div slot="content">
-				<div><i class="el-icon-plus"></i> {{assentVotes}}</div>
-				<div><i class="el-icon-minus"></i> {{dissentVotes}}</div>
-			</div>
+			<template #content>
+				<div>
+					<div><i class="el-icon-plus"></i> {{assentVotes}}</div>
+					<div><i class="el-icon-minus"></i> {{dissentVotes}}</div>
+				</div>
+			</template>
 		</el-tooltip>
 		<span class="btn assent"
 			:class="{'user-vote': hasUserAssent, sending}"

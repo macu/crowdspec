@@ -1,11 +1,11 @@
 <template>
 <el-dialog
 	:title="subspec ? 'Manage subspec' : 'Create subspec'"
-	:visible.sync="showing"
+	v-model="showing"
 	:width="$store.getters.dialogSmallWidth"
 	:close-on-click-modal="false"
 	@closed="closed()"
-	class="spec-edit-subspec-modal">
+	custom-class="spec-edit-subspec-modal">
 
 	<p v-if="subspec">
 		Created <strong><moment :datetime="subspec.created"/></strong>;
@@ -13,20 +13,22 @@
 	</p>
 
 	<label>
-		Name
+		<div>Name</div>
 		<el-input ref="nameInput" v-model="name" :maxlength="nameMaxLength" clearable/>
 	</label>
 
 	<label>
-		Description
+		<div>Description</div>
 		<el-input type="textarea" v-model="desc" :autosize="{minRows: 2}"/>
 	</label>
 
-	<span slot="footer" class="dialog-footer">
-		<el-button @click="showing = false">Cancel</el-button>
-		<el-button v-if="subspec" @click="promptDeleteSubspec()" type="danger">Delete</el-button>
-		<el-button @click="submit()" type="primary" :disabled="disableSubmit">{{subspec ? 'Save' : 'Create'}}</el-button>
-	</span>
+	<template #footer>
+		<span class="dialog-footer">
+			<el-button @click="showing = false">Cancel</el-button>
+			<el-button v-if="subspec" @click="promptDeleteSubspec()" type="danger">Delete</el-button>
+			<el-button @click="submit()" type="primary" :disabled="disableSubmit">{{subspec ? 'Save' : 'Create'}}</el-button>
+		</span>
+	</template>
 
 </el-dialog>
 </template>
@@ -174,21 +176,19 @@ export default {
 </script>
 
 <style lang="scss">
-.spec-edit-subspec-modal {
-	>.el-dialog {
-		>.el-dialog__body {
-			>p {
-				margin-top: 0;
-			}
-			>*+* {
-				margin-top: 20px;
-			}
-			>label {
+.spec-edit-subspec-modal.el-dialog {
+	>.el-dialog__body {
+		>p {
+			margin-top: 0;
+		}
+		>*+* {
+			margin-top: 20px;
+		}
+		>label {
+			display: block;
+			>.el-input {
 				display: block;
-				>.el-input {
-					display: block;
-					width: 100%;
-				}
+				width: 100%;
 			}
 		}
 	}

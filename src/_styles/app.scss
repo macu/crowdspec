@@ -1,170 +1,223 @@
 @import './_app.scss';
 
 * {
-	box-sizing: border-box;
+    box-sizing: border-box;
 }
 
-html, body {
-	height: 100%;
-	margin: 0;
-	padding: 0;
+html,
+body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
 }
 
-.el-dialog__body, .el-popover {
-	// Apply normal word-break (Element is from China)
-	word-break: normal;
-	white-space: normal;
+label {
+    >div:first-child:not([class]) {
+        // Label comes before input
+        margin-bottom: 2px;
+    }
+}
 
-	@include break-anywhere;
+.el-button.is-round {
+    min-width: 2em;
+    padding-left: 1ex;
+    padding-right: 1ex;
+}
+
+.el-button {
+    i + span {
+        display: inline-block;
+        margin-left: $icon-spacing;
+    }
+}
+
+.material-icons {
+    font-size: unset;
+}
+
+.el-dialog__body,
+.el-popover {
+    // Apply normal word-break (Element is from China)
+    word-break: normal;
+    white-space: normal;
+    @include break-anywhere;
 }
 
 .el-checkbox {
-	// Apply normal English behaviour
-	display: flex;
-	flex-direction: row;
-	align-items: center; // vertical align
-	>.el-checkbox__label {
-		flex: 1;
-		word-break: normal;
-		white-space: normal;
-	}
+    // Apply normal English behaviour
+    display: flex;
+    flex-direction: row;
+    align-items: center; // vertical align
+    height: unset;
+    >.el-checkbox__label {
+        flex: 1;
+        word-break: normal;
+        white-space: normal;
+    }
 }
 
 .el-message {
-	// Better behaviour on mobile
-	min-width: 200px;
-	max-width: 100vw;
+    // Better behaviour on mobile
+    min-width: 200px;
+    max-width: 100vw;
 }
 
 .el-select-dropdown__item {
-	// Fix viewport overflow on long option labels
-	max-width: 100vw;
+    // Fix viewport overflow on long option labels
+    max-width: 100vw;
 }
 
 .el-message-box {
-	// Fix message box mobile viewport overflow
-	max-width: 100%;
+    // Fix message box mobile viewport overflow
+    max-width: 100%;
 }
 
 .el-dialog__title::before {
-	// Don't overlap X with text
-	display: block;
-	float: right;
-	width: 44px;
-	content: " ";
-	white-space: pre;
+    // Don't overlap X with text
+    display: block;
+    float: right;
+    width: 44px;
+    content: " ";
+    white-space: pre;
 }
 
 .el-dialog__footer {
-	// Footers contain only buttons
-	padding-top: 5px;
-	.el-button {
-		margin-top: 10px;
-	}
+    // Footers contain only buttons
+    padding-top: 5px;
+    .el-button {
+        margin-top: 10px;
+    }
 }
 
 .el-table {
-	width: 100%;
+    width: 100%;
 }
 
 .markdown {
-	// Styles for rendered markdown
-
-	@include break-anywhere;
-
-	h1, h2, h3, h4, h5, h6 {
-		margin: 10px 0;
-		padding: 0;
-
-		// Headers are rendered same size as the rest of the font
-		font-size: inherit;
-		font-weight: bold;
-	}
-
-	h1::before { content: '# '; }
-	h2::before { content: '## '; }
-	h3::before { content: '### '; }
-	h4::before { content: '#### '; }
-	h5::before { content: '##### '; }
-	h6::before { content: '###### '; }
-
-	p {
-		margin: 10px 0;
-	}
-
-	blockquote {
-		margin: 10px 0;
-		border-left: medium solid lightgray;
-		padding-left: 10px;
-	}
-
-	ol, ul {
-		margin: 10px 0;
-		// TODO fix discontinuous sub list numbering
-	}
-
-	table {
-		margin: 10px 0;
-		max-width: 100%;
-		overflow-y: auto;
-	}
-
-	code {
-		background-color: rgba(0,0,0,.10);
-	}
-
-	pre {
-		margin: 10px 0;
-		overflow-x: auto;
-		line-height: 1.4;
-		>code {
-			display: block;
-			padding: 5px;
-			width: 100%;
-			overflow-x: auto;
-		}
-	}
-
-	// Allow parent context to define outer margins
-	>:first-child {
-		margin-top: 0;
-	}
-	>:last-child {
-		margin-bottom: 0;
-	}
+    // Styles for rendered markdown
+    @include break-anywhere;
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        margin: 10px 0;
+        padding: 0;
+        // Headers are rendered same size as the rest of the font
+        font-size: inherit;
+        font-weight: bold;
+    }
+    h1::before {
+        content: '# ';
+    }
+    h2::before {
+        content: '## ';
+    }
+    h3::before {
+        content: '### ';
+    }
+    h4::before {
+        content: '#### ';
+    }
+    h5::before {
+        content: '##### ';
+    }
+    h6::before {
+        content: '###### ';
+    }
+    p {
+        margin: 10px 0;
+    }
+    blockquote {
+        margin: 10px 0;
+        border-left: medium solid lightgray;
+        padding-left: 10px;
+    }
+    ol,
+    ul {
+        margin: 10px 0;
+        // TODO fix discontinuous sub list numbering
+    }
+    table {
+        margin: 10px 0;
+        max-width: 100%;
+        overflow-y: auto;
+    }
+    code {
+        background-color: rgba(0, 0, 0, .10);
+    }
+    pre {
+        margin: 10px 0;
+        overflow-x: auto;
+        line-height: 1.4;
+        >code {
+            display: block;
+            padding: 5px;
+            width: 100%;
+            overflow-x: auto;
+        }
+    }
+    // Allow parent context to define outer margins
+    >:first-child {
+        margin-top: 0;
+    }
+    >:last-child {
+        margin-bottom: 0;
+    }
 }
 
-.title, .name, .desc, .body {
-	@include break-anywhere;
+.title,
+.name,
+.desc,
+.body {
+    @include break-anywhere;
 }
 
 .flex-row {
-	display: flex;
-	flex-direction: row;
-	align-items: flex-start;
-	justify-content: flex-end;
-	padding: 0 10px 10px;
-	&:not(.nowrap) {
-		flex-wrap: wrap;
-	}
-	&.wrap-reverse {
-		flex-wrap: wrap-reverse;
-	}
-	>* {
-		margin-top: 10px;
-	}
-	>*+* {
-		margin-left: 10px;
-	}
-	>.fill {
-		flex: 1;
-	}
-	>.nowraptext {
-		white-space: nowrap;
-	}
-	>.flex-row {
-		align-self: flex-start;
-		margin-top: 0;
-		padding: 0;
-	}
+    display: flex;
+    flex-direction: row;
+    align-items: middle;
+    justify-content: flex-end;
+    padding: 0 10px 10px;
+    &:not(.nowrap) {
+        flex-wrap: wrap;
+    }
+    &.wrap-reverse {
+        flex-wrap: wrap-reverse;
+    }
+    >* {
+        margin-top: 10px;
+    }
+    >*+* {
+        margin-left: 10px;
+    }
+    >.fill {
+        flex: 1;
+    }
+    >.nowraptext {
+        white-space: nowrap;
+    }
+    >.flex-row {
+        align-self: flex-start;
+        margin-top: 0;
+        padding: 0;
+    }
+}
+
+// spinning icons
+.spin {
+    animation-name: spin;
+    animation-duration: 2000ms;
+    animation-iteration-count: infinite;
+    animation-timing-function: linear;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
 }

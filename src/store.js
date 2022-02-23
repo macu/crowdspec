@@ -1,17 +1,14 @@
 import $ from 'jquery';
-import Vue from 'vue';
-import Vuex from 'vuex';
+import {createStore} from 'vuex';
 
 import {idsEq, defaultUserSettings} from './utils.js';
 import {OWNER_TYPE_USER} from './spec/const.js';
-
-Vue.use(Vuex);
 
 const $window = $(window);
 const MOBILE_MAX_WIDTH = 767;
 const MEDIUM_MAX_WIDTH = 991;
 
-export const store = new Vuex.Store({
+export const store = Vuex.createStore({
 	state() {
 		return {
 			currentTime: Date.now(), // updated every minute

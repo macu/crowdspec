@@ -1,4 +1,4 @@
-import VueRouter from 'vue-router';
+import {createRouter} from 'vue-router';
 import store from './store.js';
 import {idsEq} from './utils.js';
 
@@ -12,8 +12,8 @@ import AdminPage from './pages/admin.vue';
 import AjaxErrorPage from './pages/ajax-error.vue';
 import NotFoundPage from './pages/not-found.vue';
 
-export const router = new VueRouter({
-	mode: 'history',
+export const router = VueRouter.createRouter({
+	history: VueRouter.createWebHashHistory(),
 	routes: [
 		{name: 'index', path: '/', component: IndexPage},
 		{path: '/spec/:specId', component: SpecPage, children: [
@@ -25,7 +25,7 @@ export const router = new VueRouter({
 		{name: 'community-review', path: '/community-review', component: CommunityReviewPage},
 		{name: 'admin', path: '/admin', component: AdminPage},
 		{name: 'ajax-error', path: '/ajax-error/:code', component: AjaxErrorPage},
-		{path: '*', component: NotFoundPage},
+		{path: '/:pathMatch(.*)', component: NotFoundPage},
 	],
 	scrollBehavior(to, from, savedPosition) {
 		// scrollBehavior is called after the new route has been rendered.
@@ -33,7 +33,7 @@ export const router = new VueRouter({
 		// save to allow restoring scroll position following additional DOM updates
 		// made during the route mounted hook
 		store.commit('setSavedScrollPosition', savedPosition);
-		return savedPosition ? savedPosition : {x: 0, y: 0};
+		return savedPosition ? savedPosition : {left: 0, top: 0};
 	},
 });
 

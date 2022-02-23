@@ -1,3 +1,5 @@
+@use "sass:math";
+
 // margin around block that gives space for the hover shadow
 $spec-block-margin: 1rem;
 
@@ -16,6 +18,6 @@ $spec-block-list-padding-left: $spec-block-margin + $spec-block-before-width + $
 $spec-block-sublist-shift-sm: $spec-block-list-padding-left - $spec-block-margin;
 
 // block hover shadow offset from block in margin (calculated as percent of margin)
-$spec-block-shadow-offset: $spec-block-margin / 2;
+$spec-block-shadow-offset: math.div($spec-block-margin, 2);
 // left shadow offset must extend past the list left padding
 $spec-block-shadow-offset-left: $spec-block-before-width + $spec-block-before-offset + $spec-block-shadow-offset;

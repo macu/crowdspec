@@ -7,7 +7,9 @@
 
 	<div class="content-page">
 
-		<p v-if="loading">Loading...</p>
+		<p v-if="loading">
+			<loading-message message="Loading..."/>
+		</p>
 		<p v-else-if="error === 403">Unauthorized</p>
 		<p v-else-if="error">Error {{error}}</p>
 
@@ -16,7 +18,9 @@
 			<div class="options">
 				<el-checkbox v-model="showAllSignupRequests">Show all</el-checkbox>
 			</div>
-			<p v-if="loadingSignupRequests">Loading...</p>
+			<p v-if="loadingSignupRequests">
+				<loading-message message="Loading..."/>
+			</p>
 			<el-table
 				v-else-if="signupRequests.length"
 				:data="signupRequests"
@@ -25,13 +29,13 @@
 				<el-table-column fixed prop="username" label="Username" width="150"/>
 				<el-table-column prop="email" label="Email address" width="300"/>
 				<el-table-column label="Created" width="200">
-					<template slot-scope="scope">
+					<template #default="scope">
 						<moment :datetime="scope.row.created" :offset="true"/>
 					</template>
 				</el-table-column>
 				<template v-if="showAllSignupRequests">
 					<el-table-column label="Status" width="120">
-						<template slot-scope="scope">
+						<template #default="scope">
 							<template v-if="scope.row.reviewed">
 								<el-tag v-if="scope.row.approved" type="success">Approved</el-tag>
 								<el-tag v-else type="warning">Denied</el-tag>
@@ -42,10 +46,10 @@
 					<el-table-column prop="userId" label="User ID" width="120"/>
 				</template>
 				<el-table-column label="Actions" width="200">
-					<template slot-scope="scope">
+					<template #default="scope">
 						<el-button v-if="!scope.row.reviewed"
 							@click="openReviewSignupRequest(scope.row)"
-							size="mini">
+							size="small">
 							Review
 						</el-button>
 					</template>
@@ -57,19 +61,21 @@
 
 		<section class="users">
 			<h3>Users</h3>
-			<p v-if="loadingUsers">Loading...</p>
+			<p v-if="loadingUsers">
+				<loading-message message="Loading..."/>
+			</p>
 			<el-table
 				v-else
 				:data="users"
 				:max-height=".80 * $store.state.windowHeight">
 				<el-table-column fixed label="Username" width="190">
-					<template slot-scope="scope">
+					<template #default="scope">
 						<username :username="scope.row.username" :highlight="scope.row.highlight"/>
 					</template>
 				</el-table-column>
 				<el-table-column prop="email" label="Email address" width="300"/>
 				<el-table-column label="Created" width="200">
-					<template slot-scope="scope">
+					<template #default="scope">
 						<moment :datetime="scope.row.created" :offset="true"/>
 					</template>
 				</el-table-column>
@@ -110,7 +116,7 @@
 		<br/><br/>
 
 		<label>
-			Message
+			<div>Message</div>
 			<el-input
 				type="textarea"
 				v-model="signupRequestResponse"
@@ -120,28 +126,30 @@
 		</label>
 
 		<p v-if="sendingSignupRequestReview">
-			<i class="el-icon-loading"/> Sending...
+			<loading-message message="Sending..."/>
 		</p>
 
-		<span slot="footer" class="dialog-footer">
-			<el-button
-				@click="cancelReviewSignupRequest()"
-				:disabled="sendingSignupRequestReview">
-				Cancel
-			</el-button>
-			<el-button
-				type="warning"
-				@click="submitSignupRequestReview(false)"
-				:disabled="sendingSignupRequestReview">
-				Decline
-			</el-button>
-			<el-button
-				type="primary"
-				@click="submitSignupRequestReview(true)"
-				:disabled="sendingSignupRequestReview">
-				Approve
-			</el-button>
-		</span>
+		<template #footer>
+			<span class="dialog-footer">
+				<el-button
+					@click="cancelReviewSignupRequest()"
+					:disabled="sendingSignupRequestReview">
+					Cancel
+				</el-button>
+				<el-button
+					type="warning"
+					@click="submitSignupRequestReview(false)"
+					:disabled="sendingSignupRequestReview">
+					Decline
+				</el-button>
+				<el-button
+					type="primary"
+					@click="submitSignupRequestReview(true)"
+					:disabled="sendingSignupRequestReview">
+					Approve
+				</el-button>
+			</span>
+		</template>
 
 	</el-dialog>
 
@@ -151,12 +159,14 @@
 <script>
 import Moment from '../widgets/moment.vue';
 import Username from '../widgets/username.vue';
+import LoadingMessage from '../widgets/loading.vue';
 import {idsEq, alertError} from '../utils.js';
 
 export default {
 	components: {
 		Moment,
 		Username,
+		LoadingMessage,
 	},
 	data() {
 		return {

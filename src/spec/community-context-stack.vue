@@ -8,7 +8,7 @@
 		<stack-bar
 			:target="s.target"
 			:target-type="s.targetType"
-			@click.native="jumpStack(i)"
+			@click="jumpStack(i)"
 			/>
 	</transition>
 </div>
@@ -19,6 +19,7 @@ import StackBar from './community-context-stack-bar.vue';
 import {idsEq} from '../utils.js';
 
 export default {
+	emits: ['pop-stack'],
 	components: {
 		StackBar,
 	},

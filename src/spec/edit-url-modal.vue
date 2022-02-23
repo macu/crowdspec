@@ -1,11 +1,11 @@
 <template>
 <el-dialog
 	:title="urlObject ? 'Manage link' : 'Create link'"
-	:visible.sync="showing"
+	v-model="showing"
 	:width="$store.getters.dialogSmallWidth"
 	:close-on-click-modal="false"
 	@closed="closed()"
-	class="spec-edit-url-modal">
+	custom-class="spec-edit-url-modal">
 
 	<p v-if="urlObject">
 		Created <strong><moment :datetime="urlObject.created"/></strong>;
@@ -13,7 +13,7 @@
 	</p>
 
 	<label>
-		URL
+		<div>URL</div>
 		<el-input ref="urlInput" v-model="url" :maxlength="urlMaxLength"/>
 	</label>
 
@@ -30,11 +30,13 @@
 		<p v-else>Link will be updated with new URL</p>
 	</template>
 
-	<span slot="footer" class="dialog-footer">
-		<el-button @click="showing = false">Cancel</el-button>
-		<el-button v-if="urlObject" @click="promptDelete()" type="danger">Delete</el-button>
-		<el-button @click="submit()" type="primary" :disabled="disableSubmit">{{urlObject ? 'Save' : 'Create'}}</el-button>
-	</span>
+	<template #footer>
+		<span class="dialog-footer">
+			<el-button @click="showing = false">Cancel</el-button>
+			<el-button v-if="urlObject" @click="promptDelete()" type="danger">Delete</el-button>
+			<el-button @click="submit()" type="primary" :disabled="disableSubmit">{{urlObject ? 'Save' : 'Create'}}</el-button>
+		</span>
+	</template>
 
 </el-dialog>
 </template>
@@ -198,37 +200,35 @@ export default {
 </script>
 
 <style lang="scss">
-.spec-edit-url-modal {
-	>.el-dialog {
-		>.el-dialog__body {
-			>p {
-				margin-top: 0;
-			}
-			>*+* {
-				margin-top: 20px;
-			}
-			>label {
+.spec-edit-url-modal.el-dialog {
+	>.el-dialog__body {
+		>p:first-child {
+			margin-top: 0;
+		}
+		>*+* {
+			margin-top: 20px;
+		}
+		>label {
+			display: block;
+			input, textarea {
 				display: block;
-				input, textarea {
-					display: block;
-					width: 100%;
-				}
+				width: 100%;
 			}
-			>.preview {
-				display: flex;
-				flex-direction: row;
-				>img {
-					max-width: 20%;
-					margin-right: 20px;
+		}
+		>.preview {
+			display: flex;
+			flex-direction: row;
+			>img {
+				max-width: 20%;
+				margin-right: 20px;
+			}
+			>div {
+				flex: 1;
+				>* {
+					margin: 10px 0;
 				}
-				>div {
-					flex: 1;
-					>* {
-						margin: 10px 0;
-					}
-					>h3 {
-						margin: 0 0 10px;
-					}
+				>h3 {
+					margin: 0 0 10px;
 				}
 			}
 		}

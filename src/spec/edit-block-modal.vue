@@ -1,21 +1,19 @@
 <template>
 <el-dialog
 	:title="(loading || block) ? 'Edit block' : 'Add block'"
-	:visible.sync="showing"
+	v-model="showing"
 	:width="$store.getters.dialogLargeWidth"
 	:close-on-click-modal="false"
 	@closed="closed()"
-	class="spec-edit-block-modal">
+	custom-class="spec-edit-block-modal">
 
-	<p v-if="loading"><i class="el-icon-loading"/> Loading...</p>
+	<p v-if="loading">
+		<loading-message message="Loading..."/>
+	</p>
 
 	<template v-else-if="error">
 
 		<p>{{error}}</p>
-
-		<span slot="footer" class="dialog-footer">
-			<el-button @click="showing = false">Close</el-button>
-		</span>
 
 	</template>
 
@@ -27,64 +25,80 @@
 		</p>
 
 		<section>
-			<el-radio-group v-model="styleType">
-				<el-radio :label="STYLE_TYPE_BULLET">Bullet point</el-radio>
-				<el-radio :label="STYLE_TYPE_NUMBERED">Numbered point</el-radio>
-				<el-radio :label="STYLE_TYPE_NONE">Indented block</el-radio>
-			</el-radio-group>
+			<div class="field">
+				<el-radio-group v-model="styleType">
+					<el-radio :label="STYLE_TYPE_BULLET">Bullet point</el-radio>
+					<el-radio :label="STYLE_TYPE_NUMBERED">Numbered point</el-radio>
+					<el-radio :label="STYLE_TYPE_NONE">Indented block</el-radio>
+				</el-radio-group>
+			</div>
 
 			<label>
-				Title
+				<div>Title</div>
 				<el-input ref="titleInput" v-model="title" :maxlength="titleMaxLength" clearable/>
 			</label>
 		</section>
 
 		<section>
-			<el-radio-group v-model="refType">
-				<el-radio :label="null">No media</el-radio>
-				<el-radio :label="REF_TYPE_SUBSPEC">Subspec</el-radio>
-				<el-radio :label="REF_TYPE_URL">URL</el-radio>
-			</el-radio-group>
+			<div class="field">
+				<el-radio-group v-model="refType">
+					<el-radio :label="null">No media</el-radio>
+					<el-radio :label="REF_TYPE_SUBSPEC">Subspec</el-radio>
+					<el-radio :label="REF_TYPE_URL">URL</el-radio>
+				</el-radio-group>
+			</div>
 
 			<ref-form
+				ref="refForm"
 				v-show="!!refType"
 				:spec-id="specId"
 				:ref-type="refType"
 				:existing-ref-type="existingRefType"
 				:existing-ref-item="existingRefItem"
-				:fields.sync="refFields"
-				:valid.sync="refFieldsValid"
+				v-model:fields="refFields"
+				v-model:valid="refFieldsValid"
 				@open-edit-url="openEditUrl"
 				@play-video="raisePlayVideo"
 				/>
 		</section>
 
 		<section>
-			<el-radio-group v-model="contentType">
-				<el-radio :label="CONTENT_TYPE_PLAIN">Plain text</el-radio>
-				<el-radio :label="CONTENT_TYPE_MARKDOWN">Markdown</el-radio>
-			</el-radio-group>
+			<div class="field">
+				<el-radio-group v-model="contentType">
+					<el-radio :label="CONTENT_TYPE_PLAIN">Plain text</el-radio>
+					<el-radio :label="CONTENT_TYPE_MARKDOWN">Markdown</el-radio>
+				</el-radio-group>
+			</div>
 
 			<template v-if="contentType === CONTENT_TYPE_MARKDOWN">
 				<div class="split-even">
+					<!-- display preview beneath for final review-->
 					<label>
-						Body
+						<div>Body</div>
 						<el-input type="textarea" v-model="body" :autosize="{minRows: 2}"/>
 					</label>
 					<label>
-						Preview
+						<div>Preview</div>
 						<div v-if="previewError" class="error">{{previewError}}</div>
 						<div v-else ref="renderedHtml" class="markdown" v-html="previewHtml" v-loading="loadingPreview"/>
 					</label>
 				</div>
 			</template>
 			<label v-else>
-				Body
+				<div>Body</div>
 				<el-input type="textarea" v-model="body" :autosize="{minRows: 2}"/>
 			</label>
 		</section>
 
-		<span slot="footer" class="dialog-footer">
+	</template>
+
+	<template #footer>
+
+		<span v-if="error" class="dialog-footer">
+			<el-button @click="showing = false">Close</el-button>
+		</span>
+
+		<span v-else-if="showing" class="dialog-footer">
 			<el-button @click="showing = false">Cancel</el-button>
 			<el-button v-if="block" @click="promotDelete()" type="warning">Delete</el-button>
 			<el-button @click="submit()" type="primary">
@@ -101,6 +115,7 @@
 import $ from 'jquery';
 import Moment from '../widgets/moment.vue';
 import RefForm from './ref-form.vue';
+import LoadingMessage from '../widgets/loading.vue';
 import {
 	ajaxLoadBlockForEditing, ajaxCreateBlock, ajaxSaveBlock,
 	ajaxRenderMarkdown,
@@ -122,6 +137,7 @@ export default {
 	components: {
 		Moment,
 		RefForm,
+		LoadingMessage,
 	},
 	props: {
 		specId: {
@@ -130,6 +146,7 @@ export default {
 		},
 		subspecId: Number,
 	},
+	emits: ['open-edit-url', 'play-video', 'prompt-delete'],
 	data() {
 		return {
 			// user inputs
@@ -151,7 +168,6 @@ export default {
 			error: null,
 			loadingPreview: false,
 			previewHtml: '',
-			previewXhr: null, // pending render request
 			previewError: null,
 		};
 	},
@@ -185,6 +201,9 @@ export default {
 		},
 		existingRefItem() {
 			return this.block && this.block.refType && this.block.refItem || null;
+		},
+		initialUrlObject() {
+			return this.existingRefType === REF_TYPE_URL && this.existingRefItem;
 		},
 	},
 	watch: {
@@ -328,16 +347,17 @@ export default {
 		openEditUrl(urlObject, updated = null, deleted = null) {
 			this.$emit('open-edit-url', urlObject, updatedUrlObject => {
 				// Updated
-				if (this.existingUrlRefItem && updatedUrlObject.id === this.existingUrlRefItem.id) {
+				if (this.initialUrlObject && updatedUrlObject.id === this.initialUrlObject.id) {
 					// Update existing ref
 					this.block.refItem = updatedUrlObject;
 				}
+				this.$refs.refForm.urlUpdated(urlObject);
 				if (updated) {
 					updated(updatedUrlObject);
 				}
 			}, deletedId => {
 				// Deleted
-				if (this.existingUrlRefItem && deletedId === this.existingUrlRefItem.id) {
+				if (this.initialUrlObject && deletedId === this.initialUrlObject.id) {
 					// Clear existing ref
 					this.block.refType = null;
 					this.block.refId = null;
@@ -447,53 +467,51 @@ export default {
 @import '../_styles/_breakpoints.scss';
 @import '../_styles/_colours.scss';
 
-.spec-edit-block-modal {
-	>.el-dialog {
-		>.el-dialog__body {
-			>p {
-				margin-top: 0;
+.spec-edit-block-modal.el-dialog {
+	>.el-dialog__body {
+		>p {
+			margin-top: 0;
+		}
+		>section {
+			&:not(:first-child) {
+				margin-top: 40px;
 			}
-			>section {
-				&:not(:first-child) {
-					margin-top: 40px;
+			>*+* {
+				margin-top: 20px;
+			}
+			>label {
+				display: block;
+				>.el-input {
+					display: block;
+					width: 100%;
 				}
-				>*+* {
-					margin-top: 20px;
-				}
+			}
+			>.field {
+				display: block;
+				padding: 10px;
+				background-color: $section-highlight;
+			}
+			>.split-even {
+				display: grid;
+				grid-template-columns: calc(50% - 10px) calc(50% - 10px);
+				column-gap: 20px;
+				row-gap: 20px;
 				>label {
 					display: block;
-					>.el-input {
-						display: block;
-						width: 100%;
-					}
 				}
-				>.el-radio-group {
-					display: block;
-					padding: 10px;
-					background-color: $section-highlight;
+				@include mobile {
+					grid-template-columns: 100%;
 				}
-				>.split-even {
-					display: grid;
-					grid-template-columns: calc(50% - 10px) calc(50% - 10px);
-					column-gap: 20px;
-					row-gap: 20px;
-					>label {
-						display: block;
-					}
-					@include mobile {
-						grid-template-columns: 100%;
-					}
-					.markdown, .error {
-						padding: 15px;
-						border-radius: 4px;
-						min-height: 54px;
-					}
-					.markdown {
-						border: thin solid lightgreen;
-					}
-					.error {
-						border: thin solid red;
-					}
+				.markdown, .error {
+					padding: 15px;
+					border-radius: 4px;
+					min-height: 54px;
+				}
+				.markdown {
+					border: thin solid lightgreen;
+				}
+				.error {
+					border: thin solid red;
 				}
 			}
 		}

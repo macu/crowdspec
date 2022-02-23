@@ -10,14 +10,16 @@
 		<el-button
 			v-if="choosingAddPosition"
 			@click="moveBlocksToBottom()"
-			size="small"
-			type="success"
-			icon="el-icon-top">Move block here</el-button>
+			type="success">
+			<i class="material-icons">arrow_upward</i>
+			<span>Move block here</span>
+		</el-button>
 		<el-button
 			v-else
 			@click="promptAddBlock()"
-			size="small"
-			type="primary">Add block</el-button>
+			type="primary">
+			Add block
+		</el-button>
 
 		<ul ref="mirrorList" class="mirror-list">
 			<!-- holds mirror element when dragging block -->
@@ -44,7 +46,6 @@
 
 <script>
 import $ from 'jquery';
-import Vue from 'vue';
 import SpecBlock from './block.vue';
 import EditBlockModal from './edit-block-modal.vue';
 import EditUrlModal from './edit-url-modal.vue';
@@ -54,8 +55,10 @@ import store from '../store.js';
 import router from '../router.js';
 import {idsEq, startAutoscroll} from '../utils.js';
 import {SCRIPT_DRAGULA, loadScript} from '../widgets/script-loader.js';
+import mitt from 'mitt';
+import {mount} from 'mount-vue-component';
 
-const SpecBlockClass = Vue.extend(SpecBlock);
+// const SpecBlockClass = Vue.defineComponent(SpecBlock);
 
 const CONTENT_MIN_OFFSET_TOP = 100; // distance top of content should be within window from top
 const CONTENT_MIN_OFFSET_BOTTOM = 200; // distance top of content should be within window from bottom
@@ -76,10 +79,11 @@ export default {
 		subspec: Object,
 		enableEditing: Boolean,
 	},
+	emits: ['rendered', 'open-community', 'url-updated', 'url-deleted', 'play-video', 'prompt-nav-spec'],
 	data() {
 		return {
 			autoscroller: null,
-			eventBus: new Vue(),
+			eventBus: mitt(),
 		};
 	},
 	computed: {
@@ -145,6 +149,21 @@ export default {
 		});
 
 		this.mountDragAndDrop();
+
+		let eventBus = this.eventBus; // TODO mitt emits arguments: eventName, event
+		eventBus.on('open-community', this.openBlockCommunity);
+		eventBus.on('open-edit', this.openEditBlock);
+		eventBus.on('prompt-add-subblock', this.promptAddSubblock);
+		eventBus.on('prompt-delete', this.promptDeleteBlock);
+		eventBus.on('start-moving', this.startMovingBlocks);
+		eventBus.on('add-to-moving', this.addToMovingBlocks);
+		eventBus.on('remove-from-moving', this.removeFromMovingBlocks);
+		eventBus.on('prompt-nav-spec', this.promptNavSpec);
+		eventBus.on('move-before', this.moveBeforeBlock);
+		eventBus.on('move-into', this.moveIntoBlock);
+		eventBus.on('move-after', this.moveAfterBlock);
+		eventBus.on('cancel-moving', this.cancelMovingBlocks);
+		eventBus.on('play-video', this.playVideo);
 	},
 	beforeDestroy() {
 		if (this.drake) {
@@ -170,12 +189,12 @@ export default {
 		}
 
 		// Destroy bus
-		this.eventBus.$destroy();
+		this.eventBus.all.clear();
 		this.eventBus = null;
 
 		// Clean up all independent block component VMs
 		$('[data-spec-block]', this.$refs.list).each((i, e) => {
-			$(e).data('vc').$destroy();
+			$(e).data('destroy')();
 		});
 	},
 	methods: {
@@ -207,34 +226,20 @@ export default {
 			});
 		},
 		insertBlock(block, append = true, justAdded = false) {
-			let vc = new SpecBlockClass({
-				parent: this, // allows Vue devtools to detect instances
-				store,
-				router,
-				propsData: {
+			let {vNode, destroy, el} = mount(SpecBlock, {
+				props: {
 					block,
 					subspecId: this.subspecId,
 					eventBus: this.eventBus,
 					enableEditing: this.enableEditing,
 					justAdded,
 				},
-			}).$mount();
+				app: window.app,
+			});
 
-			vc.$on('open-community', this.openBlockCommunity);
-			vc.$on('open-edit', this.openEditBlock);
-			vc.$on('prompt-add-subblock', this.promptAddSubblock);
-			vc.$on('prompt-delete', this.promptDeleteBlock);
-			vc.$on('start-moving', this.startMovingBlocks);
-			vc.$on('add-to-moving', this.addToMovingBlocks);
-			vc.$on('remove-from-moving', this.removeFromMovingBlocks);
-			vc.$on('prompt-nav-spec', this.promptNavSpec);
-			vc.$on('move-before', this.moveBeforeBlock);
-			vc.$on('move-into', this.moveIntoBlock);
-			vc.$on('move-after', this.moveAfterBlock);
-			vc.$on('cancel-moving', this.cancelMovingBlocks);
-			vc.$on('play-video', this.playVideo);
-
-			let $vc = $(vc.$el).data('vc', vc);
+			// TODO destroy blocks on delete block
+			let ctx = vNode.component.ctx; // access to instance methods, etc.
+			let $vc = $($(el).find('>li')).data('vc', ctx).data('destroy', destroy);
 
 			if (block.subblocks) {
 				for (var i = 0; i < block.subblocks.length; i++) {
@@ -303,13 +308,13 @@ export default {
 				this.panToBlock($block);
 			});
 		},
-		openBlockCommunity(blockId, onAdjustUnread, onAdjustComments) {
+		openBlockCommunity({blockId, onAdjustUnread, onAdjustComments}) {
 			this.$emit('open-community', TARGET_TYPE_BLOCK, blockId, onAdjustUnread, onAdjustComments);
 		},
-		openEditBlock(blockId, callback) {
+		openEditBlock({blockId, callback}) {
 			this.$refs.editBlockModal.showEditBlock(blockId, callback);
 		},
-		promptAddSubblock(parentId, insertBeforeId, defaultStyleType) {
+		promptAddSubblock({parentId, insertBeforeId, defaultStyleType}) {
 			this.$refs.editBlockModal.showAddBlock(parentId, insertBeforeId, defaultStyleType, newBlock => {
 				let $block = this.insertBlock(newBlock, false, true);
 				// Add to sublist
@@ -465,12 +470,12 @@ export default {
 		},
 		openEditUrl(urlObject, updated, deleted) {
 			this.$refs.editUrlModal.showEdit(urlObject, updatedUrlObject => {
-				this.eventBus.$emit('url-updated', updatedUrlObject);
+				this.eventBus.emit('url-updated', updatedUrlObject);
 				if (updated) {
 					updated(updatedUrlObject);
 				}
 			}, deletedId => {
-				this.eventBus.$emit('url-deleted', deletedId);
+				this.eventBus.emit('url-deleted', deletedId);
 				if (deleted) {
 					deleted(deletedId);
 				}

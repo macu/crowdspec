@@ -4,10 +4,10 @@
 	<header>
 		<h1 @click="gotoIndex()">CrowdSpec</h1>
 		<div>
-			<el-button @click="openEditProfile()" type="text" size="mini" class="username-button">
+			<el-button @click="openEditProfile()" type="text" class="username-button">
 				<username :username="username" :highlight="highlight"/>
 			</el-button>
-			<el-button @click="logout()" size="mini">Log out</el-button>
+			<el-button @click="logout()">Log out</el-button>
 		</div>
 	</header>
 
@@ -19,15 +19,10 @@
 </template>
 
 <script>
-import $ from 'jquery';
-import store from './store.js';
-import router from './router.js';
 import Username from './widgets/username.vue';
 import EditProfileModal from './widgets/edit-profile-modal.vue';
 
 export default {
-	store,
-	router,
 	components: {
 		Username,
 		EditProfileModal,
@@ -40,37 +35,6 @@ export default {
 			return this.$store.getters.userSettings.userProfile.highlightUsername;
 		},
 	},
-	// mounted() {
-	// 	let $dialog = null;
-	// 	let $scrollTo = null;
-	// 	$(document).on('selectionchange focusin mouseup', () => {
-	// 		let e = document.activeElement;
-	// 		if (e && e.tagName === 'INPUT' || e.tagName === 'TEXTAREA') {
-	// 			let $e = $(e);
-	// 			$dialog = $e.closest('.el-dialog__wrapper');
-	// 			if ($dialog.length) {
-	// 				// Work around keyboard scroll jump bug in dialogs on mobile
-	// 				// .el-textarea defines {position: relative;} take parent
-	// 				$scrollTo = $e.parent();
-	// 				// Don't handle scroll event after a period
-	// 				setTimeout(() => {
-	// 					$$dialog = null;
-	// 					$scrollTo = null;
-	// 				}, 500);
-	// 			}
-	// 		}
-	// 	});
-	// 	document.addEventListener('scroll', () => {
-	// 		if ($scrollTo) {
-	// 			let position = $scrollTo.position();
-	// 			if (position.top < $dialog.scrollTop()) {
-	// 				$dialog.scrollTop(position.top - 20);
-	// 			}
-	// 			$$dialog = null;
-	// 			scrollTo = null;
-	// 		}
-	// 	}, /* capture */ true);
-	// },
 	methods: {
 		gotoIndex() {
 			if (this.$route.name !== 'index') {
@@ -88,6 +52,7 @@ export default {
 </script>
 
 <style lang="scss">
+@use "sass:math";
 @import './_styles/_breakpoints.scss';
 @import './_styles/_colours.scss';
 @import './_styles/_app.scss';
@@ -134,7 +99,7 @@ export default {
 
 	.content-page { // just content - no header - standard padding
 		padding: $content-area-padding;
-		padding-top: $content-area-padding / 2;
+		padding-top: math.div($content-area-padding, 2);
 
 		@include mobile {
 			padding: $content-area-padding-sm;

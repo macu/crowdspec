@@ -13,52 +13,88 @@
 					<el-button v-if="showUnreadOnly && !!unreadCount"
 						@click="openCommunity()"
 						type="primary"
-						size="mini"
-						icon="el-icon-chat-dot-square">
-						{{unreadCount}} unread
+						size="small"
+						round>
+						<i class="material-icons">forum</i>
+						<span>{{unreadCount}} unread</span>
 					</el-button>
-					<el-button @click="focusActions = true" type="default" size="mini" icon="el-icon-more" circle/>
+					<el-button @click="focusActions = true" type="default" size="small" circle>
+						<i class="material-icons">more_horiz</i>
+					</el-button>
 				</div>
 				<div class="actions" :class="{show: showActions}">
 					<template v-if="choosingAddPosition">
-						<el-button @click="cancelChooseAddPosition()" type="warning" size="mini" icon="el-icon-close" circle/>
-						<el-button @click="addBeforeThis()" type="primary" size="mini" icon="el-icon-top" circle/>
-						<el-button @click="addIntoThis()" type="primary" size="mini" icon="el-icon-bottom-right" circle/>
-						<el-button @click="addAfterThis()" type="primary" size="mini" icon="el-icon-bottom" circle/>
+						<el-button @click="cancelChooseAddPosition()" type="warning" size="small" circle>
+							<i class="material-icons">close</i>
+						</el-button>
+						<el-button @click="addBeforeThis()" type="primary" size="small" circle>
+							<i class="material-icons">arrow_upward</i>
+						</el-button>
+						<el-button @click="addIntoThis()" type="primary" size="small" circle>
+							<i class="material-icons">south_east</i>
+						</el-button>
+						<el-button @click="addAfterThis()" type="primary" size="small" circle>
+							<i class="material-icons">arrow_downward</i>
+						</el-button>
 					</template>
 					<template v-else-if="movingThis">
-						<el-button @click="cancelMoving()" type="warning" size="mini" icon="el-icon-close">
-							<template v-if="$store.getters.mobileViewport">Cancel</template>
-							<template v-else>Cancel move</template>
+						<el-button @click="cancelMoving()" type="warning" size="small">
+							<i class="material-icons">close</i>
+							<span>
+								<template v-if="$store.getters.mobileViewport">Cancel</template>
+								<template v-else>Cancel move</template>
+							</span>
 						</el-button>
-						<el-button @click="promptNavSpec()" size="mini" icon="el-icon-folder-add">
-							<template v-if="$store.getters.mobileViewport">Context</template>
-							<template v-else>Change context</template>
+						<el-button @click="promptNavSpec()" size="small">
+							<i class="material-icons">input</i>
+							<span>
+								<template v-if="$store.getters.mobileViewport">Context</template>
+								<template v-else>Change context</template>
+							</span>
 						</el-button>
-						<el-checkbox key="removeFromMoving" :data-moving-block-id="block.id" :value="true" @click.native="removeThisFromMovingBlocks()" size="mini"/>
+						<el-checkbox key="removeFromMoving" :data-moving-block-id="block.id" :modelValue="true" @click="removeThisFromMovingBlocks()"/>
 					</template>
 					<template v-else-if="movingOtherBlocks">
-						<el-button @click="cancelMoving()" type="warning" size="mini" icon="el-icon-close" circle/>
-						<el-button @click="moveBeforeThis()" type="success" size="mini" icon="el-icon-top" circle/>
-						<el-button @click="moveIntoThis()" type="success" size="mini" icon="el-icon-bottom-right" circle/>
-						<el-button @click="moveAfterThis()" type="success" size="mini" icon="el-icon-bottom" circle/>
-						<el-checkbox key="addToMoving" v-if="showAddToMoving" :value="false" @click.native="addThisToMovingBlocks()" size="mini"/>
+						<el-button @click="cancelMoving()" type="warning" size="small" circle>
+							<i class="material-icons">close</i>
+						</el-button>
+						<el-button @click="moveBeforeThis()" type="success" size="small" circle>
+							<i class="material-icons">arrow_upward</i>
+						</el-button>
+						<el-button @click="moveIntoThis()" type="success" size="small" circle>
+							<i class="material-icons">south_east</i>
+						</el-button>
+						<el-button @click="moveAfterThis()" type="success" size="small" circle>
+							<i class="material-icons">arrow_downward</i>
+						</el-button>
+						<el-checkbox key="addToMoving" v-if="showAddToMoving" :modelValue="false" @click="addThisToMovingBlocks()"/>
 					</template>
 					<template v-else>
 						<el-button @click="openCommunity()"
 							:type="!!unreadCount ? 'primary' : 'default'"
-							size="mini"
-							icon="el-icon-chat-dot-square">
-							<template v-if="showUnreadOnly || unreadCount">
-								<template v-if="unreadCount">{{unreadCount}} unread</template>
-							</template>
-							<template v-else-if="commentsCount">{{commentsCount}}</template>
+							size="small"
+							round>
+							<i class="material-icons">forum</i>
+							<span v-if="(showUnreadOnly || unreadCount) || commentsCount">
+								<template v-if="showUnreadOnly || unreadCount">
+									<template v-if="unreadCount">{{unreadCount}} unread</template>
+								</template>
+								<template v-else-if="commentsCount">{{commentsCount}}</template>
+							</span>
 						</el-button>
-						<el-button @click="editBlock()" type="default" size="mini" icon="el-icon-edit" circle/>
-						<el-button v-if="showDeleteButton" @click="promptDeleteBlock()" type="warning" size="mini" icon="el-icon-delete" circle/>
-						<el-button @click="enterChooseAddPosition()" type="primary" size="mini" icon="el-icon-plus" circle/>
-						<el-button @click="startMoving()" class="move-action" type="default" size="mini" icon="el-icon-d-caret" circle/>
-						<i @click="startMoving()" class="el-icon-d-caret drag-handle"></i>
+						<el-button @click="editBlock()" type="default" size="small" circle>
+							<i class="material-icons">edit</i>
+						</el-button>
+						<el-button v-if="showDeleteButton" @click="promptDeleteBlock()" type="warning" size="small" circle>
+							<i class="material-icons">delete</i>
+						</el-button>
+						<el-button @click="enterChooseAddPosition()" type="primary" size="small" circle>
+							<i class="material-icons">add</i>
+						</el-button>
+						<el-button @click="startMoving()" class="move-action" type="default" size="small" circle>
+							<i class="material-icons">drag_handle</i>
+						</el-button>
+						<i @click="startMoving()" class="material-icons drag-handle">drag_handle</i>
 					</template>
 				</div>
 			</template>
@@ -66,17 +102,22 @@
 				<el-button
 					@click="openCommunity()"
 					:type="!!unreadCount ? 'primary' : 'default'"
-					size="mini"
-					icon="el-icon-chat-dot-square">
-					<template v-if="showUnreadOnly || unreadCount">
-						<template v-if="unreadCount">{{unreadCount}} unread</template>
-					</template>
-					<template v-else-if="commentsCount">{{commentsCount}}</template>
+					size="small"
+					round>
+					<i class="material-icons">forum</i>
+					<span>
+						<template v-if="showUnreadOnly || unreadCount">
+							<template v-if="unreadCount">{{unreadCount}} unread</template>
+						</template>
+						<template v-else-if="commentsCount">{{commentsCount}}</template>
+					</span>
 				</el-button>
 			</div>
 		</div>
 		<div v-if="currentlyMovingBlocks" class="layover parent-moving-layover">
-			<el-checkbox :value="true" disabled size="mini"/>
+			<div>
+				<el-checkbox :modelValue="true" disabled/>
+			</div>
 		</div>
 
 		<div v-if="hasTitle" class="title">{{title}}</div>
@@ -241,13 +282,13 @@ export default {
 		},
 	},
 	mounted() {
-		this.eventBus.$on('url-updated', this.urlUpdated);
-		this.eventBus.$on('url-deleted', this.urlDeleted);
+		this.eventBus.on('url-updated', this.urlUpdated);
+		this.eventBus.on('url-deleted', this.urlDeleted);
 		this.addCodeHighlighting();
 	},
 	beforeDestroy() {
-		this.eventBus.$off('url-updated', this.urlUpdated);
-		this.eventBus.$off('url-deleted', this.urlDeleted);
+		this.eventBus.off('url-updated', this.urlUpdated);
+		this.eventBus.off('url-deleted', this.urlDeleted);
 	},
 	methods: {
 		getBlockId() {
@@ -294,11 +335,11 @@ export default {
 				this.commentsCount = updatedBlock.commentsCount || 0;
 			});
 		},
-		raiseOpenEdit(block, callback) {
-			this.$emit('open-edit', block, callback);
+		raiseOpenEdit(blockId, callback) {
+			this.eventBus.emit('open-edit', {blockId, callback});
 		},
 		promptDeleteBlock() {
-			this.$emit('prompt-delete', this.block.id);
+			this.eventBus.emit('prompt-delete', this.block.id);
 		},
 		enterChooseAddPosition() {
 			this.choosingAddPosition = true;
@@ -325,33 +366,33 @@ export default {
 			this.raisePromptAddSubblock(parentId, insertBeforeId, this.styleType);
 		},
 		raisePromptAddSubblock(parentId, insertBeforeId, defaultStyleType) {
-			this.$emit('prompt-add-subblock', parentId, insertBeforeId, defaultStyleType);
+			this.eventBus.emit('prompt-add-subblock', {parentId, insertBeforeId, defaultStyleType});
 		},
 		startMoving() {
-			this.$emit('start-moving', this.block.id);
+			this.eventBus.emit('start-moving', this.block.id);
 			// Mouseover state is lost without triggering mouseleave
 			this.focusActions = false;
 		},
 		addThisToMovingBlocks() {
-			this.$emit('add-to-moving', this.block.id);
+			this.eventBus.emit('add-to-moving', this.block.id);
 		},
 		removeThisFromMovingBlocks() {
-			this.$emit('remove-from-moving', this.block.id);
+			this.eventBus.emit('remove-from-moving', this.block.id);
 		},
 		promptNavSpec() {
-			this.$emit('prompt-nav-spec');
+			this.eventBus.emit('prompt-nav-spec');
 		},
 		cancelMoving() {
-			this.$emit('cancel-moving', this.block.id);
+			this.eventBus.emit('cancel-moving', this.block.id);
 		},
 		moveBeforeThis() {
-			this.$emit('move-before', this.block.id);
+			this.eventBus.emit('move-before', this.block.id);
 		},
 		moveIntoThis() {
-			this.$emit('move-into', this.block.id);
+			this.eventBus.emit('move-into', this.block.id);
 		},
 		moveAfterThis() {
-			this.$emit('move-after', this.block.id);
+			this.eventBus.emit('move-after', this.block.id);
 		},
 		mouseLeaveLayover() {
 			this.choosingAddPosition = false;
@@ -368,13 +409,17 @@ export default {
 			}
 		},
 		raisePlayVideo(urlObject) {
-			this.$emit('play-video', urlObject);
+			this.eventBus.emit('play-video', urlObject);
 		},
 		openCommunity() {
-			this.$emit('open-community', this.block.id, adjustUnreadCount => {
-				this.unreadCount += adjustUnreadCount;
-			}, adjustCommentsCount => {
-				this.commentsCount += adjustCommentsCount;
+			this.eventBus.emit('open-community', {
+				blockId: this.block.id,
+				onAdjustUnread: adjustUnreadCount => {
+					this.unreadCount += adjustUnreadCount;
+				},
+				onAdjustComments: adjustCommentsCount => {
+					this.commentsCount += adjustCommentsCount;
+				},
 			});
 		},
 		updateHasSubblocks() {
@@ -472,6 +517,11 @@ export default {
 			// user-select: none; // Don't include in text selection
 
 			>div {
+				display: inline-flex;
+				flex-direction: row;
+				flex-wrap: nowrap;
+				align-items: center;
+
 				&.expand-control {
 					display: none;
 
@@ -510,11 +560,6 @@ export default {
 					}
 				} // &.actions
 
-				>.el-button {
-					padding: 3px;
-					font-size: 12px;
-				}
-
 				>.el-button+.el-button {
 					margin-left: 5px;
 				}
@@ -522,6 +567,7 @@ export default {
 				>.el-checkbox {
 					display: inline-block;
 					margin-left: 10px; // distance from adjacent button
+					height: unset;
 				}
 
 				>.drag-handle {

@@ -1,18 +1,20 @@
 <template>
 <el-dialog
 	:title="modalTitle"
-	:visible.sync="showing"
+	v-model="showing"
 	:width="$store.getters.dialogSmallWidth"
 	:close-on-click-modal="false"
 	@closed="closed()"
-	class="spec-block-community-modal">
+	custom-class="spec-block-community-modal">
 
 	<context-stack
 		ref="contextStack"
 		@pop-stack="popStack"
 		/>
 
-	<p v-if="loading"><i class="el-icon-loading"/> Loading...</p>
+	<p v-if="loading">
+		<loading-message message="Loading..."/>
+	</p>
 	<p v-else-if="error">{{error}}</p>
 
 	<template v-else-if="target">
@@ -44,7 +46,9 @@
 			/>
 
 		<div class="new-comment-area">
-			<p v-if="sendingComment"><i class="el-icon-loading"/> Posting comment...</p>
+			<p v-if="sendingComment">
+				<loading-message message="Posting comment..."/>
+			</p>
 			<template v-else-if="addingComment">
 				<el-input
 					v-if="addingComment"
@@ -54,10 +58,10 @@
 					:autosize="{minRows: 2}"
 					placeholder="Type comment here"/>
 				<div>
-					<el-button @click="cancelAddComment()" type="warning" size="small">
+					<el-button @click="cancelAddComment()" type="warning">
 						Cancel
 					</el-button>
-					<el-button @click="addComment()" :disabled="disablePostComment" type="primary" size="small">
+					<el-button @click="addComment()" :disabled="disablePostComment" type="primary">
 						Post
 					</el-button>
 				</div>
@@ -74,7 +78,9 @@
 			</el-checkbox>
 		</div>
 
-		<p v-if="reloadingComments"><i class="el-icon-loading"/> Reloading...</p>
+		<p v-if="reloadingComments">
+			<loading-message message="Reloading..."/>
+		</p>
 		<template v-else-if="comments.length">
 
 			<preview-comment
@@ -90,7 +96,9 @@
 				@deleted="commentDeleted"
 				/>
 
-			<p v-if="loadingPage"><i class="el-icon-loading"/> Loading more comments...</p>
+			<p v-if="loadingPage">
+				<loading-message message="Loading more comments..."/>
+			</p>
 			<el-button v-else-if="hasMoreComments" @click="loadMoreComments()">
 				Load more
 			</el-button>
@@ -99,9 +107,11 @@
 
 	</template>
 
-	<span slot="footer" class="dialog-footer">
-		<el-button @click="showing = false">Close</el-button>
-	</span>
+	<template #footer>
+		<span class="dialog-footer">
+			<el-button @click="showing = false">Close</el-button>
+		</span>
+	</template>
 
 </el-dialog>
 </template>
@@ -114,6 +124,7 @@ import PreviewSpec from './preview-spec.vue';
 import PreviewSubspec from './preview-subspec.vue';
 import PreviewBlock from './preview-block.vue';
 import PreviewComment from './preview-comment.vue';
+import LoadingMessage from '../widgets/loading.vue';
 import {
 	idsEq,
 } from '../utils.js';
@@ -137,10 +148,12 @@ export default {
 		PreviewSubspec,
 		PreviewBlock,
 		PreviewComment,
+		LoadingMessage,
 	},
 	props: {
 		specId: Number,
 	},
+	emits: ['play-video'],
 	data() {
 		return {
 			showing: false,
@@ -424,36 +437,34 @@ export default {
 </script>
 
 <style lang="scss">
-.spec-block-community-modal {
-	>.el-dialog {
-		>.el-dialog__body {
-			>*:not(.updated, :last-child) {
-				margin-bottom: 20px;
+.spec-block-community-modal.el-dialog {
+	>.el-dialog__body {
+		>*:not(.updated, :last-child) {
+			margin-bottom: 20px;
+		}
+		>.community-context-stack {
+			margin-bottom: 25px;
+			&.empty {
+				display: none;
 			}
-			>.community-context-stack {
-				margin-bottom: 25px;
-				&.empty {
-					display: none;
-				}
-			}
-			>.updated {
-				text-align: right;
-				font-size: smaller;
-				margin-bottom: 5px;
-			}
-			>.new-comment-area {
-				margin: 45px 0;
-				>.el-textarea {
-					margin-bottom: 10px;
-					max-height: 60vh;
-					overflow-y: auto;
-				}
-			}
-			>.controls-area {
-				// Adjust for padding in .flex-row;
-				// result is 20px spacing
+		}
+		>.updated {
+			text-align: right;
+			font-size: smaller;
+			margin-bottom: 5px;
+		}
+		>.new-comment-area {
+			margin: 45px 0;
+			>.el-textarea {
 				margin-bottom: 10px;
+				max-height: 60vh;
+				overflow-y: auto;
 			}
+		}
+		>.controls-area {
+			// Adjust for padding in .flex-row;
+			// result is 20px spacing
+			margin-bottom: 10px;
 		}
 	}
 }

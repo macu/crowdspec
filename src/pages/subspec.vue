@@ -9,8 +9,8 @@
 				<el-button
 					@click="openSubspecCommunity()"
 					:type="!!unreadCount ? 'primary' : 'default'"
-					:disabled="choosingAddPosition"
-					size="mini" icon="el-icon-chat-dot-square">
+					:disabled="choosingAddPosition">
+					<i class="material-icons">forum</i>
 					<template v-if="showUnreadOnly || unreadCount">
 						<template v-if="unreadCount">{{unreadCount}} unread</template>
 					</template>
@@ -19,9 +19,9 @@
 				<el-button
 					v-if="enableEditing"
 					@click="openManageSubspec()"
-					:disabled="choosingAddPosition"
-					size="mini" icon="el-icon-setting"
-					/>
+					:disabled="choosingAddPosition">
+					<i class="material-icons">settings</i>
+				</el-button>
 			</template>
 			<template v-else>
 				<span>
@@ -29,8 +29,8 @@
 				</span>
 				<el-button
 					@click="openSubspecCommunity()"
-					:type="!!unreadCount ? 'primary' : 'default'"
-					size="mini" icon="el-icon-chat-dot-square">
+					:type="!!unreadCount ? 'primary' : 'default'">
+					<i class="material-icons">forum</i>
 					<template v-if="showUnreadOnly || unreadCount">
 						<template v-if="unreadCount">{{unreadCount}} unread</template>
 					</template>
@@ -46,21 +46,18 @@
 
 	</header>
 
-	<router-view
-		ref="view"
-		:loading="loading"
-		:subspec="subspec"
-		:enable-editing="enableEditing"
-		@prompt-nav-spec="promptNavSpec"
-		@open-community="openCommunity"
-		@play-video="playVideo"
-		/>
-
-	<edit-subspec-modal
-	 	v-if="enableEditing"
-		ref="editSubspecModal"
-		:spec-id="specId"
-		/>
+	<router-view v-slot="{ Component }">
+		<component
+			:is="Component"
+			:loading="loading"
+			:subspec="subspec"
+			:enable-editing="enableEditing"
+			@rendered="handleViewRendered"
+			@prompt-nav-spec="promptNavSpec"
+			@open-community="openCommunity"
+			@play-video="playVideo"
+			/>
+	</router-view>
 
 </section>
 </template>
@@ -69,7 +66,6 @@
 import $ from 'jquery';
 import Moment from '../widgets/moment.vue';
 import SpecView from '../spec/view.vue';
-import EditSubspecModal from '../spec/edit-subspec-modal.vue';
 import {ajaxLoadSubspec} from '../spec/ajax.js';
 import {
 	OWNER_TYPE_USER,
@@ -81,15 +77,16 @@ export default {
 	components: {
 		Moment,
 		SpecView,
-		EditSubspecModal,
 	},
 	inheritAttrs: false,
 	props: {
 		enableEditing: Boolean,
 	},
+	emits: ['prompt-nav-spec', 'open-community', 'play-video', 'open-manage-subspec'],
 	data() {
 		return {
 			loading: true,
+			scrollOnRender: true,
 			subspec: null,
 			unreadCount: 0,
 			commentsCount: 0,
@@ -142,7 +139,7 @@ export default {
 				this.commentsCount = subspec.commentsCount || 0;
 				setWindowSubtitle(subspec.name);
 				this.loading = false;
-				this.$refs.view.$once('rendered', this.restoreScroll);
+				this.scrollOnRendered();
 			}).fail(jqXHR => {
 				this.$router.replace({
 					name: 'ajax-error',
@@ -150,6 +147,15 @@ export default {
 					query: {url: encodeURIComponent(this.$route.fullPath)},
 				});
 			});
+		},
+		scrollOnRendered() {
+			this.scrollOnRender = true;
+		},
+		handleViewRendered() {
+			if (this.scrollOnRender) {
+				this.scrollOnRender = false;
+				this.restoreScroll();
+			}
 		},
 		promptNavSpec() {
 			this.$emit('prompt-nav-spec');
@@ -168,7 +174,7 @@ export default {
 			this.$emit('play-video', urlObject);
 		},
 		openManageSubspec() {
-			this.$refs.editSubspecModal.showEdit(this.subspec, updatedSubspec => {
+			this.$emit('open-manage-subspec', this.subspec, updatedSubspec => {
 				this.subspec.updated = updatedSubspec.updated;
 				this.subspec.name = updatedSubspec.name;
 				this.subspec.desc = updatedSubspec.desc;
@@ -181,7 +187,7 @@ export default {
 			let savedPosition = this.$store.state.savedScrollPosition;
 			if (savedPosition && this.onSubspecRoute) {
 				console.debug('restoreScroll subspec');
-				$(window).scrollTop(savedPosition.y).scrollLeft(savedPosition.x);
+				$(window).scrollTop(savedPosition.top).scrollLeft(savedPosition.left);
 			}
 		},
 	},

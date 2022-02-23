@@ -1,11 +1,11 @@
 <template>
 <el-dialog
 	:title="spec ? 'Manage spec' : 'Create spec'"
-	:visible.sync="showing"
+	v-model="showing"
 	:width="$store.getters.dialogSmallWidth"
 	:close-on-click-modal="false"
 	@closed="closed()"
-	class="spec-edit-spec-modal">
+	custom-class="spec-edit-spec-modal">
 
 	<p v-if="spec">
 		Created <strong><moment :datetime="spec.created"/></strong>;
@@ -13,22 +13,24 @@
 	</p>
 
 	<label>
-		Name
+		<div>Name</div>
 		<el-input ref="nameInput" v-model="name" :maxlength="nameMaxLength" clearable/>
 	</label>
 
 	<label>
-		Description
+		<div>Description</div>
 		<el-input type="textarea" v-model="desc" :autosize="{minRows: 2}"/>
 	</label>
 
 	<el-checkbox v-model="isPublic">Allow public access and community features</el-checkbox>
 
-	<span slot="footer" class="dialog-footer">
-		<el-button @click="showing = false">Cancel</el-button>
-		<el-button v-if="spec" @click="promptDeleteSpec()" type="danger">Delete</el-button>
-		<el-button @click="submit()" type="primary" :disabled="disableSubmit">{{spec ? 'Save' : 'Create'}}</el-button>
-	</span>
+	<template #footer>
+		<span class="dialog-footer">
+			<el-button @click="showing = false">Cancel</el-button>
+			<el-button v-if="spec" @click="promptDeleteSpec()" type="danger">Delete</el-button>
+			<el-button @click="submit()" type="primary" :disabled="disableSubmit">{{spec ? 'Save' : 'Create'}}</el-button>
+		</span>
+	</template>
 
 </el-dialog>
 </template>
@@ -177,21 +179,19 @@ export default {
 </script>
 
 <style lang="scss">
-.spec-edit-spec-modal {
-	>.el-dialog {
-		>.el-dialog__body {
-			>p {
-				margin-top: 0;
-			}
-			>*+* {
-				margin-top: 20px;
-			}
-			>label:not(.el-checkbox) {
+.spec-edit-spec-modal.el-dialog {
+	>.el-dialog__body {
+		>p {
+			margin-top: 0;
+		}
+		>*+* {
+			margin-top: 20px;
+		}
+		>label:not(.el-checkbox) {
+			display: block;
+			input, textarea {
 				display: block;
-				input, textarea {
-					display: block;
-					width: 100%;
-				}
+				width: 100%;
 			}
 		}
 	}
