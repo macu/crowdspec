@@ -259,8 +259,7 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *h
 			RenderTime:    time.Now(),
 		}
 
-		err = db.QueryRow(`
-			SELECT id, created_at, updated_at,
+		err = db.QueryRow(`SELECT id, created_at, updated_at,
 				style_type, content_type, ref_type, ref_id, block_title,
 				CASE WHEN content_type = 'plaintext' THEN block_body ELSE NULL END AS block_body,
 				CASE WHEN content_type = 'markdown' THEN rendered_html ELSE NULL END AS rendered_html,
@@ -383,7 +382,7 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *h
 						UNION ALL
 						SELECT cc.id, cc.target_type, cc.target_id, cs.level + 1
 						FROM spec_community_comment cc, comment_stack cs
-						WHERE cs.target_type = 'comment'
+						WHERE cs.target_type = $2
 							AND cs.target_id = cc.id
 					)
 					SELECT cc.id, cc.comment_body
@@ -391,7 +390,7 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *h
 					INNER JOIN comment_stack cs
 					ON cs.id = cc.id
 					ORDER BY cs.level ASC`,
-					targetID,
+					targetID, CommunityTargetComment,
 				)
 				if err != nil {
 					logError(r, userID, fmt.Errorf("querying stack: %w", err))

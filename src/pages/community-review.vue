@@ -170,6 +170,7 @@
 	<community-modal
 		ref="communityModal"
 		:spec-id="specId"
+		:enable-write="$store.getters.loggedIn"
 		@play-video="playVideo"
 		/>
 
@@ -297,7 +298,7 @@ export default {
 			}
 		},
 		collapseSpec(specId) {
-			this.$set(this.expandedSpecs, specId, false);
+			this.expandedSpecs[specId] = false;
 		},
 		reloadComments() {
 			this.loadingCommentsPage = true;
@@ -336,14 +337,14 @@ export default {
 					adjustUnread => {
 						for (var i = 0; i < this.specs.length; i++) {
 							if (idsEq(specId, this.specs[i].id)) {
-								this.$set(this.specs[i], 'unread', this.specs[i].unread + adjustUnread);
+								this.specs[i].unread = this.specs[i].unread + adjustUnread;
 								break;
 							}
 						}
 					}, adjustTotal => {
 						for (var i = 0; i < this.specs.length; i++) {
 							if (idsEq(specId, this.specs[i].id)) {
-								this.$set(this.specs[i], 'total', this.specs[i].total + adjustTotal);
+								this.specs[i].total = this.specs[i].total + adjustTotal;
 								break;
 							}
 						}
@@ -365,7 +366,7 @@ export default {
 						let subspecs = this.subspecsBySpecId[specId];
 						for (var i = 0; i < subspecs.length; i++) {
 							if (idsEq(subspecId, subspecs[i].id)) {
-								this.$set(subspecs[i], 'unread', subspecs[i].unread + adjustUnread);
+								subspecs[i].unread = subspecs[i].unread + adjustUnread;
 								break;
 							}
 						}
@@ -383,7 +384,7 @@ export default {
 						}
 						for (var i = 0; i < this.specs.length; i++) {
 							if (idsEq(specId, this.specs[i].id)) {
-								this.$set(this.specs[i], 'hasUnreadSubspec', hasUnreadSubspec);
+								this.specs[i].hasUnreadSubspec = hasUnreadSubspec;
 								break;
 							}
 						}
@@ -391,7 +392,7 @@ export default {
 						let subspecs = this.subspecsBySpecId[specId];
 						for (var i = 0; i < subspecs.length; i++) {
 							if (idsEq(subspecId, subspecs[i].id)) {
-								this.$set(subspecs[i], 'total', subspecs[i].total + adjustTotal);
+								subspecs[i].total = subspecs[i].total + adjustTotal;
 								break;
 							}
 						}
@@ -412,14 +413,14 @@ export default {
 					adjustUnread => {
 						for (var i = 0; i <this.comments.length; i++) {
 							if (idsEq(commentId, this.comments[i].id)) {
-								this.$set(this.comments[i], 'unread', this.comments[i].unread + adjustUnread);
+								this.comments[i].unread = this.comments[i].unread + adjustUnread;
 								break;
 							}
 						}
 					}, adjustTotal => {
 						for (var i = 0; i < this.comments.length; i++) {
 							if (idsEq(commentId, this.comments[i].id)) {
-								this.$set(this.comments[i], 'total', this.comments[i].total + adjustTotal);
+								this.comments[i].total = this.comments[i].total + adjustTotal;
 								break;
 							}
 						}

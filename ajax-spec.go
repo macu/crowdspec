@@ -23,14 +23,31 @@ func ajaxSpec(db *sql.DB, userID *uint, w http.ResponseWriter, r *http.Request) 
 		return nil, status
 	}
 
+	var args = []interface{}{specID}
+
+	var lastUpdatedField string
+	if userID == nil {
+		lastUpdatedField = `GREATEST(spec.updated_at, spec.blocks_updated_at) AS last_updated`
+	} else {
+		lastUpdatedField = `CASE
+			-- when editor
+			WHEN spec.owner_type = ` + argPlaceholder(OwnerTypeUser, &args) + `
+				AND spec.owner_id = ` + argPlaceholder(*userID, &args) + `
+			THEN spec.updated_at
+			-- when visitor
+			ELSE GREATEST(spec.updated_at, spec.blocks_updated_at)
+		END AS last_updated`
+	}
+
 	var unreadCountField string
 	if userID == nil {
 		unreadCountField = `0 AS unread_count`
 	} else {
-		unreadCountField = `(SELECT COUNT(*)
-			FROM spec_community_comment AS c
+		unreadCountField = `(SELECT COUNT(*) FROM spec_community_comment AS c
 			LEFT JOIN spec_community_read AS r
-				ON r.user_id = $3 AND r.target_type = 'comment' AND r.target_id = c.id
+				ON r.user_id = ` + argPlaceholder(*userID, &args) + `
+				AND r.target_type = ` + argPlaceholder(CommunityTargetComment, &args) + `
+				AND r.target_id = c.id
 			WHERE c.target_type = 'spec' AND c.target_id = spec.id
 				AND r.user_id IS NULL
 		) AS unread_count`
@@ -44,26 +61,21 @@ func ajaxSpec(db *sql.DB, userID *uint, w http.ResponseWriter, r *http.Request) 
 		SELECT spec.id, spec.owner_type, spec.owner_id, user_account.username,
 		user_account.user_settings::json#>>'{userProfile,highlightUsername}' AS highlight,
 		spec.spec_name, spec.spec_desc, spec.is_public, spec.created_at,
-		CASE
-			-- when editor
-			WHEN spec.owner_type = $2 AND spec.owner_id = $3
-				THEN spec.updated_at
-			-- when visitor
-			ELSE GREATEST(spec.updated_at, spec.blocks_updated_at)
-		END AS last_updated,
+		-- select last updated
+		`+lastUpdatedField+`,
 		-- select number of unread comments
 		`+unreadCountField+`,
 		-- select total number of comments
-		(SELECT COUNT(*)
-			FROM spec_community_comment AS c
-			WHERE c.target_type = 'spec' AND c.target_id = spec.id
+		(SELECT COUNT(*) FROM spec_community_comment AS c
+			WHERE c.target_type = `+argPlaceholder(CommunityTargetSpec, &args)+`
+			AND c.target_id = spec.id
 		) AS comments_count
 		FROM spec
 		LEFT JOIN user_account
-		ON spec.owner_type=$2
-		AND user_account.id=spec.owner_id
-		WHERE spec.id=$1
-		`, specID, OwnerTypeUser, userID,
+			ON spec.owner_type=`+argPlaceholder(OwnerTypeUser, &args)+`
+			AND user_account.id=spec.owner_id
+		WHERE spec.id=$1`,
+		args...,
 	).Scan(&s.ID, &s.OwnerType, &s.OwnerID, &s.Username, &s.Highlight,
 		&s.Name, &s.Desc, &s.Public, &s.Created, &s.Updated, &s.UnreadCount, &s.CommentsCount)
 	if err != nil {

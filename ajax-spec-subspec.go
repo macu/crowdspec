@@ -34,14 +34,33 @@ func ajaxSubspec(db *sql.DB, userID *uint, w http.ResponseWriter, r *http.Reques
 		RenderTime: time.Now(),
 	}
 
+	var args = []interface{}{specID, subspecID}
+
+	var lastUpdatedField string
+	if userID == nil {
+		lastUpdatedField = `GREATEST(spec_subspec.updated_at, spec_subspec.blocks_updated_at) AS last_updated`
+	} else {
+		lastUpdatedField = `CASE
+			-- when editor
+			WHEN spec.owner_type = ` + argPlaceholder(OwnerTypeUser, &args) + `
+				AND spec.owner_id = ` + argPlaceholder(*userID, &args) + `
+			THEN spec_subspec.updated_at
+			-- when visitor
+			ELSE GREATEST(spec_subspec.updated_at, spec_subspec.blocks_updated_at)
+		END AS last_updated`
+	}
+
 	var unreadCountField string
 	if userID == nil {
 		unreadCountField = `0 AS unread_count`
 	} else {
 		unreadCountField = `(SELECT COUNT(*) FROM spec_community_comment AS c
 			LEFT JOIN spec_community_read AS r
-				ON r.user_id = $4 AND r.target_type = 'comment' AND r.target_id = c.id
-			WHERE c.target_type = 'subspec' AND c.target_id = spec_subspec.id
+				ON r.user_id = ` + argPlaceholder(*userID, &args) + `
+				AND r.target_type = ` + argPlaceholder(CommunityTargetComment, &args) + `
+				AND r.target_id = c.id
+			WHERE c.target_type = ` + argPlaceholder(CommunityTargetSubspec, &args) + `
+				 AND c.target_id = spec_subspec.id
 				AND r.user_id IS NULL
 		) AS unread_count`
 	}
@@ -49,25 +68,20 @@ func ajaxSubspec(db *sql.DB, userID *uint, w http.ResponseWriter, r *http.Reques
 	err = db.QueryRow(`SELECT spec_subspec.created_at,
 		spec_subspec.subspec_name, spec_subspec.subspec_desc,
 		-- spec.spec_name, spec.owner_type, spec.owner_id,
-		CASE
-			-- when editor
-			WHEN spec.owner_type = $3 AND spec.owner_id = $4
-				THEN spec_subspec.updated_at
-			-- when visitor
-			ELSE GREATEST(spec_subspec.updated_at, spec_subspec.blocks_updated_at)
-		END AS last_updated,
+		-- select last updated
+		`+lastUpdatedField+`,
 		-- select number of unread comments
 		`+unreadCountField+`,
 		-- select total number of comments
-		(SELECT COUNT(*)
-			FROM spec_community_comment AS c
-			WHERE c.target_type = 'subspec' AND c.target_id = spec_subspec.id
+		(SELECT COUNT(*) FROM spec_community_comment AS c
+			WHERE c.target_type = `+argPlaceholder(CommunityTargetSubspec, &args)+`
+			AND c.target_id = spec_subspec.id
 		) AS comments_count
 		FROM spec_subspec
 		INNER JOIN spec ON spec.id = $1
 		WHERE spec_subspec.id = $2
 			AND spec_subspec.spec_id = $1`,
-		specID, subspecID, OwnerTypeUser, userID,
+		args...,
 	).Scan(&s.Created, &s.Name, &s.Desc, &s.Updated, &s.UnreadCount, &s.CommentsCount)
 	if err != nil {
 		logError(r, userID, fmt.Errorf("reading subspec: %w", err))
