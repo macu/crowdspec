@@ -53,9 +53,13 @@ export const store = createStore({
 			return state.user ? state.user.email : null;
 		},
 		userSettings(state) {
-			return state.user ?
-				$.extend(true, defaultUserSettings(), state.userSettings)
-				: defaultUserSettings();
+			if (state.userSettings) {
+				// Settings have been modified since auth
+				return $.extend(true, defaultUserSettings(), state.userSettings);
+			} else if (state.user) {
+				return $.extend(true, defaultUserSettings(), state.user.settings);
+			}
+			return defaultUserSettings();
 		},
 		userIsAdmin(state) {
 			return state.user ? state.user.admin : false;
@@ -128,6 +132,7 @@ export const store = createStore({
 		},
 
 		setUser(state, user) {
+			state.user = user;
 			state.user = user;
 		},
 		setUserSettings(state, settings) {
