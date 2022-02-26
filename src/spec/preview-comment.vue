@@ -31,16 +31,12 @@
 			<el-button
 				v-if="showCommunity"
 				@click="openComments()"
-				:type="showUnreadCount ? 'primary' : 'default'"
+				:type="showUnread ? 'primary' : 'default'"
 				size="small"
 				round>
 				<i class="material-icons">forum</i>
-				<span v-if="showUnreadCount || commentsCount">
-					<template v-if="showUnreadCount">
-						<template v-if="unreadCount">{{unreadCount}} unread</template>
-					</template>
-					<template v-else-if="commentsCount">{{commentsCount}}</template>
-				</span>
+				<span v-if="showUnread">{{unreadCount}} unread</span>
+				<span v-else-if="showCommentsCount">{{commentsCount}}</span>
 			</el-button>
 
 			<el-button
@@ -149,9 +145,14 @@ export default {
 		commentsCount() {
 			return this.comment.commentsCount || 0;
 		},
-		showUnreadCount() {
+		showUnread() {
+			// Highlight button blue
+			// Show "%d unread"
 			return this.$store.getters.loggedIn &&
-				!!this.unreadCount;
+				this.unreadCount > 0;
+		},
+		showCommentsCount() {
+			return !this.showUnreadOnly && this.commentsCount > 0;
 		},
 	},
 	watch: {

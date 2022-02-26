@@ -333,13 +333,17 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *h
 			RenderTime:    time.Now(),
 		}
 
+		var commentArgs []interface{}
+
 		var userReadField string
 		if userID == nil {
 			userReadField = `FALSE AS user_read`
 		} else {
 			userReadField = `(SELECT EXISTS(
 					SELECT r.user_id FROM spec_community_read AS r
-					WHERE r.user_id = $1 AND r.target_type = $2 AND r.target_id = $3
+					WHERE r.user_id = ` + argPlaceholder(*userID, &commentArgs) + `
+					AND r.target_type = ` + argPlaceholder(CommunityTargetComment, &commentArgs) + `
+					AND r.target_id = ` + argPlaceholder(targetID, &commentArgs) + `
 				)) AS user_read`
 		}
 
@@ -351,8 +355,8 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *h
 			FROM spec_community_comment AS c
 			INNER JOIN user_account AS u
 				ON u.id = c.user_id
-			WHERE c.id = $3`,
-			userID, CommunityTargetComment, targetID,
+			WHERE c.id = `+argPlaceholder(targetID, &commentArgs),
+			commentArgs...,
 		).Scan(&cc.Comment.ID, &cc.Comment.Created, &cc.Comment.Updated,
 			&cc.Comment.UserID, &cc.Comment.Username, &cc.Comment.Highlight,
 			&cc.Comment.TargetType, &cc.Comment.TargetID, &cc.Comment.Body,

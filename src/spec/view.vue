@@ -5,6 +5,8 @@
 		<!-- managed programatically -->
 	</ul>
 
+	<p class="empty-message">No content.</p>
+
 	<template v-if="enableEditing">
 
 		<el-button
@@ -587,6 +589,16 @@ export default {
 
 		// >li.spec-block.none {
 		// }
+	}
+
+	.empty-message {
+		display: none;
+	}
+	>ul.spec-block-list:empty + .empty-message {
+		display: block;
+		color: gray;
+		font-style: italic;
+		margin-left: $spec-block-list-padding-left;
 	}
 
 	>ul.mirror-list {

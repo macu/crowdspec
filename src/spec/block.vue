@@ -75,12 +75,8 @@
 							size="small"
 							round>
 							<i class="material-icons">forum</i>
-							<span v-if="showUnreadCount || commentsCount">
-								<template v-if="showUnreadOnly || unreadCount">
-									<template v-if="unreadCount">{{unreadCount}} unread</template>
-								</template>
-								<template v-else-if="commentsCount">{{commentsCount}}</template>
-							</span>
+							<span v-if="showUnreadCount">{{unreadCount}} unread</span>
+							<span v-else-if="commentsCount">{{commentsCount}}</span>
 						</el-button>
 						<el-button @click="editBlock()" type="default" size="small" circle>
 							<i class="material-icons">edit</i>
@@ -105,12 +101,8 @@
 					size="small"
 					round>
 					<i class="material-icons">forum</i>
-					<span>
-						<template v-if="showUnreadCount">
-							<template v-if="unreadCount">{{unreadCount}} unread</template>
-						</template>
-						<template v-else-if="commentsCount">{{commentsCount}}</template>
-					</span>
+					<span v-if="showUnreadCount">{{unreadCount}} unread</span>
+					<span v-else-if="commentsCount">{{commentsCount}}</span>
 				</el-button>
 			</div>
 		</div>

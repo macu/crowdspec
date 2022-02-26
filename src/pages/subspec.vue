@@ -8,13 +8,11 @@
 			<template v-if="enableEditing">
 				<el-button
 					@click="openSubspecCommunity()"
-					:type="showUnreadCount ? 'primary' : 'default'"
+					:type="showUnread ? 'primary' : 'default'"
 					:disabled="choosingAddPosition">
 					<i class="material-icons">forum</i>
-					<template v-if="showUnreadCount">
-						<template v-if="unreadCount">{{unreadCount}} unread</template>
-					</template>
-					<template v-else-if="commentsCount">{{commentsCount}}</template>
+					<span v-if="showUnread">{{unreadCount}} unread</span>
+					<span v-else-if="commentsCount">{{commentsCount}}</span>
 				</el-button>
 				<el-button
 					v-if="enableEditing"
@@ -29,12 +27,10 @@
 				</span>
 				<el-button
 					@click="openSubspecCommunity()"
-					:type="showUnreadCount ? 'primary' : 'default'">
+					:type="showUnread ? 'primary' : 'default'">
 					<i class="material-icons">forum</i>
-					<template v-if="showUnreadCount">
-						<template v-if="unreadCount">{{unreadCount}} unread</template>
-					</template>
-					<template v-else-if="commentsCount">{{commentsCount}}</template>
+					<span v-if="showUnread">{{unreadCount}} unread</span>
+					<span v-else-if="commentsCount">{{commentsCount}}</span>
 				</el-button>
 			</template>
 
@@ -105,13 +101,11 @@ export default {
 		choosingAddPosition() {
 			return this.$store.getters.currentlyMovingBlocks;
 		},
-		showUnreadOnly() {
+		showUnread() {
+			// Highlight button blue
+			// Show "%d unread"
 			return this.$store.getters.loggedIn &&
-				this.$store.getters.userSettings.community.unreadOnly;
-		},
-		showUnreadCount() {
-			return this.$store.getters.loggedIn &&
-				!!this.unreadCount;
+				this.unreadCount > 0;
 		},
 	},
 	beforeRouteEnter(to, from, next) {

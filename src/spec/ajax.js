@@ -5,7 +5,7 @@ export function ajaxLoadSpec(specId, loadBlocks = true) {
 	return $.get('/ajax/spec', {
 		specId,
 		loadBlocks,
-	}).fail(alertError);
+	});
 }
 
 export function ajaxCreateSpec(name, desc, isPublic) {
@@ -42,7 +42,7 @@ export function ajaxLoadSubspec(specId, subspecId, loadBlocks = true) {
 		specId,
 		subspecId,
 		loadBlocks,
-	}).fail(alertError);
+	});
 }
 
 export function ajaxCreateSubspec(specId, name, desc) {

@@ -72,8 +72,12 @@
 		</div>
 
 		<div class="controls-area flex-row wrap-reverse">
-			<div class="fill nowraptext" v-text="formattedCommentsCount"/>
-			<el-checkbox v-if="loggedIn" v-model="unreadOnly" @change="reloadCommunity()">
+			<div class="fill nowraptext comments-count">
+				<template v-if="unreadCount">{{unreadCount}} unread</template>
+				<template v-else-if="commentsCount">{{commentsCount}} comments</template>
+				<em v-else>No comments</em>
+			</div>
+			<el-checkbox v-if="loggedIn" v-model="filterUnreadOnly" @change="reloadCommunity()">
 				Show only unread comments
 			</el-checkbox>
 		</div>
@@ -90,7 +94,7 @@
 				:spec-id="specId"
 				:comment="c"
 				:show-community="true"
-				:show-unread-only="unreadOnly"
+				:show-unread-only="showUnreadOnly"
 				@open-comments="openComments"
 				@update-unread="adjustUnread"
 				@deleted="commentDeleted"
@@ -164,6 +168,7 @@ export default {
 			target: null,
 			comments: [],
 			unreadCount: 0,
+			filterUnreadOnly: false,
 			commentsCount: 0,
 			hasMoreComments: false,
 			loadingPage: false, // loading more comments
@@ -213,15 +218,9 @@ export default {
 		disablePostComment() {
 			return !this.newCommentBody.trim();
 		},
-		formattedCommentsCount() {
-			let count = this.unreadOnly ? this.unreadCount : this.commentsCount;
-			return count + (this.unreadOnly ? ' unread' : '') +
-				(this.targetType === TARGET_TYPE_COMMENT ? ' sub' : '') +
-				' comment' + ((count !== 1) ? 's' : '');
-		},
-		unreadOnly() {
-			return this.$store.getters.loggedIn &&
-				this.$store.getters.userSettings.community.unreadOnly;
+		showUnreadOnly() {
+			// whether the unread-only filter is applicable and enabled
+			return this.$store.getters.loggedIn && this.filterUnreadOnly;
 		},
 	},
 	watch: {
@@ -252,7 +251,7 @@ export default {
 			this.loading = true;
 			this.error = null;
 			ajaxLoadCommunity(this.specId, targetType, targetId,
-				this.unreadOnly, loadStack,
+				this.showUnreadOnly, loadStack,
 			).then(response => {
 				this.loading = false;
 				this.targetType = targetType;
@@ -297,7 +296,7 @@ export default {
 			this.reloadingComments = true;
 			let updatedBefore = null; // start at beginning
 			ajaxLoadCommentsPage(this.specId, this.targetType, this.target.id,
-				updatedBefore, this.unreadOnly,
+				updatedBefore, this.showUnreadOnly,
 			).then(response => {
 				this.reloadingComments = false;
 				this.comments = response.comments;
@@ -315,7 +314,7 @@ export default {
 			// because new comments may be added while paging.
 			let updatedBefore = this.comments[this.comments.length - 1].updated;
 			ajaxLoadCommentsPage(this.specId, this.targetType, this.target.id,
-				updatedBefore, this.unreadOnly,
+				updatedBefore, this.showUnreadOnly,
 			).then(response => {
 				this.loadingPage = false;
 				this.comments = this.comments.concat(response.comments);
@@ -470,6 +469,12 @@ export default {
 			// Adjust for padding in .flex-row;
 			// result is 20px spacing
 			margin-bottom: 10px;
+			>.comments-count {
+				>em {
+					color: gray;
+					font-style: italic;
+				}
+			}
 		}
 	}
 }

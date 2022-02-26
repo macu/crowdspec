@@ -60,6 +60,9 @@ export const store = createStore({
 		userIsAdmin(state) {
 			return state.user ? state.user.admin : false;
 		},
+		defaultShowUnreadCommentsOnly(state, getters) {
+			return getters.loggedIn && getters.userSettings.community.unreadOnly;
+		},
 
 		mobileViewport(state) {
 			return state.windowWidth <= MOBILE_MAX_WIDTH;
