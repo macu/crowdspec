@@ -73,7 +73,7 @@
 
 		<div class="controls-area flex-row wrap-reverse">
 			<div class="fill nowraptext comments-count">
-				<template v-if="unreadCount">{{unreadCount}} unread</template>
+				<template v-if="showUnreadOnly">{{unreadCount}} unread</template>
 				<template v-else-if="commentsCount">{{commentsCount}} comments</template>
 				<em v-else>No comments</em>
 			</div>
