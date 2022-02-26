@@ -23,6 +23,7 @@ type UserAccount struct {
 // UserSettings represents a user's configurable settings.
 type UserSettings struct {
 	UserProfile  UserProfileSettings   `json:"userProfile"`
+	Homepage     UserHomepageSettings  `json:"homepage"`
 	BlockEditing BlockEditingSettings  `json:"blockEditing"`
 	Community    UserCommunitySettings `json:"community"`
 }
@@ -30,6 +31,11 @@ type UserSettings struct {
 // UserProfileSettings holds user settings regarding the user's own profile.
 type UserProfileSettings struct {
 	HighlightUsername *string `json:"highlightUsername"`
+}
+
+// UserHomepageSettings holds user settings regarding the homepage.
+type UserHomepageSettings struct {
+	SpecsLayout string `json:"specsLayout"`
 }
 
 // BlockEditingSettings holds user settings regarding blocks they can edit.
@@ -204,9 +210,15 @@ func sanitizeSettings(settings *UserSettings) {
 			settings.UserProfile.HighlightUsername = nil
 		}
 	}
-
-	// Apply defaults
-	if settings.BlockEditing.DeleteButton == "" {
+	if settings.Homepage.SpecsLayout == "" ||
+		!(settings.Homepage.SpecsLayout == "list" ||
+			settings.Homepage.SpecsLayout == "grid") {
+		settings.Homepage.SpecsLayout = "list"
+	}
+	if settings.BlockEditing.DeleteButton == "" ||
+		!(settings.BlockEditing.DeleteButton == "modal" ||
+			settings.BlockEditing.DeleteButton == "recent" ||
+			settings.BlockEditing.DeleteButton == "all") {
 		settings.BlockEditing.DeleteButton = "all"
 	}
 

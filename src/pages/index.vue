@@ -28,7 +28,9 @@
 		<p v-if="loading">
 			<loading-message message="Loading..."/>
 		</p>
-		<ul v-else-if="userSpecs && userSpecs.length" class="specs-list">
+		<ul v-else-if="userSpecs && userSpecs.length"
+			class="specs-list"
+			:class="specsLayoutList ? 'list' : 'grid'">
 			<router-link
 				v-for="s in userSpecs"
 				:key="s.id"
@@ -60,7 +62,9 @@
 		<p v-if="loading">
 			<loading-message message="Loading..."/>
 		</p>
-		<ul v-else-if="publicSpecs && publicSpecs.length" class="specs-list">
+		<ul v-else-if="publicSpecs && publicSpecs.length"
+			class="specs-list"
+			:class="specsLayoutList ? 'list' : 'grid'">
 			<router-link
 				v-for="s in publicSpecs"
 				:key="s.id"
@@ -123,6 +127,9 @@ export default {
 	computed: {
 		loggedIn() {
 			return this.$store.getters.loggedIn;
+		},
+		specsLayoutList() {
+			return this.$store.getters.specsLayoutList;
 		},
 	},
 	mounted() {
@@ -188,26 +195,40 @@ export default {
 	}
 
 	ul.specs-list {
-		padding: 0;
-		display: grid;
-		grid-template-columns: 1fr;
-		align-items: start;
-		column-gap: 20px;
-		row-gap: 20px;
 
-		@media (min-width: $min-lg) {
-			grid-template-columns: 1fr 1fr;
+		&.list {
+			>li {
+				&:not(:first-child) {
+					margin-top: 1px;
+				}
+			}
 		}
 
-		@media (min-width: $min-xl) {
-			grid-template-columns: 1fr 1fr 1fr;
+		&.grid {
+			padding: 0;
+			display: grid;
+			grid-template-columns: 1fr;
+			align-items: start;
+			column-gap: 20px;
+			row-gap: 20px;
+
+			>li {
+				display: inline-block;
+				background-color: scale-color($shadow-bg, $lightness: 60%);
+			}
+
+			@media (min-width: $min-lg) {
+				grid-template-columns: 1fr 1fr;
+			}
+
+			@media (min-width: $min-xl) {
+				grid-template-columns: 1fr 1fr 1fr;
+			}
 		}
 
 		>li {
-			display: inline-block;
 			padding: 20px;
 			cursor: pointer;
-			background-color: scale-color($shadow-bg, $lightness: 60%);
 
 			&:hover {
 				background-color: $shadow-bg;

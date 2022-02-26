@@ -67,6 +67,9 @@ export function defaultUserSettings() {
 		userProfile: {
 			highlightUsername: null,
 		},
+		homepage: {
+			specsLayout: 'list',
+		},
 		blockEditing: {
 			deleteButton: 'all',
 		},

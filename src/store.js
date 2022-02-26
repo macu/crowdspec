@@ -60,6 +60,10 @@ export const store = createStore({
 		userIsAdmin(state) {
 			return state.user ? state.user.admin : false;
 		},
+		specsLayoutList(state, getters) {
+			return !getters.loggedIn ||
+				getters.userSettings.homepage.specsLayout === 'list';
+		},
 		defaultShowUnreadCommentsOnly(state, getters) {
 			return getters.loggedIn && getters.userSettings.community.unreadOnly;
 		},

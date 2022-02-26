@@ -39,6 +39,15 @@
 		</el-form-item>
 		<el-form-item>
 			<template #label>
+				<strong class="section-heading">Homepage</strong>
+			</template>
+			<el-select v-model="settingsForm.homepage.specsLayout">
+				<el-option label="Display specs in a list" value="list"/>
+				<el-option label="Display specs in a grid" value="grid"/>
+			</el-select>
+		</el-form-item>
+		<el-form-item>
+			<template #label>
 				<strong class="section-heading">Block editing</strong>
 			</template>
 			<el-select v-model="settingsForm.blockEditing.deleteButton">
