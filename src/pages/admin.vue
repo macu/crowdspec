@@ -91,8 +91,7 @@
 		v-if="reviewingSignupRequest"
 		title="Review signup request"
 		:close-on-click-modal="!sendingSignupRequestReview"
-		:width="$store.getters.dialogTinyWidth"
-		visible>
+		:width="$store.getters.dialogTinyWidth">
 
 		<table>
 			<tr>

@@ -22,6 +22,25 @@
 
 	<edit-profile-modal v-if="loggedIn" ref="editProfileModal"/>
 
+	<el-dialog
+		title="About"
+		v-model="showingAbout"
+		:width="$store.getters.dialogTinyWidth">
+
+		<router-link :to="aboutSpecRoute">
+			Visit the CrowdSpec spec to read about this platform.
+		</router-link>
+
+		<template #footer>
+			<span class="dialog-footer">
+				<el-button @click="showingAbout = false">
+					Close
+				</el-button>
+			</span>
+		</template>
+
+	</el-dialog>
+
 </div>
 </template>
 
@@ -34,6 +53,11 @@ export default {
 	components: {
 		Username,
 		EditProfileModal,
+	},
+	data() {
+		return {
+			showingAbout: false,
+		};
 	},
 	computed: {
 		loadingUser() {
@@ -48,6 +72,15 @@ export default {
 		highlight() {
 			return this.$store.getters.userSettings.userProfile.highlightUsername;
 		},
+		aboutSpecRoute() {
+			// Spec 1 is the official spec about CrowdSpec
+			return {name: 'spec', params: {specId: 1}};
+		},
+	},
+	watch: {
+		'$route'() {
+			this.showingAbout = false;
+		},
 	},
 	mounted() {
 		this.$store.dispatch('loadAuth');
@@ -60,7 +93,10 @@ export default {
 			window.location.href = '/signup';
 		},
 		gotoIndex() {
-			if (this.$route.name !== 'index') {
+			if (this.$route.name === 'index') {
+				// Already on index page; show About dialog
+				this.showingAbout = true;
+			} else {
 				this.$router.push({name: 'index'});
 			}
 		},

@@ -36,17 +36,19 @@
 				custom
 				v-slot="{ navigate, href }">
 				<li @click="navigate">
-					<div class="info">
-						<span class="status" :class="{public: s.public}">
-							<template v-if="s.public"><i class="material-icons">beach_access</i> Public</template>
-							<template v-else><i class="material-icons">lock</i> Private</template>
-						</span>
+					<div>
+						<div class="info">
+							<span class="status" :class="{public: s.public}">
+								<template v-if="s.public"><i class="material-icons">beach_access</i> Public</template>
+								<template v-else><i class="material-icons">lock</i> Private</template>
+							</span>
+						</div>
+						<a :href="href" @click="navigate" class="name">{{s.name}}</a>
+						<div class="info">
+							<span class="updated">Last modified <strong><moment :datetime="s.updated" :offset="true"/></strong></span>
+						</div>
+						<div v-if="s.desc" class="desc">{{s.desc}}</div>
 					</div>
-					<a :href="href" @click="navigate" class="name">{{s.name}}</a>
-					<div class="info">
-						<span class="updated">Last modified <strong><moment :datetime="s.updated" :offset="true"/></strong></span>
-					</div>
-					<div v-if="s.desc" class="desc">{{s.desc}}</div>
 				</li>
 			</router-link>
 		</ul>
@@ -66,22 +68,24 @@
 				custom
 				v-slot="{ navigate, href }">
 				<li @click="navigate">
-					<div class="info">
-						<username :username="s.username" :highlight="s.highlight"/>
+					<div>
+						<div class="info">
+							<username :username="s.username" :highlight="s.highlight"/>
+						</div>
+						<a :href="href" @click="navigate" class="name">{{s.name}}</a>
+						<div class="info">
+							<span class="updated">Last modified <strong><moment :datetime="s.updated" :offset="true"/></strong></span>
+						</div>
+						<!--<div class="tags">
+							<el-tag size="mini" :closable="false" type="success">dsf</el-tag>
+							<el-tag size="mini" :closable="false" type="primary">d</el-tag>
+							<el-tag size="mini" :closable="false">asdfsadf</el-tag>
+							<el-tag size="mini" :closable="false">asd</el-tag>
+							<el-tag size="mini" :closable="false">fghfdghsdfg</el-tag>
+							<el-tag size="mini" :closable="false">rtrgegrae</el-tag>
+						</div>-->
+						<div v-if="s.desc" class="desc">{{s.desc}}</div>
 					</div>
-					<a :href="href" @click="navigate" class="name">{{s.name}}</a>
-					<div class="info">
-						<span class="updated">Last modified <strong><moment :datetime="s.updated" :offset="true"/></strong></span>
-					</div>
-					<!--<div class="tags">
-						<el-tag size="mini" :closable="false" type="success">dsf</el-tag>
-						<el-tag size="mini" :closable="false" type="primary">d</el-tag>
-						<el-tag size="mini" :closable="false">asdfsadf</el-tag>
-						<el-tag size="mini" :closable="false">asd</el-tag>
-						<el-tag size="mini" :closable="false">fghfdghsdfg</el-tag>
-						<el-tag size="mini" :closable="false">rtrgegrae</el-tag>
-					</div>-->
-					<div v-if="s.desc" class="desc">{{s.desc}}</div>
 				</li>
 			</router-link>
 		</ul>
@@ -184,70 +188,85 @@ export default {
 	}
 
 	ul.specs-list {
+		padding: 0;
+		display: grid;
+		grid-template-columns: 1fr;
+		align-items: start;
+		column-gap: 20px;
+		row-gap: 20px;
+
+		@media (min-width: $min-lg) {
+			grid-template-columns: 1fr 1fr;
+		}
+
+		@media (min-width: $min-xl) {
+			grid-template-columns: 1fr 1fr 1fr;
+		}
 
 		>li {
+			display: inline-block;
 			padding: 20px;
 			cursor: pointer;
-
-			&:not(:first-child) {
-				margin-top: 1px;
-			}
+			background-color: scale-color($shadow-bg, $lightness: 60%);
 
 			&:hover {
 				background-color: $shadow-bg;
 			}
 
-			>.info {
-				font-size: small;
+			>div {
 
-				>span {
-					display: inline-block;
-					margin-right: 20px;
+				>.name {
+					display: block;
+					font-size: larger;
+				}
 
-					@include mobile {
-						display: block;
-					}
+				>.info {
+					font-size: small;
 
-					&.status {
-						color: gray;
+					>span {
+						display: inline-block;
+						margin-right: 20px;
 
-						&.public {
-							color: green;
-							font-weight: green;
+						@include mobile {
+							display: block;
 						}
 
-						>i {
-							display: inline-block;
-							font-weight: bold;
-							margin-right: $icon-spacing;
+						&.status {
+							color: gray;
+
+							&.public {
+								color: green;
+								font-weight: green;
+							}
+
+							>i {
+								display: inline-block;
+								font-weight: bold;
+								margin-right: $icon-spacing;
+							}
 						}
 					}
 				}
-			}
 
-			>.name {
-				display: block;
-				font-size: larger;
-			}
+				>.desc {
+					font-size: .7rem;
+					line-height: 1rem;
+					white-space: pre-wrap;
 
-			>.desc {
-				font-size: .7rem;
-				line-height: 1rem;
-				white-space: pre-wrap;
+					// Text hidden beyond 3 lines
+					max-height: 3rem;
+					overflow: hidden;
 
-				// Text hidden beyond 3 lines
-				max-height: 3rem;
-				overflow: hidden;
+					// Special behaviour for Chrome
+					display: -webkit-box;
+					-webkit-line-clamp: 3;
+					-webkit-box-orient: vertical;
+					text-overflow: ellipsis;
+				}
 
-				// Special behaviour for Chrome
-				display: -webkit-box;
-				-webkit-line-clamp: 3;
-				-webkit-box-orient: vertical;
-				text-overflow: ellipsis;
-			}
-
-			>* + * {
-				margin-top: 10px;
+				>* + * {
+					margin-top: 10px;
+				}
 			}
 
 		}
