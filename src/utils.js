@@ -1,5 +1,5 @@
 import $ from 'jquery';
-import {ElMessageBox, ElMessage} from 'element-plus';
+import {ElMessageBox, ElMessage, ElLoading} from 'element-plus';
 import moment from 'moment';
 
 const VERSION_STAMP_RESPONSE = /^VersionStamp: (.+)$/m;
@@ -35,6 +35,22 @@ export function alertError(error) {
 	ElMessageBox.alert(message, 'Error', {
 		confirmButtonText: 'Ok',
 		type: 'error',
+	});
+}
+
+export function promptConfirm(title, message, confirmButtonText, type = 'warning') {
+	return ElMessageBox.confirm(message, title, {
+		confirmButtonText,
+		cancelButtonText: 'Cancel',
+		type,
+	});
+}
+
+export function showLoading(text) {
+	return ElLoading.service({
+		lock: true,
+		text,
+		background: 'rgba(0, 0, 0, 0.7)',
 	});
 }
 

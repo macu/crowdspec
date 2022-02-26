@@ -13,6 +13,9 @@
 		@play-video="playVideo"
 		@rendered="$emit('rendered')"
 		/>
+	<p v-else>
+		Failed to load spec.
+	</p>
 </div>
 </template>
 

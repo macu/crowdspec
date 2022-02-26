@@ -45,7 +45,7 @@ const (
 func recordSpecBlocksUpdated(db DBConn, r *http.Request, userID uint, specID int64) int {
 	_, err := db.Exec(`UPDATE spec SET blocks_updated_at=$2 WHERE id=$1`, specID, time.Now())
 	if err != nil {
-		logError(r, userID, fmt.Errorf("recording update time on spec: %w", err))
+		logError(r, &userID, fmt.Errorf("recording update time on spec: %w", err))
 		return http.StatusInternalServerError
 	}
 	return http.StatusOK

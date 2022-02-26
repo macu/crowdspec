@@ -20,8 +20,9 @@ const sessionTokenCookieRenewIfExpiresIn = time.Hour * 24 * 29
 
 var loginPageTemplate = template.Must(template.ParseFiles("html/login.html"))
 
-// AuthenticatedRoute is a request handler that also accepts *sql.DB and the authenticated userID.
-type AuthenticatedRoute func(*sql.DB, uint, http.ResponseWriter, *http.Request)
+// AuthenticatedRoute is a request handler that also accepts *sql.DB,
+// and the authenticated userID or nil if no one is logged in.
+type AuthenticatedRoute func(*sql.DB, *uint, http.ResponseWriter, *http.Request)
 
 func isAjax(r *http.Request) bool {
 	return strings.ToLower(r.Header.Get("X-Requested-With")) == "xmlhttprequest"
@@ -31,7 +32,10 @@ func isAjax(r *http.Request) bool {
 // the authenticated user ID and occasionally updates the expiry of the session cookie.
 // The wrapped handler is not called and 401 is returned if no user is authenticated.
 func makeAuthenticator(db *sql.DB) func(handler AuthenticatedRoute) func(http.ResponseWriter, *http.Request) {
-	selectUserStmt, err := db.Prepare("SELECT user_id, expires FROM user_session WHERE token=$1 AND expires>$2")
+
+	selectUserStmt, err := db.Prepare(
+		`SELECT user_id, expires FROM user_session WHERE token=$1 AND expires>$2`,
+	)
 	if err != nil {
 		panic(err)
 	}
@@ -42,75 +46,56 @@ func makeAuthenticator(db *sql.DB) func(handler AuthenticatedRoute) func(http.Re
 		// Return standard http.Handler which calls the authenticated handler passing db and userID
 		return func(w http.ResponseWriter, r *http.Request) {
 
+			var userID *uint
+
 			// Read auth cookie
 			sessionTokenCookie, err := r.Cookie(sessionTokenCookieName)
-			if err == http.ErrNoCookie { // r.Cookie returns only ErrNoCookie or nil for error
-				if isAjax(r) {
-					w.WriteHeader(http.StatusForbidden)
-				} else {
-					// Redirect to login if no auth cookie
-					http.Redirect(w, r, "/login", http.StatusSeeOther)
-				}
-				return
-			}
 
-			// Look up session and read authenticated userID
-			now := time.Now()
-			var userID uint
-			var expires time.Time
-			err = selectUserStmt.QueryRow(sessionTokenCookie.Value, now).Scan(&userID, &expires)
-			if err == sql.ErrNoRows {
-				if isAjax(r) {
-					w.WriteHeader(http.StatusForbidden)
-				} else {
-					// Redirect to login if no valid session
-					http.Redirect(w, r, "/login", http.StatusSeeOther)
-				}
-				return
-			} else if err != nil {
-				logError(r, 0, fmt.Errorf("loading user from session token: %w", err))
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
+			if err == nil {
 
-			// Refresh session and cookie if old
-			if expires.Before(now.Add(sessionTokenCookieRenewIfExpiresIn)) {
-
-				// Update session expires time
-				expires := now.Add(sessionTokenCookieExpiry)
-				_, err = db.Exec(
-					`UPDATE user_session SET expires=$1 WHERE token=$2`,
-					expires, sessionTokenCookie.Value)
-				if err != nil {
-					logError(r, userID, fmt.Errorf("updating session expiry: %w", err))
+				// Look up session and read authenticated userID
+				now := time.Now()
+				var expires time.Time
+				err = selectUserStmt.QueryRow(sessionTokenCookie.Value, now).Scan(&userID, &expires)
+				if err == sql.ErrNoRows {
+					userID = nil
+				} else if err != nil {
+					logError(r, nil, fmt.Errorf("loading user from session token: %w", err))
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
 
-				// Update cookie expires time
-				http.SetCookie(w, &http.Cookie{
-					Name:     sessionTokenCookieName,
-					Value:    sessionTokenCookie.Value,
-					Path:     "/",
-					Expires:  expires,
-					HttpOnly: true,                    // don't expose cookie to JavaScript
-					SameSite: http.SameSiteStrictMode, // send in first-party contexts only
-				})
+				if userID != nil {
+					// Refresh session and cookie if old
+					if expires.Before(now.Add(sessionTokenCookieRenewIfExpiresIn)) {
+
+						// Update session expires time
+						expires := now.Add(sessionTokenCookieExpiry)
+						_, err = db.Exec(
+							`UPDATE user_session SET expires=$1 WHERE token=$2`,
+							expires, sessionTokenCookie.Value)
+						if err != nil {
+							logError(r, userID, fmt.Errorf("updating session expiry: %w", err))
+							w.WriteHeader(http.StatusInternalServerError)
+							return
+						}
+
+						// Update cookie expires time
+						http.SetCookie(w, &http.Cookie{
+							Name:     sessionTokenCookieName,
+							Value:    sessionTokenCookie.Value,
+							Path:     "/",
+							Expires:  expires,
+							HttpOnly: true,                    // don't expose cookie to JavaScript
+							SameSite: http.SameSiteStrictMode, // send in first-party contexts only
+						})
+					}
+				}
+
 			}
 
 			// Invoke route with authenticated user info
 			handler(db, userID, w, r)
-		}
-	}
-}
-
-func makeAdminAuthenticatedRoute(h AuthenticatedRoute) AuthenticatedRoute {
-	return func(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) {
-		if userID == adminUserID {
-			h(db, userID, w, r)
-		} else {
-			logError(r, userID, fmt.Errorf("forbidden admin access"))
-			w.WriteHeader(http.StatusForbidden)
 		}
 	}
 }
@@ -124,7 +109,7 @@ func makeLoginHandler(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 			w.WriteHeader(statusCode)
 		}
 		if err != nil {
-			logError(r, 0, err)
+			logError(r, nil, err)
 		}
 		loginPageTemplate.Execute(w, struct {
 			Error        string
@@ -278,13 +263,17 @@ func authUser(w http.ResponseWriter, r *http.Request, db DBConn, userID uint) er
 
 }
 
-func logoutHandler(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) {
+func ajaxLogoutHandler(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
 
 	sessionTokenCookie, _ := r.Cookie(sessionTokenCookieName)
 
-	_, err := db.Exec("DELETE FROM user_session WHERE token=$1", sessionTokenCookie.Value)
+	_, err := db.Exec(
+		"DELETE FROM user_session WHERE token=$1",
+		sessionTokenCookie.Value,
+	)
 	if err != nil {
-		logError(r, userID, fmt.Errorf("deleting session: %w", err))
+		logError(r, &userID, fmt.Errorf("deleting session: %w", err))
+		return false, http.StatusInternalServerError
 	}
 
 	http.SetCookie(w, &http.Cookie{
@@ -296,7 +285,8 @@ func logoutHandler(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reque
 		SameSite: http.SameSiteStrictMode, // send in first-party contexts only
 	})
 
-	http.Redirect(w, r, "/login", http.StatusSeeOther)
+	return true, http.StatusOK
+
 }
 
 func deleteExpiredSessions(db *sql.DB) error {

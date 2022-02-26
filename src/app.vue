@@ -3,17 +3,24 @@
 
 	<header>
 		<h1 @click="gotoIndex()">CrowdSpec</h1>
-		<div>
+		<div v-if="loadingUser">
+			<span>Loading...</span>
+		</div>
+		<div v-else-if="loggedIn">
 			<el-button @click="openEditProfile()" type="text" class="username-button">
 				<username :username="username" :highlight="highlight"/>
 			</el-button>
 			<el-button @click="logout()">Log out</el-button>
 		</div>
+		<div v-else>
+			<el-button @click="gotoLogin()">Log in</el-button>
+			<el-button @click="gotoSignup()">Sign up</el-button>
+		</div>
 	</header>
 
 	<router-view class="page-area"/>
 
-	<edit-profile-modal ref="editProfileModal"/>
+	<edit-profile-modal v-if="loggedIn" ref="editProfileModal"/>
 
 </div>
 </template>
@@ -21,6 +28,7 @@
 <script>
 import Username from './widgets/username.vue';
 import EditProfileModal from './widgets/edit-profile-modal.vue';
+import {promptConfirm} from './utils.js';
 
 export default {
 	components: {
@@ -28,6 +36,12 @@ export default {
 		EditProfileModal,
 	},
 	computed: {
+		loadingUser() {
+			return this.$store.getters.loadingUser;
+		},
+		loggedIn() {
+			return this.$store.getters.loggedIn;
+		},
 		username() {
 			return this.$store.getters.username;
 		},
@@ -35,14 +49,31 @@ export default {
 			return this.$store.getters.userSettings.userProfile.highlightUsername;
 		},
 	},
+	mounted() {
+		this.$store.dispatch('loadAuth');
+	},
 	methods: {
+		gotoLogin() {
+			window.location.href = '/login';
+		},
+		gotoSignup() {
+			window.location.href = '/signup';
+		},
 		gotoIndex() {
 			if (this.$route.name !== 'index') {
 				this.$router.push({name: 'index'});
 			}
 		},
 		logout() {
-			window.location.href = '/logout';
+			promptConfirm(
+				null,
+				'Please confirm that you wish to log out.',
+				'Log out',
+			).then(() => {
+				this.$store.dispatch('logOut');
+			}).catch(() => {
+				// Cancelled
+			});
 		},
 		openEditProfile() {
 			this.$refs.editProfileModal.show();

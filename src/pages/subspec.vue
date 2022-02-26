@@ -8,10 +8,10 @@
 			<template v-if="enableEditing">
 				<el-button
 					@click="openSubspecCommunity()"
-					:type="!!unreadCount ? 'primary' : 'default'"
+					:type="showUnreadCount ? 'primary' : 'default'"
 					:disabled="choosingAddPosition">
 					<i class="material-icons">forum</i>
-					<template v-if="showUnreadOnly || unreadCount">
+					<template v-if="showUnreadCount">
 						<template v-if="unreadCount">{{unreadCount}} unread</template>
 					</template>
 					<template v-else-if="commentsCount">{{commentsCount}}</template>
@@ -29,9 +29,9 @@
 				</span>
 				<el-button
 					@click="openSubspecCommunity()"
-					:type="!!unreadCount ? 'primary' : 'default'">
+					:type="showUnreadCount ? 'primary' : 'default'">
 					<i class="material-icons">forum</i>
-					<template v-if="showUnreadOnly || unreadCount">
+					<template v-if="showUnreadCount">
 						<template v-if="unreadCount">{{unreadCount}} unread</template>
 					</template>
 					<template v-else-if="commentsCount">{{commentsCount}}</template>
@@ -106,7 +106,12 @@ export default {
 			return this.$store.getters.currentlyMovingBlocks;
 		},
 		showUnreadOnly() {
-			return this.$store.getters.userSettings.community.unreadOnly;
+			return this.$store.getters.loggedIn &&
+				this.$store.getters.userSettings.community.unreadOnly;
+		},
+		showUnreadCount() {
+			return this.$store.getters.loggedIn &&
+				!!this.unreadCount;
 		},
 	},
 	beforeRouteEnter(to, from, next) {
@@ -144,7 +149,10 @@ export default {
 				this.$router.replace({
 					name: 'ajax-error',
 					params: {code: jqXHR.status},
-					query: {url: encodeURIComponent(this.$route.fullPath)},
+					query: {
+						e: 'subspec',
+						url: encodeURIComponent(this.$route.fullPath)
+					},
 				});
 			});
 		},

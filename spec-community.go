@@ -49,7 +49,7 @@ const (
 	CommunityTargetComment = "comment"
 )
 
-func loadCommentsPage(r *http.Request, db DBConn, userID uint,
+func loadCommentsPage(r *http.Request, db DBConn, userID *uint,
 	targetType string, targetID int64,
 	pageSize uint, updatedBefore *time.Time, unreadOnly bool) ([]*Comment, bool, uint, uint, int) {
 
@@ -60,7 +60,11 @@ func loadCommentsPage(r *http.Request, db DBConn, userID uint,
 
 	var args = []interface{}{targetType, targetID, userID, pageSize}
 
-	var unreadCountField = `(SELECT COUNT(*)
+	var unreadCountField string
+	if userID == nil {
+		unreadCountField = `0 AS unread_count`
+	} else {
+		unreadCountField = `(SELECT COUNT(*)
 		FROM spec_community_comment AS subc
 		LEFT JOIN spec_community_read AS subr
 			ON subr.user_id = $3
@@ -69,11 +73,11 @@ func loadCommentsPage(r *http.Request, db DBConn, userID uint,
 		WHERE subc.target_type = 'comment' AND subc.target_id = c.id
 			AND subr.user_id IS NULL
 		) AS unread_count`
+	}
 
 	var unreadOnlyCond string
 	var commentsCountField string
-
-	if unreadOnly {
+	if unreadOnly && userID != nil {
 		// Limit to unread comments
 		unreadOnlyCond = `AND NOT EXISTS(
 			SELECT *
@@ -90,33 +94,44 @@ func loadCommentsPage(r *http.Request, db DBConn, userID uint,
 			) AS comments_count`
 	}
 
-	var userReadField = `(SELECT EXISTS(
-		SELECT *
-		FROM spec_community_read AS r
-		WHERE r.user_id = $3 AND r.target_type = 'comment' AND r.target_id = c.id
+	var userReadField string
+	if userID == nil {
+		userReadField = `FALSE AS user_read`
+	} else {
+		userReadField = `(SELECT EXISTS(SELECT *
+			FROM spec_community_read AS r
+			WHERE r.user_id = $3 AND r.target_type = 'comment' AND r.target_id = c.id
 		)) AS user_read`
+	}
 
 	var unionUsersOwnComments string
 	var updatedBeforeCond string
-
 	if updatedBefore == nil {
-		// Select all of the current user's own comments
-		unionUsersOwnComments =
-			`(SELECT c.id, c.user_id, c.created_at, c.updated_at, c.comment_body, u.username,
-				'' AS highlight, -- blank because highlight for current user is already known
-				` + unreadCountField + `,
-				` + commentsCountField + `,
-				` + userReadField + `
-			FROM spec_community_comment AS c
-			INNER JOIN user_account AS u
-				ON u.id = c.user_id
-			WHERE c.target_type = $1 AND c.target_id = $2
-				AND c.user_id = $3
-				` + unreadOnlyCond + `
-			ORDER BY c.updated_at)
-			UNION`
+		if userID != nil {
+			// Select all of the current user's own comments:
+			// highlight for current user is already known
+			unionUsersOwnComments =
+				`(SELECT c.id, c.user_id, c.created_at, c.updated_at,
+					c.comment_body, u.username, '' AS highlight,
+					` + unreadCountField + `,
+					` + commentsCountField + `,
+					` + userReadField + `
+				FROM spec_community_comment AS c
+				INNER JOIN user_account AS u
+					ON u.id = c.user_id
+				WHERE c.target_type = $1 AND c.target_id = $2
+					AND c.user_id = $3
+					` + unreadOnlyCond + `
+				ORDER BY c.updated_at)
+				UNION`
+		}
 	} else {
 		updatedBeforeCond = `AND c.updated_at < ` + argPlaceholder(updatedBefore, &args)
+	}
+
+	var currentUserExclusionCond string
+	if userID != nil {
+		currentUserExclusionCond = `AND c.user_id != $3`
 	}
 
 	// Select pageSize community comments (preceeding updatedBefore if given)
@@ -134,7 +149,7 @@ func loadCommentsPage(r *http.Request, db DBConn, userID uint,
 			INNER JOIN user_account AS u
 				ON u.id = c.user_id
 			WHERE c.target_type = $1 AND c.target_id = $2
-				AND c.user_id != $3
+				`+currentUserExclusionCond+`
 				`+updatedBeforeCond+`
 				`+unreadOnlyCond+`
 			ORDER BY c.updated_at DESC
@@ -163,16 +178,18 @@ func loadCommentsPage(r *http.Request, db DBConn, userID uint,
 
 	if updatedBefore == nil {
 		// Count unread and total comments when loading initial page
-		err = db.QueryRow(
-			`SELECT COUNT(c.id)
+		if userID != nil {
+			err = db.QueryRow(
+				`SELECT COUNT(c.id)
 			FROM spec_community_comment AS c
 			LEFT JOIN spec_community_read AS r
 				ON r.user_id = $3 AND r.target_type = 'comment' AND r.target_id = c.id
 			WHERE c.target_type = $1 AND c.target_id = $2 AND r.user_id IS NULL`,
-			targetType, targetID, userID).Scan(&unreadCount)
-		if err != nil {
-			logError(r, userID, fmt.Errorf("reading unread count: %w", err))
-			return nil, false, 0, 0, http.StatusInternalServerError
+				targetType, targetID, userID).Scan(&unreadCount)
+			if err != nil {
+				logError(r, userID, fmt.Errorf("reading unread count: %w", err))
+				return nil, false, 0, 0, http.StatusInternalServerError
+			}
 		}
 		err = db.QueryRow(
 			`SELECT COUNT(c.id)
@@ -192,7 +209,7 @@ func loadCommentsPage(r *http.Request, db DBConn, userID uint,
 				SELECT *
 				FROM spec_community_comment AS c
 				WHERE c.target_type = $1 AND c.target_id = $2
-					AND c.user_id != $3
+					`+currentUserExclusionCond+`
 					AND c.updated_at < $4
 					`+unreadOnlyCond+`
 				LIMIT 1

@@ -45,7 +45,7 @@
 			@update-unread="contextUpdateUnread"
 			/>
 
-		<div class="new-comment-area">
+		<div v-if="enableWrite" class="new-comment-area">
 			<p v-if="sendingComment">
 				<loading-message message="Posting comment..."/>
 			</p>
@@ -73,7 +73,7 @@
 
 		<div class="controls-area flex-row wrap-reverse">
 			<div class="fill nowraptext" v-text="formattedCommentsCount"/>
-			<el-checkbox v-model="unreadOnly" @change="reloadCommunity()">
+			<el-checkbox v-if="loggedIn" v-model="unreadOnly" @change="reloadCommunity()">
 				Show only unread comments
 			</el-checkbox>
 		</div>
@@ -152,6 +152,7 @@ export default {
 	},
 	props: {
 		specId: Number,
+		enableWrite: Boolean,
 	},
 	emits: ['play-video'],
 	data() {
@@ -171,11 +172,13 @@ export default {
 			sendingComment: false, // during POST
 			onAdjustUnread: null,
 			onAdjustComments: null,
-			unreadOnly: false,
 			reloadingComments: false,
 		};
 	},
 	computed: {
+		loggedIn() {
+			return this.$store.getters.loggedIn;
+		},
 		TARGET_TYPE_SPEC() {
 			return TARGET_TYPE_SPEC;
 		},
@@ -216,6 +219,10 @@ export default {
 				(this.targetType === TARGET_TYPE_COMMENT ? ' sub' : '') +
 				' comment' + ((count !== 1) ? 's' : '');
 		},
+		unreadOnly() {
+			return this.$store.getters.loggedIn &&
+				this.$store.getters.userSettings.community.unreadOnly;
+		},
 	},
 	watch: {
 		addingComment(adding) {
@@ -232,14 +239,12 @@ export default {
 		openCommunity(targetType, targetId, onAdjustUnread = null, onAdjustComments = null) {
 			this.onAdjustUnread = onAdjustUnread;
 			this.onAdjustComments = onAdjustComments;
-			this.unreadOnly = this.$store.getters.userSettings.community.unreadOnly;
 			this.loadCommunity(targetType, targetId);
 			this.showing = true;
 		},
 		openCommunityReview(targetType, targetId, onAdjustUnread = null, onAdjustComments = null) {
 			this.onAdjustUnread = onAdjustUnread;
 			this.onAdjustComments = onAdjustComments;
-			this.unreadOnly = this.$store.getters.userSettings.community.unreadOnly;
 			this.loadCommunity(targetType, targetId, true);
 			this.showing = true;
 		},

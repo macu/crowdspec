@@ -51,8 +51,7 @@ import EditBlockModal from './edit-block-modal.vue';
 import EditUrlModal from './edit-url-modal.vue';
 import {ajaxDeleteBlock, ajaxMoveBlocks} from './ajax.js';
 import {TARGET_TYPE_BLOCK} from './const.js';
-import store from '../store.js';
-import router from '../router.js';
+import {getAppContext} from '../store.js';
 import {idsEq, startAutoscroll} from '../utils.js';
 import {SCRIPT_DRAGULA, loadScript} from '../widgets/script-loader.js';
 import mitt from 'mitt';
@@ -234,7 +233,7 @@ export default {
 					enableEditing: this.enableEditing,
 					justAdded,
 				},
-				app: window.app,
+				app: getAppContext(),
 			});
 
 			// TODO destroy blocks on delete block

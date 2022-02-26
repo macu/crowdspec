@@ -6,11 +6,11 @@
 		<div class="bg"></div>
 
 		<div class="layover" @mouseleave="mouseLeaveLayover()">
-			<template v-if="enableEditing">
+			<template v-if="enableEditingDynamic">
 				<div class="expand-control" :class="{hide: showActions}">
 					<!-- only show community button to admins in collapsed mobile menu when there are unread submissions -->
 					<!-- always show community button to guests, who only make community interactions -->
-					<el-button v-if="showUnreadOnly && !!unreadCount"
+					<el-button v-if="showUnreadCount"
 						@click="openCommunity()"
 						type="primary"
 						size="small"
@@ -71,11 +71,11 @@
 					</template>
 					<template v-else>
 						<el-button @click="openCommunity()"
-							:type="!!unreadCount ? 'primary' : 'default'"
+							:type="showUnreadCount ? 'primary' : 'default'"
 							size="small"
 							round>
 							<i class="material-icons">forum</i>
-							<span v-if="(showUnreadOnly || unreadCount) || commentsCount">
+							<span v-if="showUnreadCount || commentsCount">
 								<template v-if="showUnreadOnly || unreadCount">
 									<template v-if="unreadCount">{{unreadCount}} unread</template>
 								</template>
@@ -101,12 +101,12 @@
 			<div v-else class="visitor-actions">
 				<el-button
 					@click="openCommunity()"
-					:type="!!unreadCount ? 'primary' : 'default'"
+					:type="showUnreadCount ? 'primary' : 'default'"
 					size="small"
 					round>
 					<i class="material-icons">forum</i>
 					<span>
-						<template v-if="showUnreadOnly || unreadCount">
+						<template v-if="showUnreadCount">
 							<template v-if="unreadCount">{{unreadCount}} unread</template>
 						</template>
 						<template v-else-if="commentsCount">{{commentsCount}}</template>
@@ -212,6 +212,9 @@ export default {
 		REF_TYPE_SUBSPEC() {
 			return REF_TYPE_SUBSPEC;
 		},
+		enableEditingDynamic() {
+			return this.$store.getters.loggedIn && this.enableEditing;
+		},
 		showDeleteButton() {
 			switch (this.$store.getters.userSettings.blockEditing.deleteButton) {
 				case 'modal':
@@ -261,7 +264,12 @@ export default {
 			return this.focusActions || this.currentlyMovingBlocks;
 		},
 		showUnreadOnly() {
-			return this.$store.getters.userSettings.community.unreadOnly;
+			return this.$store.getters.loggedIn &&
+				this.$store.getters.userSettings.community.unreadOnly;
+		},
+		showUnreadCount() {
+			return this.$store.getters.loggedIn &&
+				!!this.unreadCount;
 		},
 		clearRef() {
 			// whether to add {clear: both} to ref item area

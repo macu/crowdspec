@@ -125,7 +125,7 @@ type communityCommentsPage struct {
 	RenderTime time.Time `json:"renderTime"`
 }
 
-func extractValidCommunityTarget(r *http.Request, userID uint) (int64, string, int) {
+func extractValidCommunityTarget(r *http.Request, userID *uint) (int64, string, int) {
 	targetID, err := AtoInt64(r.FormValue("targetId"))
 	if err != nil {
 		logError(r, userID, err)
@@ -142,7 +142,7 @@ func extractValidCommunityTarget(r *http.Request, userID uint) (int64, string, i
 	}
 }
 
-func ajaxSpecLoadCommunity(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
+func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
 	// GET
 
 	specID, err := AtoInt64(r.FormValue("specId"))
@@ -333,14 +333,21 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID uint, w http.ResponseWriter, r *ht
 			RenderTime:    time.Now(),
 		}
 
+		var userReadField string
+		if userID == nil {
+			userReadField = `FALSE AS user_read`
+		} else {
+			userReadField = `(SELECT EXISTS(
+					SELECT r.user_id FROM spec_community_read AS r
+					WHERE r.user_id = $1 AND r.target_type = $2 AND r.target_id = $3
+				)) AS user_read`
+		}
+
 		err = db.QueryRow(`
 			SELECT c.id, c.created_at, c.updated_at, c.user_id, u.username,
 				u.user_settings::json#>>'{userProfile,highlightUsername}' AS highlight,
 				c.target_type, c.target_id, c.comment_body,
-				(SELECT EXISTS(
-					SELECT r.user_id FROM spec_community_read AS r
-					WHERE r.user_id = $1 AND r.target_type = $2 AND r.target_id = $3
-				)) AS user_read
+				`+userReadField+`
 			FROM spec_community_comment AS c
 			INNER JOIN user_account AS u
 				ON u.id = c.user_id
@@ -477,7 +484,7 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID uint, w http.ResponseWriter, r *ht
 	}
 }
 
-func ajaxSpecCommunityLoadCommentsPage(db *sql.DB, userID uint,
+func ajaxSpecCommunityLoadCommentsPage(db *sql.DB, userID *uint,
 	w http.ResponseWriter, r *http.Request) (interface{}, int) {
 
 	specID, err := AtoInt64(r.FormValue("specId"))
@@ -526,26 +533,26 @@ func ajaxSpecCommunityAddComment(db *sql.DB, userID uint, w http.ResponseWriter,
 
 	specID, err := AtoInt64(r.FormValue("specId"))
 	if err != nil {
-		logError(r, userID, fmt.Errorf("invalid specId: %w", err))
+		logError(r, &userID, fmt.Errorf("invalid specId: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
-	targetID, targetType, status := extractValidCommunityTarget(r, userID)
+	targetID, targetType, status := extractValidCommunityTarget(r, &userID)
 	if status != http.StatusOK {
 		return nil, status
 	}
 
-	if access, status := verifyAddComment(r, db, userID, specID, targetType, targetID); !access {
+	if access, status := verifyAddComment(r, db, &userID, specID, targetType, targetID); !access {
 		return nil, status
 	}
 
 	body := strings.TrimSpace(r.FormValue("body"))
 	if body == "" {
-		logError(r, userID, fmt.Errorf("empty comment body"))
+		logError(r, &userID, fmt.Errorf("empty comment body"))
 		return nil, http.StatusBadRequest
 	}
 
-	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, &userID, func(tx *sql.Tx) (interface{}, int) {
 
 		var now = time.Now()
 		var c = Comment{
@@ -563,7 +570,7 @@ func ajaxSpecCommunityAddComment(db *sql.DB, userID uint, w http.ResponseWriter,
 			) RETURNING id, comment_body, (SELECT username FROM user_account WHERE id = $4)
 			`, specID, targetType, targetID, userID, now, now, body).Scan(&c.ID, &c.Body, &c.Username)
 		if err != nil {
-			logError(r, userID, fmt.Errorf("adding comment: %w", err))
+			logError(r, &userID, fmt.Errorf("adding comment: %w", err))
 			return nil, http.StatusInternalServerError
 		}
 
@@ -576,7 +583,7 @@ func ajaxSpecCommunityAddComment(db *sql.DB, userID uint, w http.ResponseWriter,
 			)`, userID, CommunityTargetComment, c.ID, time.Now(),
 		)
 		if err != nil {
-			logError(r, userID, fmt.Errorf("marking new comment read: %w", err))
+			logError(r, &userID, fmt.Errorf("marking new comment read: %w", err))
 			return nil, http.StatusInternalServerError
 		}
 
@@ -592,27 +599,27 @@ func ajaxSpecCommunityUpdateComment(db *sql.DB, userID uint, w http.ResponseWrit
 
 	specID, err := AtoInt64(r.FormValue("specId"))
 	if err != nil {
-		logError(r, userID, fmt.Errorf("invalid specId: %w", err))
+		logError(r, &userID, fmt.Errorf("invalid specId: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
 	commentID, err := AtoInt64(r.FormValue("commentId"))
 	if err != nil {
-		logError(r, userID, fmt.Errorf("invalid commentId: %w", err))
+		logError(r, &userID, fmt.Errorf("invalid commentId: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
-	if access, status := verifyUpdateComment(r, db, userID, specID, commentID); !access {
+	if access, status := verifyUpdateComment(r, db, &userID, specID, commentID); !access {
 		return nil, status
 	}
 
 	body := strings.TrimSpace(r.FormValue("body"))
 	if body == "" {
-		logError(r, userID, fmt.Errorf("empty comment body"))
+		logError(r, &userID, fmt.Errorf("empty comment body"))
 		return nil, http.StatusBadRequest
 	}
 
-	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, &userID, func(tx *sql.Tx) (interface{}, int) {
 
 		var comment = struct {
 			ID      int64     `json:"id"`
@@ -631,7 +638,7 @@ func ajaxSpecCommunityUpdateComment(db *sql.DB, userID uint, w http.ResponseWrit
 			RETURNING user_id, comment_body
 			`, commentID, body, comment.Updated).Scan(&comment.UserID, &comment.Body)
 		if err != nil {
-			logError(r, userID, fmt.Errorf("updating comment: %w", err))
+			logError(r, &userID, fmt.Errorf("updating comment: %w", err))
 			return nil, http.StatusInternalServerError
 		}
 
@@ -644,25 +651,25 @@ func ajaxSpecCommunityDeleteComment(db *sql.DB, userID uint, w http.ResponseWrit
 
 	specID, err := AtoInt64(r.FormValue("specId"))
 	if err != nil {
-		logError(r, userID, fmt.Errorf("invalid specId: %w", err))
+		logError(r, &userID, fmt.Errorf("invalid specId: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
 	commentID, err := AtoInt64(r.FormValue("commentId"))
 	if err != nil {
-		logError(r, userID, fmt.Errorf("invalid commentId: %w", err))
+		logError(r, &userID, fmt.Errorf("invalid commentId: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
-	if access, status := verifyDeleteComment(r, db, userID, specID, commentID); !access {
+	if access, status := verifyDeleteComment(r, db, &userID, specID, commentID); !access {
 		return nil, status
 	}
 
-	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, &userID, func(tx *sql.Tx) (interface{}, int) {
 
 		_, err := tx.Exec(`DELETE FROM spec_community_comment WHERE id = $1`, commentID)
 		if err != nil {
-			logError(r, userID, fmt.Errorf("deleting comment: %w", err))
+			logError(r, &userID, fmt.Errorf("deleting comment: %w", err))
 			return nil, http.StatusInternalServerError
 		}
 
@@ -673,14 +680,14 @@ func ajaxSpecCommunityDeleteComment(db *sql.DB, userID uint, w http.ResponseWrit
 func ajaxSpecCommunityMarkRead(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
 	// POST
 
-	targetID, targetType, status := extractValidCommunityTarget(r, userID)
+	targetID, targetType, status := extractValidCommunityTarget(r, &userID)
 	if status != http.StatusOK {
 		return nil, status
 	}
 
 	read := AtoBool(r.FormValue("read"))
 
-	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, &userID, func(tx *sql.Tx) (interface{}, int) {
 
 		var existing bool
 
@@ -692,7 +699,7 @@ func ajaxSpecCommunityMarkRead(db *sql.DB, userID uint, w http.ResponseWriter, r
 			)`, userID, targetType, targetID,
 		).Scan(&existing)
 		if err != nil {
-			logError(r, userID, fmt.Errorf("checking whether user read: %w", err))
+			logError(r, &userID, fmt.Errorf("checking whether user read: %w", err))
 			return nil, http.StatusInternalServerError
 		}
 
@@ -708,7 +715,7 @@ func ajaxSpecCommunityMarkRead(db *sql.DB, userID uint, w http.ResponseWriter, r
 					userID, targetType, targetID,
 				)
 				if err != nil {
-					logError(r, userID, fmt.Errorf("marking unread: %w", err))
+					logError(r, &userID, fmt.Errorf("marking unread: %w", err))
 					return nil, http.StatusInternalServerError
 				}
 			}
@@ -721,7 +728,7 @@ func ajaxSpecCommunityMarkRead(db *sql.DB, userID uint, w http.ResponseWriter, r
 				userID, targetType, targetID, time.Now(),
 			)
 			if err != nil {
-				logError(r, userID, fmt.Errorf("marking read: %w", err))
+				logError(r, &userID, fmt.Errorf("marking read: %w", err))
 				return nil, http.StatusInternalServerError
 			}
 		}

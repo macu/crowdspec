@@ -79,6 +79,11 @@ postgres=#
 
 ## Changelog
 
+### 2022-02
+
+- [x] Upgrade to Vue 3
+- [x] Make public specs publicly accessible
+
 ### 2022-01
 
 - [x] Refactoring

@@ -1,19 +1,21 @@
 import './_styles/app.scss';
 
-import { createApp } from 'vue';
+import {createApp} from 'vue';
 import ElementPlus from 'element-plus';
 import ElementPlusLocaleEn from 'element-en';
 
 import App from './app.vue';
 import router from './router.js';
-import store from './store.js';
+import store, {registerApp} from './store.js';
 
-let app = Vue.createApp(App);
+export const app = createApp(App);
+
+registerApp(app); // register for programmatically instantiated components
 
 window.app = app; // required for appContext in mounted blocks
 
 app.use(ElementPlus, {
-    locale: ElementPlusLocaleEn,
+	locale: ElementPlusLocaleEn,
 });
 app.use(router);
 app.use(store);

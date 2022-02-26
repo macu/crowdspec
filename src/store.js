@@ -1,5 +1,6 @@
 import $ from 'jquery';
 import {createStore} from 'vuex';
+import {alertError} from './utils.js';
 
 import {idsEq, defaultUserSettings} from './utils.js';
 import {OWNER_TYPE_USER} from './spec/const.js';
@@ -8,37 +9,58 @@ const $window = $(window);
 const MOBILE_MAX_WIDTH = 767;
 const MEDIUM_MAX_WIDTH = 991;
 
-export const store = Vuex.createStore({
+let app = null;
+export function registerApp(appContext) {
+	app = appContext;
+}
+export function getAppContext() {
+	return app;
+}
+
+export const store = createStore({
 	state() {
 		return {
 			currentTime: Date.now(), // updated every minute
 			windowWidth: $window.width(),
 			windowHeight: $window.height(),
+
+			currentSpec: null,
+			savedScrollPosition: null, // set when returning to routes in history
+			currentSpecScrollTop: null, // saved when leaving spec to restore on forward navigation
 			dragging: false, // drag operation in progress; lock down interface
 			movingBlockIds: [], // ids of blocks being moved
 			movingBlocksSourceSubspecId: null, // id of source subspec if any for current move operation
-			savedScrollPosition: null, // set momentarily when returning to routes in history
-			currentSpec: null,
-			currentSpecScrollTop: null, // saved when leaving spec view for navigation improvements
-			userSettings: window.user.settings,
+
+			user: null,
+			userSettings: null,
 		};
 	},
 	getters: {
+
+		loggedIn(state) {
+			return !!state.user;
+		},
+		loadingUser(state) {
+			return state.user === false; // false means loading
+		},
 		currentUserId(state) {
-			return window.user.id;
+			return state.user ? state.user.id : null;
 		},
 		username(state) {
-			return window.user.username;
+			return state.user ? state.user.username : null;
 		},
 		emailAddress(state) {
-			return window.user.email;
+			return state.user ? state.user.email : null;
 		},
 		userSettings(state) {
-			return $.extend(true, defaultUserSettings(), state.userSettings);
+			return state.user ?
+				$.extend(true, defaultUserSettings(), state.userSettings)
+				: defaultUserSettings();
 		},
 		userIsAdmin(state) {
-			return window.user.admin;
+			return state.user ? state.user.admin : false;
 		},
+
 		mobileViewport(state) {
 			return state.windowWidth <= MOBILE_MAX_WIDTH;
 		},
@@ -67,14 +89,7 @@ export const store = Vuex.createStore({
 				return '90%'; // TODO set pixel width
 			}
 		},
-		currentlyMovingBlocks(state) {
-			return state.movingBlockIds.length > 0;
-		},
-		currentlyMovingBlock(state) {
-			return (blockId) => {
-				return state.movingBlockIds.indexOf(blockId) >= 0;
-			};
-		},
+
 		currentSpecId(state) {
 			return state.currentSpec ? state.currentSpec.id : null;
 		},
@@ -85,37 +100,33 @@ export const store = Vuex.createStore({
 			}
 			return false;
 		},
+		currentlyMovingBlocks(state) {
+			return state.movingBlockIds.length > 0;
+		},
+		currentlyMovingBlock(state) {
+			return (blockId) => {
+				return state.movingBlockIds.indexOf(blockId) >= 0;
+			};
+		},
+
 	},
 	mutations: {
+
 		updateWindowDimensions(state) {
 			state.windowWidth = $window.width();
 			state.windowHeight = $window.height();
 		},
+		updateCurrentTime(state) {
+			state.currentTime = Date.now();
+		},
+
+		setUser(state, user) {
+			state.user = user;
+		},
 		setUserSettings(state, settings) {
 			state.userSettings = settings;
 		},
-		startDragging(state) {
-			state.dragging = true;
-		},
-		endDragging(state) {
-			state.dragging = false;
-		},
-		setMovingBlocks(state, payload) {
-			state.movingBlocksSourceSubspecId = payload.subspecId;
-			state.movingBlockIds = payload.blockIds;
-		},
-		endMovingBlocks(state) {
-			state.movingBlocksSourceSubspecId = null;
-			state.movingBlockIds = [];
-		},
-		setSavedScrollPosition(state, position) {
-			console.debug('setSavedScrollPosition', position);
-			state.savedScrollPosition = position;
-		},
-		clearSavedScrollPosition(state) {
-			console.debug('clearSavedScrollPosition');
-			state.savedScrollPosition = null;
-		},
+
 		saveCurrentSpec(state, spec) {
 			console.debug('saveCurrentSpec');
 			if (state.currentSpec && !idsEq(state.currentSpec.id, spec.id)) {
@@ -124,7 +135,36 @@ export const store = Vuex.createStore({
 			}
 			state.currentSpec = spec;
 		},
+		startDragging(state) {
+			// Mouse-powered move operation now in progress
+			state.dragging = true;
+		},
+		endDragging(state) {
+			// Mouse drop
+			state.dragging = false;
+		},
+		setMovingBlocks(state, payload) {
+			// Block multi-select precise move active
+			state.movingBlocksSourceSubspecId = payload.subspecId;
+			state.movingBlockIds = payload.blockIds;
+		},
+		endMovingBlocks(state) {
+			// Cancelled or fulfilled
+			state.movingBlocksSourceSubspecId = null;
+			state.movingBlockIds = [];
+		},
+		setSavedScrollPosition(state, position) {
+			// Receiving saved scroll offset from router to restore navigation
+			console.debug('setSavedScrollPosition', position);
+			state.savedScrollPosition = position;
+		},
+		clearSavedScrollPosition(state) {
+			// called before scrollBehavior is called for the new route
+			console.debug('clearSavedScrollPosition');
+			state.savedScrollPosition = null;
+		},
 		saveCurrentSpecScrollTop(state) {
+			// called before navigating away
 			console.debug('saveCurrentSpecScrollTop');
 			state.currentSpecScrollTop = $window.scrollTop();
 		},
@@ -132,8 +172,28 @@ export const store = Vuex.createStore({
 			state.currentSpec = null;
 			state.currentSpecScrollTop = null;
 		},
-		updateCurrentTime(state) {
-			state.currentTime = Date.now();
+
+	},
+	actions: {
+		loadAuth({commit}) {
+			commit('setUser', false); // false means loading
+			$.get('/ajax/auth').then(response => {
+				commit('setUser', response);
+			}).fail(jqXHR => {
+				commit('setUser', null);
+				if (jqXHR && jqXHR.readyState && jqXHR.status) {
+					if (jqXHR.status === 403) {
+						// Forbidden - not logged in
+						return;
+					}
+				}
+				alertError(jqXHR);
+			});
+		},
+		logOut({commit}) {
+			$.get('/ajax/logout').then(response => {
+				commit('setUser', null);
+			}).fail(alertError);
 		},
 	},
 });

@@ -78,7 +78,7 @@ func loadSubspecHeader(db DBConn, subspecID int64) (*SpecSubspec, error) {
 func recordSubspecBlocksUpdated(db DBConn, r *http.Request, userID uint, subspecID int64) int {
 	_, err := db.Exec(`UPDATE spec_subspec SET blocks_updated_at=$2 WHERE id=$1`, subspecID, time.Now())
 	if err != nil {
-		logError(r, userID, fmt.Errorf("recording update time on subspec: %w", err))
+		logError(r, &userID, fmt.Errorf("recording update time on subspec: %w", err))
 		return http.StatusInternalServerError
 	}
 	return http.StatusOK

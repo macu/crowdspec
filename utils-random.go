@@ -37,11 +37,11 @@ func randomSeed() int64 {
 			return seed
 		}
 
-		logError(nil, 0, fmt.Errorf("reading session ID random generator seed with binary.Read: %w", err))
+		logError(nil, nil, fmt.Errorf("reading session ID random generator seed with binary.Read: %w", err))
 		return time.Now().UnixNano()
 
 	}
 
-	logError(nil, 0, fmt.Errorf("reading session ID random generator seed bytes with crypto/rand: %w", err))
+	logError(nil, nil, fmt.Errorf("reading session ID random generator seed bytes with crypto/rand: %w", err))
 	return time.Now().UnixNano()
 }

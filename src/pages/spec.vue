@@ -24,10 +24,10 @@
 					</span>
 					<el-button
 						@click="openSpecCommunity()"
-						:type="!!unreadCount ? 'primary' : 'default'"
+						:type="showUnreadCount ? 'primary' : 'default'"
 						:disabled="choosingAddPosition">
 						<i class="material-icons">forum</i>
-						<template v-if="showUnreadOnly || unreadCount">
+						<template v-if="showUnreadCount">
 							<template v-if="unreadCount">{{unreadCount}} unread</template>
 						</template>
 						<template v-else-if="commentsCount">{{commentsCount}}</template>
@@ -44,9 +44,9 @@
 					</span>
 					<el-button
 						@click="openSpecCommunity()"
-						:type="!!unreadCount ? 'primary' : 'default'">
+						:type="showUnreadCount ? 'primary' : 'default'">
 						<i class="material-icons">forum</i>
-						<template v-if="showUnreadOnly || unreadCount">
+						<template v-if="showUnreadCount">
 							<template v-if="unreadCount">{{unreadCount}} unread</template>
 						</template>
 						<template v-else-if="commentsCount">{{commentsCount}}</template>
@@ -95,12 +95,14 @@
 		ref="navSpecModal"
 		:spec-id="specId"
 		:subspec-id="subspecId"
+		:enable-editing="enableEditing"
 		@open-create-subspec="openCreateSubspec()"
 		/>
 
 	<community-modal
 		ref="communityModal"
 		:spec-id="specId"
+		:enable-write="enableWriteComments"
 		@play-video="playVideo"
 		/>
 
@@ -154,7 +156,8 @@ export default {
 			return this.$route.name === 'spec';
 		},
 		currentUserOwns() {
-			return this.spec &&
+			return this.$store.getters.loggedIn &&
+				this.spec &&
 				this.spec.ownerType === OWNER_TYPE_USER &&
 				this.$store.getters.currentUserId === this.spec.ownerId;
 		},
@@ -162,11 +165,19 @@ export default {
 			// Currently users may edit only their own specs
 			return this.currentUserOwns;
 		},
+		enableWriteComments() {
+			return this.$store.getters.loggedIn;
+		},
 		choosingAddPosition() {
 			return this.$store.getters.currentlyMovingBlocks;
 		},
 		showUnreadOnly() {
-			return this.$store.getters.userSettings.community.unreadOnly;
+			return this.$store.getters.loggedIn &&
+				this.$store.getters.userSettings.community.unreadOnly;
+		},
+		showUnreadCount() {
+			return this.$store.getters.loggedIn &&
+				!!this.unreadCount;
 		},
 	},
 	beforeRouteEnter(to, from, next) {
@@ -205,7 +216,10 @@ export default {
 				this.$router.replace({
 					name: 'ajax-error',
 					params: {code: jqXHR.status},
-					query: {url: encodeURIComponent(this.$route.fullPath)},
+					query: {
+						e: 'spec',
+						url: encodeURIComponent(this.$route.fullPath),
+					},
 				});
 			});
 		},

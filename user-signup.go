@@ -20,7 +20,7 @@ func makeRequestSignupHandler(db *sql.DB) func(w http.ResponseWriter, r *http.Re
 		username, email, message string, statusCode int, errMsg string, err error,
 	) {
 		if err != nil {
-			logError(r, 0, err)
+			logError(r, nil, err)
 		}
 		if statusCode != 0 {
 			w.WriteHeader(statusCode)
@@ -277,7 +277,7 @@ func makeActivateSignupHandler(db *sql.DB) func(w http.ResponseWriter, r *http.R
 		token string, username string, statusCode int, errMsg string, err error,
 	) {
 		if err != nil {
-			logError(r, 0, err)
+			logError(r, nil, err)
 		}
 		if statusCode != 0 {
 			w.WriteHeader(statusCode)

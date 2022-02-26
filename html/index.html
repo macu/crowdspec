@@ -18,15 +18,6 @@
 
 <script>
 
-// Authenticated user details
-window.user = {
-	id: {{.UserID}},
-	username: "{{.Username}}",
-	email: "{{.EmailAddress}}",
-	settings: {{.Settings}},
-	admin: {{.Admin}},
-};
-
 // Constants defined in server code
 window.const = {
 	appVersion: "{{.VersionStamp}}", // version stamp at load time
@@ -34,6 +25,7 @@ window.const = {
 	specNameMaxLength: {{.SpecNameMaxLength}},
 	blockTitleMaxLength: {{.BlockTitleMaxLength}},
 	urlMaxLength: {{.URLMaxLength}},
+	local: {{.Local}},
 };
 
 </script>

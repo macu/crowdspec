@@ -8,16 +8,25 @@ import (
 
 // Current policy is that only the user who owns the spec may write to it.
 
-func verifyReadSpec(r *http.Request, db DBConn, userID uint, specID int64) (bool, int) {
+func verifyReadSpec(r *http.Request, db DBConn, userID *uint, specID int64) (bool, int) {
 
 	var count uint
-	err := db.QueryRow(
-		`SELECT COUNT(*) FROM spec
-		WHERE id = $1
-			AND (is_public OR
-				(owner_type = $2 AND owner_id = $3)
-			)`,
-		specID, OwnerTypeUser, userID).Scan(&count)
+	var err error
+
+	if userID == nil {
+
+		err = db.QueryRow(
+			`SELECT COUNT(*) FROM spec WHERE id = $1 AND is_public`,
+			specID).Scan(&count)
+
+	} else {
+
+		err = db.QueryRow(
+			`SELECT COUNT(*) FROM spec
+			WHERE id = $1 AND (is_public OR (owner_type = $2 AND owner_id = $3))`,
+			specID, OwnerTypeUser, *userID).Scan(&count)
+
+	}
 
 	if err != nil {
 		logError(r, userID, fmt.Errorf("validating read spec access: %w", err))
@@ -32,14 +41,16 @@ func verifyReadSpec(r *http.Request, db DBConn, userID uint, specID int64) (bool
 	return true, http.StatusOK
 }
 
-func verifyWriteSpec(r *http.Request, db DBConn, userID uint, specID int64) (bool, int) {
+func verifyWriteSpec(r *http.Request, db DBConn, userID *uint, specID int64) (bool, int) {
+
+	if userID == nil {
+		return false, http.StatusForbidden
+	}
 
 	var count uint
 	err := db.QueryRow(
 		`SELECT COUNT(*) FROM spec
-		WHERE id = $1
-			AND owner_type = $2
-			AND owner_id = $3`,
+		WHERE id = $1 AND owner_type = $2 AND owner_id = $3`,
 		specID, OwnerTypeUser, userID).Scan(&count)
 
 	if err != nil {
@@ -55,18 +66,32 @@ func verifyWriteSpec(r *http.Request, db DBConn, userID uint, specID int64) (boo
 	return true, http.StatusOK
 }
 
-func verifyReadSubspec(r *http.Request, db DBConn, userID uint, subspecID int64) (bool, int) {
+func verifyReadSubspec(r *http.Request, db DBConn, userID *uint, subspecID int64) (bool, int) {
 
 	var count uint
-	err := db.QueryRow(
-		`SELECT COUNT(*) FROM spec_subspec
-		INNER JOIN spec
-			ON spec.id = spec_subspec.spec_id
-		WHERE spec_subspec.id = $1
-			AND (spec.is_public OR
-				(spec.owner_type = $2 AND spec.owner_id = $3)
-			)`,
-		subspecID, OwnerTypeUser, userID).Scan(&count)
+	var err error
+
+	if userID == nil {
+
+		err = db.QueryRow(
+			`SELECT COUNT(*) FROM spec_subspec
+			INNER JOIN spec ON spec.id = spec_subspec.spec_id
+			WHERE spec_subspec.id = $1 AND spec.is_public`,
+			subspecID).Scan(&count)
+
+	} else {
+
+		err = db.QueryRow(
+			`SELECT COUNT(*) FROM spec_subspec
+			INNER JOIN spec
+				ON spec.id = spec_subspec.spec_id
+			WHERE spec_subspec.id = $1
+				AND (spec.is_public OR
+					(spec.owner_type = $2 AND spec.owner_id = $3)
+				)`,
+			subspecID, OwnerTypeUser, userID).Scan(&count)
+
+	}
 
 	if err != nil {
 		logError(r, userID, fmt.Errorf("validating read subspec access: %w", err))
@@ -81,7 +106,11 @@ func verifyReadSubspec(r *http.Request, db DBConn, userID uint, subspecID int64)
 	return true, http.StatusOK
 }
 
-func verifyWriteSubspec(r *http.Request, db DBConn, userID uint, subspecID int64) (bool, int) {
+func verifyWriteSubspec(r *http.Request, db DBConn, userID *uint, subspecID int64) (bool, int) {
+
+	if userID == nil {
+		return false, http.StatusForbidden
+	}
 
 	var count uint
 	err := db.QueryRow(
@@ -106,7 +135,11 @@ func verifyWriteSubspec(r *http.Request, db DBConn, userID uint, subspecID int64
 	return true, http.StatusOK
 }
 
-func verifyWriteURL(r *http.Request, db DBConn, userID uint, urlID int64) (bool, int) {
+func verifyWriteURL(r *http.Request, db DBConn, userID *uint, urlID int64) (bool, int) {
+
+	if userID == nil {
+		return false, http.StatusForbidden
+	}
 
 	var count uint
 	err := db.QueryRow(
@@ -131,20 +164,29 @@ func verifyWriteURL(r *http.Request, db DBConn, userID uint, urlID int64) (bool,
 	return true, http.StatusOK
 }
 
-func verifyReadBlock(r *http.Request, db DBConn, userID uint, specID, blockID int64) (bool, int) {
+func verifyReadBlock(r *http.Request, db DBConn, userID *uint, specID, blockID int64) (bool, int) {
 
 	var count uint
-	err := db.QueryRow(
-		`SELECT COUNT(*) FROM spec_block
-		INNER JOIN spec
-			ON spec.id = spec_block.spec_id
-		WHERE
-			spec_block.id = $2
-			AND spec.id = $1
-			AND (spec.is_public OR
-				(spec.owner_type = $3 AND spec.owner_id = $4)
-			)`,
-		specID, blockID, OwnerTypeUser, userID).Scan(&count)
+	var err error
+
+	if userID == nil {
+
+		err = db.QueryRow(
+			`SELECT COUNT(*) FROM spec_block
+			INNER JOIN spec ON spec.id = spec_block.spec_id
+			WHERE spec_block.id = $2 AND spec.id = $1 AND spec.is_public`,
+			specID, blockID).Scan(&count)
+
+	} else {
+
+		err = db.QueryRow(
+			`SELECT COUNT(*) FROM spec_block
+			INNER JOIN spec ON spec.id = spec_block.spec_id
+			WHERE spec_block.id = $2 AND spec.id = $1
+				AND (spec.is_public OR (spec.owner_type = $3 AND spec.owner_id = $4))`,
+			specID, blockID, OwnerTypeUser, userID).Scan(&count)
+
+	}
 
 	if err != nil {
 		logError(r, userID, fmt.Errorf("validating read block access: %w", err))
@@ -159,7 +201,11 @@ func verifyReadBlock(r *http.Request, db DBConn, userID uint, specID, blockID in
 	return true, http.StatusOK
 }
 
-func verifyWriteBlock(r *http.Request, db DBConn, userID uint, blockID int64) (bool, int) {
+func verifyWriteBlock(r *http.Request, db DBConn, userID *uint, blockID int64) (bool, int) {
+
+	if userID == nil {
+		return false, http.StatusForbidden
+	}
 
 	var count uint
 	err := db.QueryRow(
@@ -184,15 +230,19 @@ func verifyWriteBlock(r *http.Request, db DBConn, userID uint, blockID int64) (b
 }
 
 // - verifies the given block belongs to the given spec
-func verifyWriteSpecBlock(r *http.Request, db DBConn, userID uint,
+func verifyWriteSpecBlock(r *http.Request, db DBConn, userID *uint,
 	specID int64, blockID int64) (bool, int) {
 	return verifyWriteSpecSubspecBlocks(r, db, userID, specID, nil, blockID)
 }
 
 // - verifies given subspec belongs to spec
 // - verifies all given blocks belong to spec
-func verifyWriteSpecSubspecBlocks(r *http.Request, db DBConn, userID uint,
+func verifyWriteSpecSubspecBlocks(r *http.Request, db DBConn, userID *uint,
 	specID int64, subspecID *int64, blockIDs ...int64) (bool, int) {
+
+	if userID == nil {
+		return false, http.StatusForbidden
+	}
 
 	args := []interface{}{}
 
@@ -238,8 +288,9 @@ func verifyWriteSpecSubspecBlocks(r *http.Request, db DBConn, userID uint,
 	return true, http.StatusOK
 }
 
+// Validate an association between a spec and ref target.
 // Current policy is that the ref item must belong to the spec it is referenced in.
-func verifyRefAccess(r *http.Request, db DBConn, userID uint,
+func validateRefAccess(r *http.Request, db DBConn, userID *uint,
 	specID int64, refType *string, refID *int64) (bool, int) {
 
 	// Function is used when checking request parameters,
@@ -287,8 +338,12 @@ func verifyRefAccess(r *http.Request, db DBConn, userID uint,
 
 // Community access
 
-func verifyAddComment(r *http.Request, db DBConn, userID uint,
+func verifyAddComment(r *http.Request, db DBConn, userID *uint,
 	specID int64, targetType string, targetID int64) (bool, int) {
+
+	if userID == nil {
+		return false, http.StatusForbidden
+	}
 
 	var count uint
 	var err error
@@ -312,11 +367,8 @@ func verifyAddComment(r *http.Request, db DBConn, userID uint,
 	case "spec":
 		err = db.QueryRow(
 			`SELECT COUNT(*) FROM spec
-				WHERE
-					spec.id = $1
-					AND (spec.is_public
-						OR (spec.owner_type = $2 AND spec.owner_id = $3) -- allow spec owner
-					)`,
+				WHERE spec.id = $1
+					AND (spec.is_public OR (spec.owner_type = $2 AND spec.owner_id = $3))`,
 			specID, OwnerTypeUser, userID).Scan(&count)
 
 	case "subspec":
@@ -348,22 +400,38 @@ func verifyAddComment(r *http.Request, db DBConn, userID uint,
 
 // allow all in public specs
 // allow comment author or spec owner in private specs
-func verifyReadComment(r *http.Request, db DBConn, userID uint, specID, commentID int64) (bool, int) {
+func verifyReadComment(r *http.Request, db DBConn, userID *uint, specID, commentID int64) (bool, int) {
 
 	var count uint
-	err := db.QueryRow(
-		`SELECT COUNT(*)
-		FROM spec_community_comment AS c
-		INNER JOIN spec
-			ON spec.id = c.spec_id
-		WHERE
-			c.id = $2
-			AND spec.id = $1 -- verify spec association
-			AND (spec.is_public
-				OR (spec.owner_type = $3 AND spec.owner_id = $4) -- allow spec owner
-				OR c.user_id = $4 -- allow comment author
-			)`,
-		specID, commentID, OwnerTypeUser, userID).Scan(&count)
+	var err error
+
+	if userID == nil {
+
+		err = db.QueryRow(
+			`SELECT COUNT(*)
+			FROM spec_community_comment AS c
+			INNER JOIN spec ON spec.id = c.spec_id
+			WHERE c.id = $2
+				AND spec.id = $1 -- verify spec association
+				AND spec.is_public`,
+			specID, commentID).Scan(&count)
+
+	} else {
+
+		err = db.QueryRow(
+			`SELECT COUNT(*)
+			FROM spec_community_comment AS c
+			INNER JOIN spec
+				ON spec.id = c.spec_id
+			WHERE c.id = $2
+				AND spec.id = $1 -- verify spec association
+				AND (spec.is_public
+					OR (spec.owner_type = $3 AND spec.owner_id = $4) -- allow spec owner
+					OR c.user_id = $4 -- allow comment author
+				)`,
+			specID, commentID, OwnerTypeUser, userID).Scan(&count)
+
+	}
 
 	if err != nil {
 		logError(r, userID, fmt.Errorf("validating read comment access: %w", err))
@@ -379,7 +447,11 @@ func verifyReadComment(r *http.Request, db DBConn, userID uint, specID, commentI
 }
 
 // allow comment author only
-func verifyUpdateComment(r *http.Request, db DBConn, userID uint, specID, commentID int64) (bool, int) {
+func verifyUpdateComment(r *http.Request, db DBConn, userID *uint, specID, commentID int64) (bool, int) {
+
+	if userID == nil {
+		return false, http.StatusForbidden
+	}
 
 	var count uint
 	err := db.QueryRow(
@@ -407,7 +479,11 @@ func verifyUpdateComment(r *http.Request, db DBConn, userID uint, specID, commen
 }
 
 // allow comment author or spec owner
-func verifyDeleteComment(r *http.Request, db DBConn, userID uint, specID, commentID int64) (bool, int) {
+func verifyDeleteComment(r *http.Request, db DBConn, userID *uint, specID, commentID int64) (bool, int) {
+
+	if userID == nil {
+		return false, http.StatusForbidden
+	}
 
 	var count uint
 	err := db.QueryRow(
@@ -438,7 +514,7 @@ func verifyDeleteComment(r *http.Request, db DBConn, userID uint, specID, commen
 	return true, http.StatusOK
 }
 
-func verifyReadCommunityTarget(r *http.Request, db DBConn, userID uint,
+func verifyReadCommunityTarget(r *http.Request, db DBConn, userID *uint,
 	specID int64, targetType string, targetID int64) (bool, int) {
 	switch targetType {
 	case CommunityTargetSpec:

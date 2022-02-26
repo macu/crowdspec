@@ -22,7 +22,7 @@ func makeRequestPasswordResetHandler(db *sql.DB) func(w http.ResponseWriter, r *
 		statusCode int, errMsg string, err error,
 	) {
 		if err != nil {
-			logError(r, 0, err)
+			logError(r, nil, err)
 		}
 		if statusCode != 0 {
 			w.WriteHeader(statusCode)
@@ -169,7 +169,7 @@ func makeResetPasswordHandler(db *sql.DB) func(w http.ResponseWriter, r *http.Re
 		token, username string, errCode int, errMsg string, err error,
 	) {
 		if err != nil {
-			logError(r, 0, err)
+			logError(r, nil, err)
 		}
 		if errCode != 0 {
 			w.WriteHeader(errCode)

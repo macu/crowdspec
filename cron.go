@@ -10,11 +10,11 @@ func makeCronHandler(db *sql.DB, handler func(*sql.DB) error) func(http.Response
 	return func(w http.ResponseWriter, r *http.Request) {
 		// X-Appengine-Cron is added by App Engine; if a client sends this header, it is removed.
 		if r.Header.Get("X-Appengine-Cron") == "" {
-			logError(r, 0, fmt.Errorf("illegal request to cron"))
+			logError(r, nil, fmt.Errorf("illegal request to cron"))
 			w.WriteHeader(http.StatusForbidden)
 		} else {
 			if err := handler(db); err != nil {
-				logError(r, 0, fmt.Errorf("error running cron handler: %w", err))
+				logError(r, nil, fmt.Errorf("error running cron handler: %w", err))
 				w.WriteHeader(http.StatusInternalServerError)
 			} else {
 				w.WriteHeader(http.StatusOK)

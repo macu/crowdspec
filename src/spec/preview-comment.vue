@@ -5,34 +5,38 @@
 
 		<div class="right">
 
-			<el-checkbox
-				:modelValue="userRead"
-				:disabled="sendingRead"
-				@change="setUserRead"
-				size="small"/>
+			<template v-if="loggedIn">
 
-			<el-tag
-				v-if="userRead"
-				size="small" type="success"
-				@click="setUserRead(false)">
-				Read
-			</el-tag>
-			<el-tag
-				v-else
-				size="small" type="info"
-				@click="setUserRead(true)">
-				Unread
-			</el-tag>
+				<el-checkbox
+					:modelValue="userRead"
+					:disabled="sendingRead"
+					@change="setUserRead"
+					size="small"/>
+
+				<el-tag
+					v-if="userRead"
+					size="small" type="success"
+					@click="setUserRead(false)">
+					Read
+				</el-tag>
+				<el-tag
+					v-else
+					size="small" type="info"
+					@click="setUserRead(true)">
+					Unread
+				</el-tag>
+
+			</template>
 
 			<el-button
 				v-if="showCommunity"
 				@click="openComments()"
-				:type="!!unreadCount ? 'primary' : 'default'"
+				:type="showUnreadCount ? 'primary' : 'default'"
 				size="small"
 				round>
 				<i class="material-icons">forum</i>
-				<span v-if="(showUnreadOnly || unreadCount) || commentsCount">
-					<template v-if="showUnreadOnly || unreadCount">
+				<span v-if="showUnreadCount || commentsCount">
+					<template v-if="showUnreadCount">
 						<template v-if="unreadCount">{{unreadCount}} unread</template>
 					</template>
 					<template v-else-if="commentsCount">{{commentsCount}}</template>
@@ -127,6 +131,9 @@ export default {
 		};
 	},
 	computed: {
+		loggedIn() {
+			return this.$store.getters.loggedIn;
+		},
 		userCanEdit() {
 			return this.$store.getters.currentUserId === this.comment.userId;
 		},
@@ -141,6 +148,10 @@ export default {
 		},
 		commentsCount() {
 			return this.comment.commentsCount || 0;
+		},
+		showUnreadCount() {
+			return this.$store.getters.loggedIn &&
+				!!this.unreadCount;
 		},
 	},
 	watch: {

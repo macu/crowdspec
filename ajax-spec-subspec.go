@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func ajaxSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
+func ajaxSubspec(db *sql.DB, userID *uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
 	// GET
 	query := r.URL.Query()
 
@@ -34,6 +34,18 @@ func ajaxSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request
 		RenderTime: time.Now(),
 	}
 
+	var unreadCountField string
+	if userID == nil {
+		unreadCountField = `0 AS unread_count`
+	} else {
+		unreadCountField = `(SELECT COUNT(*) FROM spec_community_comment AS c
+			LEFT JOIN spec_community_read AS r
+				ON r.user_id = $4 AND r.target_type = 'comment' AND r.target_id = c.id
+			WHERE c.target_type = 'subspec' AND c.target_id = spec_subspec.id
+				AND r.user_id IS NULL
+		) AS unread_count`
+	}
+
 	err = db.QueryRow(`SELECT spec_subspec.created_at,
 		spec_subspec.subspec_name, spec_subspec.subspec_desc,
 		-- spec.spec_name, spec.owner_type, spec.owner_id,
@@ -45,12 +57,7 @@ func ajaxSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request
 			ELSE GREATEST(spec_subspec.updated_at, spec_subspec.blocks_updated_at)
 		END AS last_updated,
 		-- select number of unread comments
-		(SELECT COUNT(*) FROM spec_community_comment AS c
-			LEFT JOIN spec_community_read AS r
-				ON r.user_id = $4 AND r.target_type = 'comment' AND r.target_id = c.id
-			WHERE c.target_type = 'subspec' AND c.target_id = spec_subspec.id
-				AND r.user_id IS NULL
-		) AS unread_count,
+		`+unreadCountField+`,
 		-- select total number of comments
 		(SELECT COUNT(*)
 			FROM spec_community_comment AS c
@@ -79,7 +86,7 @@ func ajaxSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request
 }
 
 // load a list of subspecs for nav or block ref editing
-func ajaxSubspecs(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
+func ajaxSubspecs(db *sql.DB, userID *uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
 	// GET
 	query := r.URL.Query()
 
@@ -129,29 +136,29 @@ func ajaxSpecCreateSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *ht
 
 	err := r.ParseForm()
 	if err != nil {
-		logError(r, userID, err)
+		logError(r, &userID, err)
 		return nil, http.StatusInternalServerError
 	}
 
 	specID, err := AtoInt64(r.Form.Get("specId"))
 	if err != nil {
-		logError(r, userID, fmt.Errorf("parsing specId: %w", err))
+		logError(r, &userID, fmt.Errorf("parsing specId: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
-	if access, status := verifyWriteSpec(r, db, userID, specID); !access {
+	if access, status := verifyWriteSpec(r, db, &userID, specID); !access {
 		return nil, status
 	}
 
 	name := Substr(strings.TrimSpace(r.Form.Get("name")), subspecNameMaxLen)
 	if name == "" {
-		logError(r, userID, fmt.Errorf("subspec name required"))
+		logError(r, &userID, fmt.Errorf("subspec name required"))
 		return nil, http.StatusBadRequest
 	}
 
 	desc := AtoPointerNilIfEmpty(strings.TrimSpace(r.Form.Get("desc")))
 
-	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, &userID, func(tx *sql.Tx) (interface{}, int) {
 
 		var subspec = &SpecSubspec{}
 
@@ -166,7 +173,7 @@ func ajaxSpecCreateSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *ht
 			&subspec.Name, &subspec.Desc)
 
 		if err != nil {
-			logError(r, userID, fmt.Errorf("creating subspec: %w", err))
+			logError(r, &userID, fmt.Errorf("creating subspec: %w", err))
 			return nil, http.StatusInternalServerError
 		}
 
@@ -179,29 +186,29 @@ func ajaxSpecSaveSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 
 	err := r.ParseForm()
 	if err != nil {
-		logError(r, userID, err)
+		logError(r, &userID, err)
 		return nil, http.StatusInternalServerError
 	}
 
 	subspecID, err := AtoInt64(r.Form.Get("subspecId"))
 	if err != nil {
-		logError(r, userID, fmt.Errorf("parsing subspecId: %w", err))
+		logError(r, &userID, fmt.Errorf("parsing subspecId: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
-	if access, status := verifyWriteSubspec(r, db, userID, subspecID); !access {
+	if access, status := verifyWriteSubspec(r, db, &userID, subspecID); !access {
 		return nil, status
 	}
 
 	name := Substr(strings.TrimSpace(r.Form.Get("name")), subspecNameMaxLen)
 	if name == "" {
-		logError(r, userID, fmt.Errorf("subspec name required"))
+		logError(r, &userID, fmt.Errorf("subspec name required"))
 		return nil, http.StatusBadRequest
 	}
 
 	desc := AtoPointerNilIfEmpty(strings.TrimSpace(r.Form.Get("desc")))
 
-	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, &userID, func(tx *sql.Tx) (interface{}, int) {
 
 		s := &SpecSubspec{
 			ID: subspecID,
@@ -229,7 +236,7 @@ func ajaxSpecSaveSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 		).Scan(&s.SpecID, &s.Created, &s.Updated, &s.Name, &s.Desc, &s.UnreadCount, &s.CommentsCount)
 
 		if err != nil {
-			logError(r, userID, fmt.Errorf("updating subspec: %w", err))
+			logError(r, &userID, fmt.Errorf("updating subspec: %w", err))
 			return nil, http.StatusInternalServerError
 		}
 
@@ -242,21 +249,21 @@ func ajaxSpecDeleteSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *ht
 
 	err := r.ParseForm()
 	if err != nil {
-		logError(r, userID, err)
+		logError(r, &userID, err)
 		return nil, http.StatusInternalServerError
 	}
 
 	subspecID, err := AtoInt64(r.Form.Get("subspecId"))
 	if err != nil {
-		logError(r, userID, fmt.Errorf("parsing subspecId: %w", err))
+		logError(r, &userID, fmt.Errorf("parsing subspecId: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
-	if access, status := verifyWriteSubspec(r, db, userID, subspecID); !access {
+	if access, status := verifyWriteSubspec(r, db, &userID, subspecID); !access {
 		return nil, status
 	}
 
-	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, &userID, func(tx *sql.Tx) (interface{}, int) {
 
 		// Blocks in subspec are deleted on cascade
 
@@ -268,7 +275,7 @@ func ajaxSpecDeleteSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *ht
 			`, subspecID)
 
 		if err != nil {
-			logError(r, userID, fmt.Errorf("deleting subspec: %w", err))
+			logError(r, &userID, fmt.Errorf("deleting subspec: %w", err))
 			return nil, http.StatusInternalServerError
 		}
 

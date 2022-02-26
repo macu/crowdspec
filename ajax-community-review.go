@@ -165,7 +165,7 @@ func ajaxLoadCommuntyReviewPage(db *sql.DB, userID uint, w http.ResponseWriter, 
 			OwnerTypeUser, userID,
 		)
 		if err != nil {
-			logError(r, userID, fmt.Errorf("querying specs review: %w", err))
+			logError(r, &userID, fmt.Errorf("querying specs review: %w", err))
 			return nil, http.StatusInternalServerError
 		}
 
@@ -176,7 +176,7 @@ func ajaxLoadCommuntyReviewPage(db *sql.DB, userID uint, w http.ResponseWriter, 
 				&review.BlockUnreadComments, &review.BlockTotalComments,
 				&review.HasSubspecs, &review.HasUnreadSubspecComments)
 			if err != nil {
-				logError(r, userID, fmt.Errorf("scanning specs review row: %w", err))
+				logError(r, &userID, fmt.Errorf("scanning specs review row: %w", err))
 				return nil, http.StatusInternalServerError
 			}
 			(*response.Specs) = append((*response.Specs), &review)
@@ -188,7 +188,7 @@ func ajaxLoadCommuntyReviewPage(db *sql.DB, userID uint, w http.ResponseWriter, 
 
 		var specID, err = AtoInt64(r.FormValue("specId"))
 		if err != nil {
-			logError(r, userID, fmt.Errorf("parsing specId: %w", err))
+			logError(r, &userID, fmt.Errorf("parsing specId: %w", err))
 			return nil, http.StatusBadRequest
 		}
 
@@ -250,7 +250,7 @@ func ajaxLoadCommuntyReviewPage(db *sql.DB, userID uint, w http.ResponseWriter, 
 			OwnerTypeUser, userID, specID,
 		)
 		if err != nil {
-			logError(r, userID, fmt.Errorf("querying subspecs review: %w", err))
+			logError(r, &userID, fmt.Errorf("querying subspecs review: %w", err))
 			return nil, http.StatusInternalServerError
 		}
 
@@ -260,7 +260,7 @@ func ajaxLoadCommuntyReviewPage(db *sql.DB, userID uint, w http.ResponseWriter, 
 				&review.UnreadComments, &review.TotalComments,
 				&review.BlockUnreadComments, &review.BlockTotalComments)
 			if err != nil {
-				logError(r, userID, fmt.Errorf("scanning subspecs review row: %w", err))
+				logError(r, &userID, fmt.Errorf("scanning subspecs review row: %w", err))
 				return nil, http.StatusInternalServerError
 			}
 			(*response.Subspecs) = append((*response.Subspecs), &review)
@@ -272,7 +272,7 @@ func ajaxLoadCommuntyReviewPage(db *sql.DB, userID uint, w http.ResponseWriter, 
 
 		updatedBefore, err := AtoTimeNilIfEmpty(r.FormValue("updatedBefore"))
 		if err != nil {
-			logError(r, userID, fmt.Errorf("parsing updatedBefore: %w", err))
+			logError(r, &userID, fmt.Errorf("parsing updatedBefore: %w", err))
 			return nil, http.StatusBadRequest
 		}
 
@@ -332,7 +332,7 @@ func ajaxLoadCommuntyReviewPage(db *sql.DB, userID uint, w http.ResponseWriter, 
 			args...,
 		)
 		if err != nil {
-			logError(r, userID, fmt.Errorf("querying comments review: %w", err))
+			logError(r, &userID, fmt.Errorf("querying comments review: %w", err))
 			return nil, http.StatusInternalServerError
 		}
 
@@ -342,7 +342,7 @@ func ajaxLoadCommuntyReviewPage(db *sql.DB, userID uint, w http.ResponseWriter, 
 				&review.Created, &review.Updated,
 				&review.UnreadComments, &review.TotalComments)
 			if err != nil {
-				logError(r, userID, fmt.Errorf("scanning comments review row: %w", err))
+				logError(r, &userID, fmt.Errorf("scanning comments review row: %w", err))
 				return nil, http.StatusInternalServerError
 			}
 			(*response.Comments) = append((*response.Comments), &review)
@@ -363,7 +363,7 @@ func ajaxLoadCommuntyReviewPage(db *sql.DB, userID uint, w http.ResponseWriter, 
 				userID, lastResultUpdatedAt,
 			).Scan(&response.HasMoreComments)
 			if err != nil {
-				logError(r, userID, fmt.Errorf("reading has more comments: %w", err))
+				logError(r, &userID, fmt.Errorf("reading has more comments: %w", err))
 				return nil, http.StatusInternalServerError
 			}
 		} else {
@@ -381,7 +381,7 @@ func ajaxLoadCommuntyReviewPage(db *sql.DB, userID uint, w http.ResponseWriter, 
 				userID,
 			).Scan(&response.TotalComments)
 			if err != nil {
-				logError(r, userID, fmt.Errorf("counting comments: %w", err))
+				logError(r, &userID, fmt.Errorf("counting comments: %w", err))
 				return nil, http.StatusInternalServerError
 			}
 		}

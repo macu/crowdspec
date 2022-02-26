@@ -18,7 +18,12 @@
 
 	<p v-else>No subspecs.</p>
 
-	<el-button @click="openCreateSubspec()" class="new-subspec-button">New subspec</el-button>
+	<el-button
+		v-if="enableEditing"
+		@click="openCreateSubspec()"
+		class="new-subspec-button">
+		New subspec
+	</el-button>
 
 	<template #footer>
 		<span class="dialog-footer">
@@ -48,6 +53,7 @@ export default {
 	props: {
 		specId: Number,
 		subspecId: Number,
+		enableEditing: Boolean,
 	},
 	emits: ['open-create-subspec'],
 	data() {

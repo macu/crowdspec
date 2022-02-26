@@ -50,7 +50,7 @@ func ajaxAdminLoadSignupRequests(db *sql.DB,
 		` + conds + `
 		` + orderby)
 	if err != nil {
-		logError(r, userID, fmt.Errorf("loading signup requests: %w", err))
+		logError(r, &userID, fmt.Errorf("loading signup requests: %w", err))
 		return nil, http.StatusInternalServerError
 	}
 
@@ -60,10 +60,10 @@ func ajaxAdminLoadSignupRequests(db *sql.DB,
 			&sr.Reviewed, &sr.Approved, &sr.UserID)
 		if err != nil {
 			if err2 := rows.Close(); err2 != nil {
-				logError(r, userID, fmt.Errorf("closing rows: %s; on scan error: %w", err2, err))
+				logError(r, &userID, fmt.Errorf("closing rows: %s; on scan error: %w", err2, err))
 				return nil, http.StatusInternalServerError
 			}
-			logError(r, userID, fmt.Errorf("scanning signup requests: %w", err))
+			logError(r, &userID, fmt.Errorf("scanning signup requests: %w", err))
 			return nil, http.StatusInternalServerError
 		}
 		requests = append(requests, &sr)
@@ -77,7 +77,7 @@ func ajaxAdminSubmitSignupRequestReview(db *sql.DB,
 
 	requestID, err := AtoInt64(r.FormValue("requestId"))
 	if err != nil {
-		logError(r, userID, fmt.Errorf("parsing requestId: %w", err))
+		logError(r, &userID, fmt.Errorf("parsing requestId: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
@@ -102,7 +102,7 @@ func ajaxAdminSubmitSignupRequestReview(db *sql.DB,
 	).Scan(&username, &email)
 
 	if err != nil {
-		logError(r, userID, fmt.Errorf("updating signup request: %w", err))
+		logError(r, &userID, fmt.Errorf("updating signup request: %w", err))
 		return nil, http.StatusInternalServerError
 	}
 
@@ -117,7 +117,7 @@ func ajaxAdminSubmitSignupRequestReview(db *sql.DB,
 
 		url, err := buildAbsoluteURL(r, "activate-signup?t="+*token)
 		if err != nil {
-			logError(r, userID, fmt.Errorf("building URL: %w", err))
+			logError(r, &userID, fmt.Errorf("building URL: %w", err))
 			return nil, http.StatusInternalServerError
 		}
 
@@ -130,7 +130,7 @@ func ajaxAdminSubmitSignupRequestReview(db *sql.DB,
 				messageHTML,
 		)
 		if err != nil {
-			logError(r, userID, fmt.Errorf("sending signup request approval email: %w", err))
+			logError(r, &userID, fmt.Errorf("sending signup request approval email: %w", err))
 			return nil, http.StatusInternalServerError
 		}
 
@@ -144,7 +144,7 @@ func ajaxAdminSubmitSignupRequestReview(db *sql.DB,
 				messageHTML,
 		)
 		if err != nil {
-			logError(r, userID, fmt.Errorf("sending signup request approval email: %w", err))
+			logError(r, &userID, fmt.Errorf("sending signup request approval email: %w", err))
 			return nil, http.StatusInternalServerError
 		}
 
@@ -165,7 +165,7 @@ func ajaxAdminLoadUsers(db *sql.DB,
 		ORDER BY id`,
 		OwnerTypeUser)
 	if err != nil {
-		logError(r, userID, fmt.Errorf("loading signup requests: %w", err))
+		logError(r, &userID, fmt.Errorf("loading signup requests: %w", err))
 		return nil, http.StatusInternalServerError
 	}
 
@@ -175,10 +175,10 @@ func ajaxAdminLoadUsers(db *sql.DB,
 			&u.SpecCount)
 		if err != nil {
 			if err2 := rows.Close(); err2 != nil {
-				logError(r, userID, fmt.Errorf("closing rows: %s; on scan error: %w", err2, err))
+				logError(r, &userID, fmt.Errorf("closing rows: %s; on scan error: %w", err2, err))
 				return nil, http.StatusInternalServerError
 			}
-			logError(r, userID, fmt.Errorf("scanning user: %w", err))
+			logError(r, &userID, fmt.Errorf("scanning user: %w", err))
 			return nil, http.StatusInternalServerError
 		}
 		users = append(users, &u)

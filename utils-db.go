@@ -133,7 +133,7 @@ func inTransaction(r *http.Request, db *sql.DB, f func(*sql.Tx) error) error {
 	return nil
 }
 
-func handleInTransaction(r *http.Request, db *sql.DB, userID uint,
+func handleInTransaction(r *http.Request, db *sql.DB, userID *uint,
 	f func(*sql.Tx) (interface{}, int)) (interface{}, int) {
 
 	c := r.Context()

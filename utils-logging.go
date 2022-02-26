@@ -91,7 +91,7 @@ func logNotice(r *http.Request, jsonPayload interface{}) {
 	log.Printf("[notice] %s:%d %v", fn, line, jsonPayload)
 }
 
-func logError(r *http.Request, userID uint, err error) {
+func logError(r *http.Request, userID *uint, err error) {
 	if err == nil {
 		return
 	}
@@ -100,8 +100,8 @@ func logError(r *http.Request, userID uint, err error) {
 		initAppEngineErrorClient()
 		if appEngineErrorClient != nil {
 			var user string
-			if userID > 0 {
-				user = UintToA(userID)
+			if userID != nil {
+				user = UintToA(*userID)
 			}
 			appEngineErrorClient.Report(errorreporting.Entry{
 				Error: err,

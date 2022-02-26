@@ -184,7 +184,6 @@ func main() {
 	r.HandleFunc("/activate-signup", makeActivateSignupHandler(db))
 	r.HandleFunc("/request-password-reset", makeRequestPasswordResetHandler(db))
 	r.HandleFunc("/reset-password", makeResetPasswordHandler(db))
-	r.HandleFunc("/logout", authenticate(logoutHandler))
 
 	r.PathPrefix("/ajax/").HandlerFunc(authenticate(ajaxHandler))
 
@@ -215,28 +214,8 @@ func main() {
 
 var indexTemplate = template.Must(template.ParseFiles("html/index.html"))
 
-func indexHandler(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) {
-	var username, email string
-	err := db.QueryRow(
-		`SELECT username, email FROM user_account WHERE id=$1`, userID,
-	).Scan(&username, &email)
-	if err != nil {
-		logError(r, userID, fmt.Errorf("selecting username: %w", err))
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	settings, err := loadUserSettings(db, userID)
-	if err != nil {
-		logError(r, userID, fmt.Errorf("loading user settings: %w", err))
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+func indexHandler(db *sql.DB, userID *uint, w http.ResponseWriter, r *http.Request) {
 	indexTemplate.Execute(w, struct {
-		UserID              uint
-		Username            string
-		EmailAddress        string
-		Admin               bool
-		Settings            UserSettings
 		VersionStamp        string
 		PasswordMinLength   uint
 		SpecNameMaxLength   uint
@@ -244,11 +223,6 @@ func indexHandler(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 		URLMaxLength        uint
 		Local               bool
 	}{
-		userID,
-		username,
-		email,
-		userID == adminUserID,
-		*settings,
 		cacheControlVersionStamp,
 		passwordMinLength,
 		subspecNameMaxLen,

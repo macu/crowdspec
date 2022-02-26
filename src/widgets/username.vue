@@ -9,6 +9,7 @@
 import {encodeRgb, invertHsl} from '../colour-utils.js';
 
 export default {
+	name: 'username',
 	props: {
 		username: {
 			type: String,

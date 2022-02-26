@@ -205,11 +205,25 @@ func loadBlocksByID(db DBConn, userID uint, specID int64, blockIDs ...int64) ([]
 }
 
 // load the blocks in a spec or subspec
-func loadContextBlocks(db *sql.DB, userID uint, specID int64, subspecID *int64) ([]*SpecBlock, error) {
+func loadContextBlocks(db *sql.DB, userID *uint, specID int64, subspecID *int64) ([]*SpecBlock, error) {
+
+	var args = []interface{}{}
+
+	var unreadCountField string
+	if userID == nil {
+		unreadCountField = `0 AS unread_count`
+	} else {
+		unreadCountField = `(SELECT COUNT(c.id) FROM spec_community_comment AS c
+			LEFT JOIN spec_community_read AS r
+				ON r.user_id = ` + argPlaceholder(userID, &args) + `
+				AND r.target_type = 'comment' AND r.target_id = c.id
+			WHERE c.target_type = 'block' AND c.target_id = spec_block.id
+				AND r.user_id IS NULL
+		) AS unread_count`
+	}
 
 	// Ref items are only loaded if belonging to the same spec.
 	// TODO Allow linking to any ref item, but verify current user's access when joining info.
-	var args = []interface{}{userID, specID}
 	var query = `SELECT spec_block.id, spec_block.spec_id, spec_block.created_at, spec_block.updated_at,
 		spec_block.subspec_id, spec_block.parent_id, spec_block.order_number,
 		spec_block.style_type, spec_block.content_type, spec_block.ref_type, spec_block.ref_id,
@@ -220,12 +234,7 @@ func loadContextBlocks(db *sql.DB, userID uint, specID int64, subspecID *int64) 
 		ref_url.spec_id AS url_spec_id, ref_url.created_at AS url_created, ref_url.updated_at AS url_updated,
 		ref_url.url AS url_url, ref_url.url_title, ref_url.url_desc, ref_url.url_image_data,
 		-- select number of unread comments
-		(SELECT COUNT(c.id) FROM spec_community_comment AS c
-			LEFT JOIN spec_community_read AS r
-				ON r.user_id = $1 AND r.target_type = 'comment' AND r.target_id = c.id
-			WHERE c.target_type = 'block' AND c.target_id = spec_block.id
-				AND r.user_id IS NULL
-		) AS unread_count,
+		` + unreadCountField + `,
 		-- select total number of comments
 		(SELECT COUNT(*) FROM spec_community_comment AS c
 			WHERE c.target_type = 'block' AND c.target_id = spec_block.id
@@ -239,7 +248,7 @@ func loadContextBlocks(db *sql.DB, userID uint, specID int64, subspecID *int64) 
 			ON spec_block.ref_type=` + argPlaceholder(BlockRefURL, &args) + `
 			AND ref_url.id=spec_block.ref_id
 			AND ref_url.spec_id = spec_block.spec_id
-		WHERE spec_block.spec_id=$2
+		WHERE spec_block.spec_id=` + argPlaceholder(specID, &args) + `
 			AND ` + eqCond("spec_block.subspec_id", subspecID, &args) + `
 		ORDER BY spec_block.parent_id, spec_block.order_number`
 

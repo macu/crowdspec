@@ -1,7 +1,7 @@
 <template>
 <div class="index-page">
 
-	<div class="actions">
+	<div v-if="loggedIn" class="actions">
 		<el-button
 			@click="promptCreateSpec()"
 			type="primary">
@@ -23,7 +23,7 @@
 		</el-button>
 	</div>
 
-	<div class="user-specs">
+	<div v-if="loggedIn" class="user-specs">
 		<h2>Your specs</h2>
 		<p v-if="loading">
 			<loading-message message="Loading..."/>
@@ -88,7 +88,7 @@
 		<p v-else>There are no public specs......</p>
 	</div>
 
-	<edit-spec-modal ref="editSpecModal"/>
+	<edit-spec-modal v-if="loggedIn" ref="editSpecModal"/>
 
 </div>
 </template>
@@ -116,6 +116,11 @@ export default {
 			loading: true,
 		};
 	},
+	computed: {
+		loggedIn() {
+			return this.$store.getters.loggedIn;
+		},
+	},
 	mounted() {
 		this.reloadSpecs();
 	},
@@ -137,6 +142,9 @@ export default {
 			});
 		},
 		promptCreateSpec() {
+			if (!this.$store.state.loggedIn) {
+				return;
+			}
 			this.$refs.editSpecModal.showCreate(newSpecId => {
 				this.$router.push({name: 'spec', params: {specId: newSpecId}});
 			});
@@ -168,7 +176,7 @@ export default {
 		}
 	}
 
-	.user-specs, .public-specs {
+	*+.user-specs, *+.public-specs {
 		margin-top: 70px;
 		@include mobile {
 			margin-top: 60px;

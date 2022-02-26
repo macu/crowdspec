@@ -9,7 +9,7 @@ import (
 )
 
 // Returns the requested spec with immediate blocks.
-func ajaxSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
+func ajaxSpec(db *sql.DB, userID *uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
 	// GET
 	query := r.URL.Query()
 
@@ -21,6 +21,19 @@ func ajaxSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (
 
 	if access, status := verifyReadSpec(r, db, userID, specID); !access {
 		return nil, status
+	}
+
+	var unreadCountField string
+	if userID == nil {
+		unreadCountField = `0 AS unread_count`
+	} else {
+		unreadCountField = `(SELECT COUNT(*)
+			FROM spec_community_comment AS c
+			LEFT JOIN spec_community_read AS r
+				ON r.user_id = $3 AND r.target_type = 'comment' AND r.target_id = c.id
+			WHERE c.target_type = 'spec' AND c.target_id = spec.id
+				AND r.user_id IS NULL
+		) AS unread_count`
 	}
 
 	// TODO Finish owner_name, user_is_admin, user_is_contributor
@@ -39,13 +52,7 @@ func ajaxSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (
 			ELSE GREATEST(spec.updated_at, spec.blocks_updated_at)
 		END AS last_updated,
 		-- select number of unread comments
-		(SELECT COUNT(*)
-			FROM spec_community_comment AS c
-			LEFT JOIN spec_community_read AS r
-				ON r.user_id = $3 AND r.target_type = 'comment' AND r.target_id = c.id
-			WHERE c.target_type = 'spec' AND c.target_id = spec.id
-				AND r.user_id IS NULL
-		) AS unread_count,
+		`+unreadCountField+`,
 		-- select total number of comments
 		(SELECT COUNT(*)
 			FROM spec_community_comment AS c
@@ -81,7 +88,7 @@ func ajaxCreateSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Requ
 
 	err := r.ParseForm()
 	if err != nil {
-		logError(r, userID, err)
+		logError(r, &userID, err)
 		return nil, http.StatusInternalServerError
 	}
 
@@ -89,7 +96,7 @@ func ajaxCreateSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Requ
 
 	name := Substr(strings.TrimSpace(r.Form.Get("name")), spenNameMaxLen)
 	if name == "" {
-		logError(r, userID, fmt.Errorf("spec name required"))
+		logError(r, &userID, fmt.Errorf("spec name required"))
 		return nil, http.StatusBadRequest
 	}
 
@@ -97,7 +104,7 @@ func ajaxCreateSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Requ
 
 	isPublic := AtoBool(r.Form.Get("isPublic"))
 
-	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, &userID, func(tx *sql.Tx) (interface{}, int) {
 
 		var specID int64
 
@@ -108,7 +115,7 @@ func ajaxCreateSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Requ
 				`, OwnerTypeUser, userID, time.Now(), name, desc, isPublic).Scan(&specID)
 
 		if err != nil {
-			logError(r, userID, fmt.Errorf("creating spec: %w", err))
+			logError(r, &userID, fmt.Errorf("creating spec: %w", err))
 			return nil, http.StatusInternalServerError
 		}
 
@@ -121,23 +128,23 @@ func ajaxSaveSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 
 	err := r.ParseForm()
 	if err != nil {
-		logError(r, userID, err)
+		logError(r, &userID, err)
 		return nil, http.StatusInternalServerError
 	}
 
 	specID, err := AtoInt64(r.Form.Get("specId"))
 	if err != nil {
-		logError(r, userID, fmt.Errorf("parsing specId: %w", err))
+		logError(r, &userID, fmt.Errorf("parsing specId: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
-	if access, status := verifyWriteSpec(r, db, userID, specID); !access {
+	if access, status := verifyWriteSpec(r, db, &userID, specID); !access {
 		return nil, status
 	}
 
 	name := Substr(strings.TrimSpace(r.Form.Get("name")), spenNameMaxLen)
 	if name == "" {
-		logError(r, userID, fmt.Errorf("spec name required"))
+		logError(r, &userID, fmt.Errorf("spec name required"))
 		return nil, http.StatusBadRequest
 	}
 
@@ -145,7 +152,7 @@ func ajaxSaveSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 
 	isPublic := AtoBool(r.Form.Get("isPublic"))
 
-	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, &userID, func(tx *sql.Tx) (interface{}, int) {
 
 		spec := &Spec{
 			ID:     specID,
@@ -173,7 +180,7 @@ func ajaxSaveSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 		).Scan(&spec.Updated, &spec.Name, &spec.Desc, &spec.UnreadCount, &spec.CommentsCount)
 
 		if err != nil {
-			logError(r, userID, fmt.Errorf("updating spec: %w", err))
+			logError(r, &userID, fmt.Errorf("updating spec: %w", err))
 			return nil, http.StatusInternalServerError
 		}
 
@@ -186,26 +193,26 @@ func ajaxDeleteSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Requ
 
 	err := r.ParseForm()
 	if err != nil {
-		logError(r, userID, err)
+		logError(r, &userID, err)
 		return nil, http.StatusInternalServerError
 	}
 
 	specID, err := AtoInt64(r.Form.Get("specId"))
 	if err != nil {
-		logError(r, userID, fmt.Errorf("parsing specId: %w", err))
+		logError(r, &userID, fmt.Errorf("parsing specId: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
-	if access, status := verifyWriteSpec(r, db, userID, specID); !access {
+	if access, status := verifyWriteSpec(r, db, &userID, specID); !access {
 		return nil, status
 	}
 
-	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, &userID, func(tx *sql.Tx) (interface{}, int) {
 
 		_, err := tx.Exec(`DELETE FROM spec WHERE id=$1`, specID)
 
 		if err != nil {
-			logError(r, userID, fmt.Errorf("deleting spec: %w", err))
+			logError(r, &userID, fmt.Errorf("deleting spec: %w", err))
 			return nil, http.StatusInternalServerError
 		}
 

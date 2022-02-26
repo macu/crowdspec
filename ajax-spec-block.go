@@ -14,31 +14,31 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 
 	err := r.ParseForm()
 	if err != nil {
-		logError(r, userID, err)
+		logError(r, &userID, err)
 		return nil, http.StatusInternalServerError
 	}
 
 	specID, err := AtoInt64(r.Form.Get("specId"))
 	if err != nil {
-		logError(r, userID, fmt.Errorf("parsing specId: %w", err))
+		logError(r, &userID, fmt.Errorf("parsing specId: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
 	subspecID, err := AtoInt64NilIfEmpty(r.Form.Get("subspecId"))
 	if err != nil {
-		logError(r, userID, fmt.Errorf("parsing subspecId: %w", err))
+		logError(r, &userID, fmt.Errorf("parsing subspecId: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
 	parentID, err := AtoInt64NilIfEmpty(r.Form.Get("parentId"))
 	if err != nil {
-		logError(r, userID, fmt.Errorf("parsing parentId: %w", err))
+		logError(r, &userID, fmt.Errorf("parsing parentId: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
 	insertBeforeID, err := AtoInt64NilIfEmpty(r.Form.Get("insertBeforeId"))
 	if err != nil {
-		logError(r, userID, fmt.Errorf("parsing insertBeforeId: %w", err))
+		logError(r, &userID, fmt.Errorf("parsing insertBeforeId: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
@@ -49,30 +49,30 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 	if insertBeforeID != nil {
 		verifyBlockIds = append(verifyBlockIds, *insertBeforeID)
 	}
-	if access, status := verifyWriteSpecSubspecBlocks(r, db, userID, specID, subspecID,
+	if access, status := verifyWriteSpecSubspecBlocks(r, db, &userID, specID, subspecID,
 		verifyBlockIds...); !access {
 		return nil, status
 	}
 
 	styleType := r.Form.Get("styleType")
 	if !isValidListStyleType(styleType) {
-		logError(r, userID, fmt.Errorf("invalid styleType: %s", styleType))
+		logError(r, &userID, fmt.Errorf("invalid styleType: %s", styleType))
 		return nil, http.StatusBadRequest
 	}
 
 	contentType := r.Form.Get("contentType")
 	if !isValidTextContentType(contentType) {
-		logError(r, userID, fmt.Errorf("invalid contentType: %s", contentType))
+		logError(r, &userID, fmt.Errorf("invalid contentType: %s", contentType))
 		return nil, http.StatusBadRequest
 	}
 
 	refType, refID, err := validateCreateRefItemFields(r.Form)
 	if err != nil {
-		logError(r, userID, fmt.Errorf("invalid ref fields: %w", err))
+		logError(r, &userID, fmt.Errorf("invalid ref fields: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
-	if access, status := verifyRefAccess(r, db, userID, specID, refType, refID); !access {
+	if access, status := validateRefAccess(r, db, &userID, specID, refType, refID); !access {
 		return nil, status
 	}
 
@@ -81,7 +81,7 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 	body := AtoPointerNilIfEmpty(strings.TrimSpace(r.Form.Get("body")))
 
 	if refType == nil && title == nil && body == nil {
-		logError(r, userID, fmt.Errorf("empty blocks are not currently allowed"))
+		logError(r, &userID, fmt.Errorf("empty blocks are not currently allowed"))
 		return nil, http.StatusBadRequest
 	}
 
@@ -95,7 +95,7 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 		renderedHTML = &html
 	}
 
-	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, &userID, func(tx *sql.Tx) (interface{}, int) {
 
 		var err error
 
@@ -105,13 +105,13 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 			if refID == nil {
 				refID, refItem, err = handleCreateRefItem(tx, specID, r.Form)
 				if err != nil {
-					logError(r, userID, fmt.Errorf("creating ref item: %w", err))
+					logError(r, &userID, fmt.Errorf("creating ref item: %w", err))
 					return nil, http.StatusInternalServerError
 				}
 			} else {
 				refItem, err = loadRefItem(tx, *refType, *refID)
 				if err != nil {
-					logError(r, userID, fmt.Errorf("loading ref item: %w", err))
+					logError(r, &userID, fmt.Errorf("loading ref item: %w", err))
 					return nil, http.StatusInternalServerError
 				}
 			}
@@ -120,7 +120,7 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 		// Prepare insert position
 		insertAt, code, err := makeInsertAt(tx, specID, subspecID, parentID, insertBeforeID, 1)
 		if err != nil {
-			logError(r, userID, fmt.Errorf("making insert position: %w", err))
+			logError(r, &userID, fmt.Errorf("making insert position: %w", err))
 			return nil, code
 		}
 
@@ -147,7 +147,7 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 			styleType, contentType, refType, refID, title, body, renderedHTML,
 		).Scan(&block.ID, &block.Created, &block.Updated, &block.Title, &block.Body, &block.HTML)
 		if err != nil {
-			logError(r, userID, fmt.Errorf("creating block: %w", err))
+			logError(r, &userID, fmt.Errorf("creating block: %w", err))
 			return nil, http.StatusInternalServerError
 		}
 
@@ -169,23 +169,23 @@ func ajaxLoadBlockForEditing(db *sql.DB, userID uint, w http.ResponseWriter, r *
 
 	specID, err := AtoInt64(r.FormValue("specId"))
 	if err != nil {
-		logError(r, userID, fmt.Errorf("parsing specId: %w", err))
+		logError(r, &userID, fmt.Errorf("parsing specId: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
 	blockID, err := AtoInt64(r.FormValue("blockId"))
 	if err != nil {
-		logError(r, userID, fmt.Errorf("parsing blockId: %w", err))
+		logError(r, &userID, fmt.Errorf("parsing blockId: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
-	if access, status := verifyWriteSpecBlock(r, db, userID, specID, blockID); !access {
+	if access, status := verifyWriteSpecBlock(r, db, &userID, specID, blockID); !access {
 		return nil, status
 	}
 
 	block, err := loadBlockForEditing(db, userID, specID, blockID)
 	if err != nil {
-		logError(r, userID, fmt.Errorf("loading block: %w", err))
+		logError(r, &userID, fmt.Errorf("loading block: %w", err))
 		return nil, http.StatusInternalServerError
 	}
 
@@ -225,45 +225,45 @@ func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 
 	err := r.ParseForm()
 	if err != nil {
-		logError(r, userID, err)
+		logError(r, &userID, err)
 		return nil, http.StatusInternalServerError
 	}
 
 	specID, err := AtoInt64(r.Form.Get("specId"))
 	if err != nil {
-		logError(r, userID, fmt.Errorf("parsing specId: %w", err))
+		logError(r, &userID, fmt.Errorf("parsing specId: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
 	blockID, err := AtoInt64(r.Form.Get("blockId"))
 	if err != nil {
-		logError(r, userID, fmt.Errorf("parsing blockId: %w", err))
+		logError(r, &userID, fmt.Errorf("parsing blockId: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
-	if access, status := verifyWriteSpecBlock(r, db, userID, specID, blockID); !access {
+	if access, status := verifyWriteSpecBlock(r, db, &userID, specID, blockID); !access {
 		return nil, status
 	}
 
 	styleType := r.Form.Get("styleType")
 	if !isValidListStyleType(styleType) {
-		logError(r, userID, fmt.Errorf("invalid styleType: %s", styleType))
+		logError(r, &userID, fmt.Errorf("invalid styleType: %s", styleType))
 		return nil, http.StatusBadRequest
 	}
 
 	contentType := r.Form.Get("contentType")
 	if !isValidTextContentType(contentType) {
-		logError(r, userID, fmt.Errorf("invalid contentType: %s", contentType))
+		logError(r, &userID, fmt.Errorf("invalid contentType: %s", contentType))
 		return nil, http.StatusBadRequest
 	}
 
 	refType, refID, err := validateCreateRefItemFields(r.Form)
 	if err != nil {
-		logError(r, userID, fmt.Errorf("invalid ref fields: %w", err))
+		logError(r, &userID, fmt.Errorf("invalid ref fields: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
-	if access, status := verifyRefAccess(r, db, userID, specID, refType, refID); !access {
+	if access, status := validateRefAccess(r, db, &userID, specID, refType, refID); !access {
 		return nil, status
 	}
 
@@ -272,7 +272,7 @@ func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 	body := AtoPointerNilIfEmpty(strings.TrimSpace(r.Form.Get("body")))
 
 	if refType == nil && title == nil && body == nil {
-		logError(r, userID, fmt.Errorf("empty blocks are not currently allowed"))
+		logError(r, &userID, fmt.Errorf("empty blocks are not currently allowed"))
 		return nil, http.StatusBadRequest
 	}
 
@@ -286,7 +286,7 @@ func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 		renderedHTML = &html
 	}
 
-	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, &userID, func(tx *sql.Tx) (interface{}, int) {
 
 		var err error
 
@@ -296,13 +296,13 @@ func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 			if refID == nil {
 				refID, refItem, err = handleCreateRefItem(tx, specID, r.Form)
 				if err != nil {
-					logError(r, userID, fmt.Errorf("creating ref item: %w", err))
+					logError(r, &userID, fmt.Errorf("creating ref item: %w", err))
 					return nil, http.StatusInternalServerError
 				}
 			} else {
 				refItem, err = loadRefItem(tx, *refType, *refID)
 				if err != nil {
-					logError(r, userID, fmt.Errorf("loading ref item: %w", err))
+					logError(r, &userID, fmt.Errorf("loading ref item: %w", err))
 					return nil, http.StatusInternalServerError
 				}
 			}
@@ -341,7 +341,7 @@ func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 		).Scan(&block.Updated, &block.SubspecID, &block.Title, &block.Body, &block.HTML,
 			&block.UnreadCount, &block.CommentsCount)
 		if err != nil {
-			logError(r, userID, fmt.Errorf("updating block: %w", err))
+			logError(r, &userID, fmt.Errorf("updating block: %w", err))
 			return nil, http.StatusInternalServerError
 		}
 
@@ -363,18 +363,18 @@ func ajaxSpecMoveBlocks(db *sql.DB, userID uint, w http.ResponseWriter, r *http.
 
 	err := r.ParseForm()
 	if err != nil {
-		logError(r, userID, err)
+		logError(r, &userID, err)
 		return nil, http.StatusInternalServerError
 	}
 
 	blockIDs, err := AtoInt64Array(r.Form.Get("blockIds"))
 	if err != nil {
-		logError(r, userID, fmt.Errorf("parsing blockIds: %w", err))
+		logError(r, &userID, fmt.Errorf("parsing blockIds: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
 	if len(blockIDs) == 0 {
-		logError(r, userID, fmt.Errorf("blank blockIds: %w", err))
+		logError(r, &userID, fmt.Errorf("blank blockIds: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
@@ -387,25 +387,25 @@ func ajaxSpecMoveBlocks(db *sql.DB, userID uint, w http.ResponseWriter, r *http.
 		`SELECT spec_id, subspec_id FROM spec_block WHERE id = $1`,
 		blockIDs[0]).Scan(&specID, &sourceSubspecID)
 	if err != nil {
-		logError(r, userID, fmt.Errorf("loading specID for block %d: %w", blockIDs[0], err))
+		logError(r, &userID, fmt.Errorf("loading specID for block %d: %w", blockIDs[0], err))
 		return nil, http.StatusInternalServerError
 	}
 
 	targetSubspecID, err := AtoInt64NilIfEmpty(r.Form.Get("subspecId"))
 	if err != nil {
-		logError(r, userID, fmt.Errorf("parsing subsapceId: %w", err))
+		logError(r, &userID, fmt.Errorf("parsing subsapceId: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
 	parentID, err := AtoInt64NilIfEmpty(r.Form.Get("parentId"))
 	if err != nil {
-		logError(r, userID, fmt.Errorf("parsing parentId: %w", err))
+		logError(r, &userID, fmt.Errorf("parsing parentId: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
 	insertBeforeID, err := AtoInt64NilIfEmpty(r.Form.Get("insertBeforeId"))
 	if err != nil {
-		logError(r, userID, fmt.Errorf("parsing insertBeforeId: %w", err))
+		logError(r, &userID, fmt.Errorf("parsing insertBeforeId: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
@@ -416,16 +416,16 @@ func ajaxSpecMoveBlocks(db *sql.DB, userID uint, w http.ResponseWriter, r *http.
 	if insertBeforeID != nil {
 		verifyBlockIds = append(verifyBlockIds, *insertBeforeID)
 	}
-	if access, status := verifyWriteSpecSubspecBlocks(r, db, userID, specID, targetSubspecID,
+	if access, status := verifyWriteSpecSubspecBlocks(r, db, &userID, specID, targetSubspecID,
 		verifyBlockIds...); !access {
 		return nil, status
 	}
 
-	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, &userID, func(tx *sql.Tx) (interface{}, int) {
 
 		insertAt, code, err := makeInsertAt(tx, specID, targetSubspecID, parentID, insertBeforeID, len(blockIDs))
 		if err != nil {
-			logError(r, userID, fmt.Errorf("making insert position: %w", err))
+			logError(r, &userID, fmt.Errorf("making insert position: %w", err))
 			return 0, code
 		}
 
@@ -447,7 +447,7 @@ func ajaxSpecMoveBlocks(db *sql.DB, userID uint, w http.ResponseWriter, r *http.
 			WHERE spec_block.id = v.id`,
 			args...)
 		if err != nil {
-			logError(r, userID, fmt.Errorf("moving blocks: %w", err))
+			logError(r, &userID, fmt.Errorf("moving blocks: %w", err))
 			return nil, http.StatusInternalServerError
 		}
 
@@ -477,7 +477,7 @@ func ajaxSpecMoveBlocks(db *sql.DB, userID uint, w http.ResponseWriter, r *http.
 				WHERE spec_block.id IN (SELECT id FROM block_tree)`,
 				args...)
 			if err != nil {
-				logError(r, userID, fmt.Errorf("moving block tree to subspec: %w", err))
+				logError(r, &userID, fmt.Errorf("moving block tree to subspec: %w", err))
 				return nil, http.StatusInternalServerError
 			}
 		}
@@ -501,7 +501,7 @@ func ajaxSpecMoveBlocks(db *sql.DB, userID uint, w http.ResponseWriter, r *http.
 		if subspecChanged {
 			blocks, err := loadBlocksByID(tx, userID, specID, blockIDs...)
 			if err != nil {
-				logError(r, userID, fmt.Errorf("loading blocks: %w", err))
+				logError(r, &userID, fmt.Errorf("loading blocks: %w", err))
 				return nil, http.StatusInternalServerError
 			}
 			return blocks, http.StatusOK
@@ -516,13 +516,13 @@ func ajaxSpecDeleteBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 
 	err := r.ParseForm()
 	if err != nil {
-		logError(r, userID, err)
+		logError(r, &userID, err)
 		return nil, http.StatusInternalServerError
 	}
 
 	blockID, err := AtoInt64(r.Form.Get("blockId"))
 	if err != nil {
-		logError(r, userID, fmt.Errorf("parsing blockId: %w", err))
+		logError(r, &userID, fmt.Errorf("parsing blockId: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
@@ -536,15 +536,15 @@ func ajaxSpecDeleteBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 	).Scan(&specID, &subspecID)
 
 	if err != nil {
-		logError(r, userID, fmt.Errorf("loading specID for block %d: %w", blockID, err))
+		logError(r, &userID, fmt.Errorf("loading specID for block %d: %w", blockID, err))
 		return nil, http.StatusInternalServerError
 	}
 
-	if access, status := verifyWriteSpecSubspecBlocks(r, db, userID, specID, subspecID, blockID); !access {
+	if access, status := verifyWriteSpecSubspecBlocks(r, db, &userID, specID, subspecID, blockID); !access {
 		return nil, status
 	}
 
-	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, &userID, func(tx *sql.Tx) (interface{}, int) {
 
 		// Delete block row (delete is cascade; subblocks will also be deleted)
 		_, err := tx.Exec(
@@ -552,7 +552,7 @@ func ajaxSpecDeleteBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 			WHERE id=$1`,
 			blockID)
 		if err != nil {
-			logError(r, userID, fmt.Errorf("deleting block: %w", err))
+			logError(r, &userID, fmt.Errorf("deleting block: %w", err))
 			return nil, http.StatusInternalServerError
 		}
 

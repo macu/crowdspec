@@ -19,7 +19,7 @@ func validateURL(s string) error {
 	return nil
 }
 
-func ajaxSpecURLs(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
+func ajaxSpecURLs(db *sql.DB, userID *uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
 	// GET
 	query := r.URL.Query()
 
@@ -69,36 +69,36 @@ func ajaxSpecCreateURL(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 
 	err := r.ParseForm()
 	if err != nil {
-		logError(r, userID, err)
+		logError(r, &userID, err)
 		return nil, http.StatusInternalServerError
 	}
 
 	specID, err := AtoInt64(r.Form.Get("specId"))
 	if err != nil {
-		logError(r, userID, fmt.Errorf("parsing specId: %w", err))
+		logError(r, &userID, fmt.Errorf("parsing specId: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
-	if access, status := verifyWriteSpec(r, db, userID, specID); !access {
+	if access, status := verifyWriteSpec(r, db, &userID, specID); !access {
 		return nil, status
 	}
 
 	url := strings.TrimSpace(r.Form.Get("url"))
 	if url == "" {
-		logError(r, userID, fmt.Errorf("url required"))
+		logError(r, &userID, fmt.Errorf("url required"))
 		return nil, http.StatusBadRequest
 	}
 	if err = validateURL(url); err != nil {
-		logError(r, userID, fmt.Errorf("invalid url: %w", err))
+		logError(r, &userID, fmt.Errorf("invalid url: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
-	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, &userID, func(tx *sql.Tx) (interface{}, int) {
 
 		urlObject, err := createURLObject(tx, specID, url)
 
 		if err != nil {
-			logError(r, userID, fmt.Errorf("creating spec_url: %w", err))
+			logError(r, &userID, fmt.Errorf("creating spec_url: %w", err))
 			return nil, http.StatusInternalServerError
 		}
 
@@ -111,36 +111,36 @@ func ajaxSpecRefreshURL(db *sql.DB, userID uint, w http.ResponseWriter, r *http.
 
 	err := r.ParseForm()
 	if err != nil {
-		logError(r, userID, err)
+		logError(r, &userID, err)
 		return nil, http.StatusInternalServerError
 	}
 
 	id, err := AtoInt64(r.Form.Get("id"))
 	if err != nil {
-		logError(r, userID, fmt.Errorf("parsing id: %w", err))
+		logError(r, &userID, fmt.Errorf("parsing id: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
-	if access, status := verifyWriteURL(r, db, userID, id); !access {
+	if access, status := verifyWriteURL(r, db, &userID, id); !access {
 		return nil, status
 	}
 
 	url := strings.TrimSpace(r.Form.Get("url"))
 	if url == "" {
-		logError(r, userID, fmt.Errorf("url required"))
+		logError(r, &userID, fmt.Errorf("url required"))
 		return nil, http.StatusBadRequest
 	}
 	if err = validateURL(url); err != nil {
-		logError(r, userID, fmt.Errorf("invalid url: %w", err))
+		logError(r, &userID, fmt.Errorf("invalid url: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
-	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, &userID, func(tx *sql.Tx) (interface{}, int) {
 
 		urlObject, err := updateURLObject(tx, id, url)
 
 		if err != nil {
-			logError(r, userID, fmt.Errorf("updating spec_url: %w", err))
+			logError(r, &userID, fmt.Errorf("updating spec_url: %w", err))
 			return nil, http.StatusInternalServerError
 		}
 
@@ -153,21 +153,21 @@ func ajaxSpecDeleteURL(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 
 	err := r.ParseForm()
 	if err != nil {
-		logError(r, userID, err)
+		logError(r, &userID, err)
 		return nil, http.StatusInternalServerError
 	}
 
 	id, err := AtoInt64(r.Form.Get("id"))
 	if err != nil {
-		logError(r, userID, fmt.Errorf("parsing id: %w", err))
+		logError(r, &userID, fmt.Errorf("parsing id: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
-	if access, status := verifyWriteURL(r, db, userID, id); !access {
+	if access, status := verifyWriteURL(r, db, &userID, id); !access {
 		return nil, status
 	}
 
-	return handleInTransaction(r, db, userID, func(tx *sql.Tx) (interface{}, int) {
+	return handleInTransaction(r, db, &userID, func(tx *sql.Tx) (interface{}, int) {
 
 		// Don't clear references from blocks - display "content unavailable" message
 
@@ -177,7 +177,7 @@ func ajaxSpecDeleteURL(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 				`, id)
 
 		if err != nil {
-			logError(r, userID, fmt.Errorf("deleting spec_url: %w", err))
+			logError(r, &userID, fmt.Errorf("deleting spec_url: %w", err))
 			return nil, http.StatusInternalServerError
 		}
 
@@ -191,23 +191,23 @@ func ajaxFetchURLPreview(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 
 	err := r.ParseForm()
 	if err != nil {
-		logError(r, userID, err)
+		logError(r, &userID, err)
 		return nil, http.StatusInternalServerError
 	}
 
 	url := strings.TrimSpace(r.Form.Get("url"))
 	if url == "" {
-		logError(r, userID, fmt.Errorf("url required"))
+		logError(r, &userID, fmt.Errorf("url required"))
 		return nil, http.StatusBadRequest
 	}
 	if err = validateURL(url); err != nil {
-		logError(r, userID, fmt.Errorf("invalid url: %w", err))
+		logError(r, &userID, fmt.Errorf("invalid url: %w", err))
 		return nil, http.StatusBadRequest
 	}
 
 	data, err := fetchMetadata(url)
 	if err != nil {
-		logError(r, userID, fmt.Errorf("loading url metadata: %w", err))
+		logError(r, &userID, fmt.Errorf("loading url metadata: %w", err))
 		return nil, http.StatusInternalServerError
 	}
 
