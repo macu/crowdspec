@@ -3,7 +3,6 @@
 	<transition
 		v-for="(s, i) in stack"
 		:key="s.targetType + '-' + s.target.id"
-		@after-leave="checkEmpty"
 		name="fade" appear>
 		<stack-bar
 			:target="s.target"
@@ -51,12 +50,14 @@ export default {
 			});
 		},
 		popStack() {
+			// called when comment is deleted
 			if (this.stack.length) {
 				let items = this.stack.splice(this.stack.length - 1, 1); // remove last item
 				let item = items[0];
 				this.$emit('pop-stack', item.targetType, item.target.id,
 					item.onAdjustUnread, item.onAdjustComments);
 				this.cacheItemHandlers(item);
+				this.checkEmpty();
 				return item;
 			}
 			return null;
@@ -69,6 +70,7 @@ export default {
 			for (var i = 0; i < items.length; i++) {
 				this.cacheItemHandlers(items[i]);
 			}
+			this.checkEmpty();
 			return item;
 		},
 		cacheItemHandlers(item) {
@@ -112,6 +114,7 @@ export default {
 		clearStack() {
 			this.stack = [];
 			this.cachedContext = [];
+			this.empty = true;
 		},
 		checkEmpty() {
 			return this.empty = !this.stack.length;
@@ -122,6 +125,10 @@ export default {
 
 <style lang="scss">
 .community-context-stack {
+
+	&.empty {
+		display: none;
+	}
 
 	.community-context-stack-bar {
 		&:first-child {
@@ -135,7 +142,7 @@ export default {
 	.fade-enter-active {
 		transition: opacity .5s;
 	}
-	.fade-enter {
+	.fade-enter-from {
 		opacity: 0;
 	}
 	//.fade-leave-active {}
