@@ -19,13 +19,9 @@
 
 	<template v-if="urlObject">
 		<div v-if="url === urlObject.url" class="preview">
-			<img v-if="urlObject.imageData" :src="urlObject.imageData"/>
-			<div>
-				<h3 v-if="urlObject.title">{{urlObject.title.trim()}}</h3>
-				<div v-if="urlObject.desc">{{urlObject.desc.trim()}}</div>
-				<p v-if="autoRefresh">URL preview will be updated</p>
-				<el-checkbox v-else v-model="refresh">Refresh URL preview</el-checkbox>
-			</div>
+			<ref-url :item="urlObject"/>
+			<p v-if="autoRefresh">URL preview will be updated</p>
+			<el-checkbox v-else v-model="refresh">Refresh URL preview</el-checkbox>
 		</div>
 		<p v-else>Link will be updated with new URL</p>
 	</template>
@@ -43,12 +39,14 @@
 
 <script>
 import $ from 'jquery';
+import RefUrl from './ref-url.vue';
 import Moment from '../widgets/moment.vue';
 import {ajaxCreateUrl, ajaxRefreshUrl, ajaxDeleteUrl} from './ajax.js';
 import {isValidURL} from '../utils.js';
 
 export default {
 	components: {
+		RefUrl,
 		Moment,
 	},
 	props: {
@@ -216,20 +214,8 @@ export default {
 			}
 		}
 		>.preview {
-			display: flex;
-			flex-direction: row;
-			>img {
-				max-width: 20%;
-				margin-right: 20px;
-			}
-			>div {
-				flex: 1;
-				>* {
-					margin: 10px 0;
-				}
-				>h3 {
-					margin: 0 0 10px;
-				}
+			>*+* {
+				margin-top: 10px;
 			}
 		}
 	}
