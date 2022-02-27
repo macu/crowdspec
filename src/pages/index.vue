@@ -153,7 +153,7 @@ export default {
 			});
 		},
 		promptCreateSpec() {
-			if (!this.$store.state.loggedIn) {
+			if (!this.$store.getters.loggedIn) {
 				return;
 			}
 			this.$refs.editSpecModal.showCreate(newSpecId => {

@@ -24,6 +24,8 @@
 
 	<el-checkbox v-model="isPublic">Allow public access and community features</el-checkbox>
 
+	<policy-disclaimer/>
+
 	<template #footer>
 		<span class="dialog-footer">
 			<el-button @click="showing = false">Cancel</el-button>
@@ -39,10 +41,12 @@
 import $ from 'jquery';
 import Moment from '../widgets/moment.vue';
 import {ajaxCreateSpec, ajaxSaveSpec, ajaxDeleteSpec} from './ajax.js';
+import PolicyDisclaimer from '../widgets/policy-disclaimer.vue';
 
 export default {
 	components: {
 		Moment,
+		PolicyDisclaimer,
 	},
 	data() {
 		return {

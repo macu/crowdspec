@@ -106,6 +106,10 @@ func ajaxCreateSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Requ
 
 	// TODO ALlow creating within an org
 
+	if access, status := verifyCreateSpec(r, db, &userID); !access {
+		return nil, status
+	}
+
 	name := Substr(strings.TrimSpace(r.Form.Get("name")), spenNameMaxLen)
 	if name == "" {
 		logError(r, &userID, fmt.Errorf("spec name required"))

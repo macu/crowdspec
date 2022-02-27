@@ -1,11 +1,11 @@
 <template>
 <div class="ajax-error-page content-page">
 
-	<p v-if="statusCode === 0">Could not connect to server</p>
-	<p v-else-if="statusCode === 503">CrowdSpec is currently offline for database upgrades</p>
+	<p v-if="statusCode === 0">Could not connect to server.</p>
+	<p v-else-if="statusCode === 503">CrowdSpec is currently offline for database upgrades.</p>
 	<p v-else-if="specForbidden">You do not have access to the requested spec.</p>
 	<p v-else-if="subspecForbidden">You do not have access to the requested subspec.</p>
-	<p v-else>Request failed with error code {{statusCode}}</p>
+	<p v-else>Request failed with error code {{statusCode}}.</p>
 
 	<el-button v-if="url" @click="retry()">Retry</el-button>
 

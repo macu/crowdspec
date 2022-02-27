@@ -12,11 +12,22 @@
 
 	<template v-else-if="subspecs.length">
 
-		<ref-subspec v-for="s in subspecs" :key="s.id" :item="s"/>
+		<div v-if="subspecs.length > 10" class="filter">
+			<el-input
+				type="text"
+				v-model="filter"
+				placeholder="Filter by name or description"
+				clearable
+				/>
+		</div>
+
+		<template v-if="filteredSubspecs.length">
+			<ref-subspec v-for="s in subspecs" :key="s.id" :item="s"/>
+		</template>
+		<p v-else><em>No matching subspecs.</em></p>
 
 	</template>
-
-	<p v-else>No subspecs.</p>
+	<p v-else><em>No subspecs.</em></p>
 
 	<el-button
 		v-if="enableEditing"
@@ -61,7 +72,27 @@ export default {
 			subspecs: [],
 			loading: false,
 			showing: false,
+			filter: '',
 		};
+	},
+	computed: {
+		filteredSubspecs() {
+			if (!this.filter) {
+				return this.subspecs;
+			}
+			let filter = this.filter.toLowerCase();
+			let filtered = [];
+			for (let i = 0; i < this.subspecs.length; i++) {
+				let subspec = this.subspecs[i];
+				if (
+					subspec.name.toLowerCase().indexOf(filter) >= 0 ||
+					(subspec.desc && subspec.desc.toLowerCase().indexOf(filter) >= 0)
+				) {
+					filtered.push(subspec);
+				}
+			}
+			return filtered;
+		},
 	},
 	watch: {
 		'$route': {
@@ -107,6 +138,7 @@ export default {
 		closed() {
 			this.loading = false;
 			this.subspecs = [];
+			this.filter = '';
 		},
 	},
 };
@@ -123,6 +155,20 @@ export default {
 	.new-subspec-button {
 		width: 100%;
 		margin-top: 20px;
+	}
+	.filter {
+		display: block;
+		margin-bottom: 20px;
+		// >div:first-child:not([class]) {
+		// 	font-weight: bold;
+		// 	margin-bottom: 5px;
+		// }
+		>.el-input {
+			width: 100%;
+		}
+	}
+	p>em {
+		color: gray;
 	}
 }
 </style>

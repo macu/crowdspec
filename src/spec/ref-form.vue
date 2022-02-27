@@ -113,6 +113,9 @@
 						:autosize="{minRows: 2}"
 						/>
 				</label>
+				<el-checkbox v-model="newSubspecPrivate">
+					Keep this subspec private when the spec is published
+				</el-checkbox>
 			</template>
 			<el-button
 				@click="createSubspec()"
@@ -138,10 +141,10 @@
 				<ref-subspec v-if="selectedSubspec" :item="selectedSubspec"/>
 			</template>
 			<div key="subspec-select-actions">
-				<el-button @click="subspecMode = MODE_CREATE" size="small">
+				<el-button @click="subspecMode = MODE_CREATE">
 					Create new subspec
 				</el-button>
-				<el-button v-if="initialSubspec" @click="subspecMode = MODE_KEEP" size="small">
+				<el-button v-if="initialSubspec" @click="subspecMode = MODE_KEEP">
 					Cancel
 				</el-button>
 			</div>
@@ -149,10 +152,10 @@
 		<template v-else>
 			<ref-subspec v-if="initialSubspec" :item="initialSubspec"/>
 			<div key="subspec-keep-actions">
-				<el-button @click="subspecMode = MODE_CREATE" size="small">
+				<el-button @click="subspecMode = MODE_CREATE">
 					Create new subspec
 				</el-button>
-				<el-button v-if="subspecSelectModeAvailable" @click="subspecMode = MODE_SELECT" size="small">
+				<el-button v-if="subspecSelectModeAvailable" @click="subspecMode = MODE_SELECT">
 					Select a different subspec
 				</el-button>
 			</div>
@@ -225,6 +228,7 @@ export default {
 			// Subspec
 			newSubspecName: '',
 			newSubspecDesc: '',
+			newSubspecPrivate: false,
 			subspecId: this.existingRefType === REF_TYPE_SUBSPEC &&
 				this.existingRefItem && this.existingRefItem.id || null,
 			subspecFilter: '',
@@ -400,6 +404,7 @@ export default {
 							return {
 								refName: this.newSubspecName,
 								refDesc: this.newSubspecDesc,
+								refPrivate: this.newSubspecPrivate,
 							};
 						case MODE_SELECT:
 							return {refId: this.subspecId};
@@ -574,12 +579,15 @@ export default {
 			// Create now - don't wait until save block
 			this.creatingSubspec = true;
 			ajaxCreateSubspec(this.specId,
-				this.newSubspecName, this.newSubspecDesc,
+				this.newSubspecName,
+				this.newSubspecDesc,
+				this.newSubspecPrivate,
 			).then(subspec => {
 				this.subspecId = subspec.id;
 				this.subspecMode = MODE_SELECT;
 				this.newSubspecName = '';
 				this.newSubspecDesc = '';
+				this.newSubspecPrivate = false;
 				this.creatingSubspec = false;
 				if (this.subspecs) {
 					// Add newly created subspec
@@ -616,7 +624,7 @@ export default {
 			>*+* {
 				margin-top: 10px;
 			}
-			>label {
+			>label:not([class]) {
 				display: block;
 				>.el-input {
 					display: block;
@@ -625,6 +633,9 @@ export default {
 				>.el-alert {
 					margin-top: 10px;
 				}
+			}
+			>.el-checkbox {
+				margin: 20px 0 10px;
 			}
 		}
 	}

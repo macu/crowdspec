@@ -14,7 +14,7 @@ export function alertError(error) {
 			if (error.status === 503) { // Service Unavailable
 				message = 'CrowdSpec is currently offline for database upgrades. Please try again in a bit.';
 			} else {
-				message = 'Request failed with HTTP error code ' + error.status + '.';
+				message = 'Request failed with error code ' + error.status + '.';
 			}
 		} else if (error.message) {
 			message = error.message;

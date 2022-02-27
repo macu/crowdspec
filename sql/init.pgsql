@@ -111,9 +111,10 @@ CREATE TABLE spec_subspec (
 	updated_at TIMESTAMPTZ NOT NULL,
 	subspec_name VARCHAR(255) NOT NULL COLLATE case_insensitive,
 	subspec_desc TEXT,
-	blocks_updated_at TIMESTAMPTZ
+	blocks_updated_at TIMESTAMPTZ,
+	is_private BOOLEAN NOT NULL DEFAULT FALSE
 );
-CREATE INDEX spec_subspec_by_name ON spec_subspec (spec_id, subspec_name);
+CREATE INDEX spec_subspec_by_name ON spec_subspec (spec_id, is_private, subspec_name);
 
 CREATE TYPE list_style_type AS ENUM (
 	'bullet',

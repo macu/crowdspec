@@ -118,7 +118,26 @@
 				<h3>Your comments</h3>
 
 				<div class="flex-row wrap-reverse">
-					<div class="fill nowraptext" v-text="formattedCommentsCount"/>
+					<div class="fill nowraptext count-message">
+						<template v-if="showUnreadOnly">
+							<template v-if="totalComments === 1">
+								1 comment with unread replies
+							</template>
+							<template v-else-if="totalComments > 0">
+								{{totalComments}} comments with unread replies
+							</template>
+							<em v-else>No comments with unread replies</em>
+						</template>
+						<template v-else>
+							<template v-if="totalComments === 1">
+								1 comment
+							</template>
+							<template v-else-if="totalComments > 0">
+								{{totalComments}} comment
+							</template>
+							<em v-else>No comments</em>
+						</template>
+					</div>
 					<el-checkbox v-model="showUnreadOnly" @change="reloadComments()">
 						Show only comments with unread replies
 					</el-checkbox>
@@ -159,7 +178,6 @@
 				<p v-else-if="loadingCommentsPage">
 					<loading-message message="Loading..."/>
 				</p>
-				<p v-else>No comments</p>
 
 			</section>
 
@@ -172,6 +190,8 @@
 		:spec-id="specId"
 		:enable-write="$store.getters.loggedIn"
 		@play-video="playVideo"
+		@comment-updated="commentUpdated"
+		@comment-deleted="commentDeleted"
 		/>
 
 	<play-video-modal
@@ -233,11 +253,6 @@ export default {
 				args.updatedBefore = this.comments[this.comments.length - 1].updated;
 			}
 			return args;
-		},
-		formattedCommentsCount() {
-			let c = this.totalComments;
-			return (c + ' comment' + (c !== 1 ? 's' : '')) +
-				(this.showUnreadOnly ? ' with unread replies' : '');
 		},
 	},
 	beforeRouteEnter(to, from, next) {
@@ -335,14 +350,14 @@ export default {
 			this.$nextTick(() => { // allow prop to apply
 				this.$refs.communityModal.openCommunityReview(TARGET_TYPE_SPEC, specId,
 					adjustUnread => {
-						for (var i = 0; i < this.specs.length; i++) {
+						for (let i = 0; i < this.specs.length; i++) {
 							if (idsEq(specId, this.specs[i].id)) {
 								this.specs[i].unread = this.specs[i].unread + adjustUnread;
 								break;
 							}
 						}
 					}, adjustTotal => {
-						for (var i = 0; i < this.specs.length; i++) {
+						for (let i = 0; i < this.specs.length; i++) {
 							if (idsEq(specId, this.specs[i].id)) {
 								this.specs[i].total = this.specs[i].total + adjustTotal;
 								break;
@@ -364,7 +379,7 @@ export default {
 				this.$refs.communityModal.openCommunityReview(TARGET_TYPE_SUBSPEC, subspecId,
 					adjustUnread => {
 						let subspecs = this.subspecsBySpecId[specId];
-						for (var i = 0; i < subspecs.length; i++) {
+						for (let i = 0; i < subspecs.length; i++) {
 							if (idsEq(subspecId, subspecs[i].id)) {
 								subspecs[i].unread = subspecs[i].unread + adjustUnread;
 								break;
@@ -375,14 +390,14 @@ export default {
 						if (adjustUnread > 0) {
 							hasUnreadSubspec = true;
 						} else {
-							for (var i = 0; i < subspecs.length; i++) {
+							for (let i = 0; i < subspecs.length; i++) {
 								if (subspecs[i].unread > 0 || subspecs[i].blockUnread > 0) {
 									hasUnreadSubspec = true;
 									break;
 								}
 							}
 						}
-						for (var i = 0; i < this.specs.length; i++) {
+						for (let i = 0; i < this.specs.length; i++) {
 							if (idsEq(specId, this.specs[i].id)) {
 								this.specs[i].hasUnreadSubspec = hasUnreadSubspec;
 								break;
@@ -390,7 +405,7 @@ export default {
 						}
 					}, adjustTotal => {
 						let subspecs = this.subspecsBySpecId[specId];
-						for (var i = 0; i < subspecs.length; i++) {
+						for (let i = 0; i < subspecs.length; i++) {
 							if (idsEq(subspecId, subspecs[i].id)) {
 								subspecs[i].total = subspecs[i].total + adjustTotal;
 								break;
@@ -411,14 +426,14 @@ export default {
 			this.$nextTick(() => { // allow prop to apply
 				this.$refs.communityModal.openCommunityReview(TARGET_TYPE_COMMENT, commentId,
 					adjustUnread => {
-						for (var i = 0; i <this.comments.length; i++) {
+						for (let i = 0; i < this.comments.length; i++) {
 							if (idsEq(commentId, this.comments[i].id)) {
 								this.comments[i].unread = this.comments[i].unread + adjustUnread;
 								break;
 							}
 						}
 					}, adjustTotal => {
-						for (var i = 0; i < this.comments.length; i++) {
+						for (let i = 0; i < this.comments.length; i++) {
 							if (idsEq(commentId, this.comments[i].id)) {
 								this.comments[i].total = this.comments[i].total + adjustTotal;
 								break;
@@ -430,6 +445,25 @@ export default {
 		},
 		playVideo(urlObject) {
 			this.$refs.playVideoModal.show(urlObject);
+		},
+		commentUpdated(comment) {
+			for (let i = 0; i < this.comments.length; i++) {
+				if (this.comments[i].id === comment.id) {
+					// Apply changes
+					this.comments[i] = $.extend(true, this.comments[i], comment);
+					break;
+				}
+			}
+		},
+		commentDeleted(commentId) {
+			for (let i = 0; i < this.comments.length; i++) {
+				if (this.comments[i].id === commentId) {
+					// Remove from list
+					this.comments.splice(i, 1);
+					this.totalComments--;
+					break;
+				}
+			}
 		},
 	},
 };
@@ -457,12 +491,20 @@ export default {
 	} // header
 
 	section {
+		margin-bottom: 100px;
 		>h3 {
 			margin: 40px 0;
 			padding: 20px;
 			background-color: $section-highlight;
 		}
-		margin-bottom: 100px;
+		>div.flex-row {
+			>div.count-message {
+				>em {
+					color: gray;
+					font-style: italic;
+				}
+			}
+		}
 	}
 
 	.body {

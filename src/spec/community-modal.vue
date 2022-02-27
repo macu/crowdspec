@@ -41,6 +41,7 @@
 			ref="previewComment"
 			:spec-id="specId"
 			:comment="target"
+			@updated="commentUpdated"
 			@deleted="commentDeleted"
 			@update-unread="contextUpdateUnread"
 			/>
@@ -130,6 +131,7 @@ import PreviewBlock from './preview-block.vue';
 import PreviewComment from './preview-comment.vue';
 import LoadingMessage from '../widgets/loading.vue';
 import {
+	alertError,
 	idsEq,
 } from '../utils.js';
 import {
@@ -158,7 +160,7 @@ export default {
 		specId: Number,
 		enableWrite: Boolean,
 	},
-	emits: ['play-video'],
+	emits: ['play-video', 'comment-updated', 'comment-deleted'],
 	data() {
 		return {
 			showing: false,
@@ -284,11 +286,13 @@ export default {
 					this.onAdjustUnread = cachedItem.onAdjustUnread;
 					this.onAdjustComments = cachedItem.onAdjustComments;
 				}
-			}).fail(() => {
+			}).fail(jqXHR => {
 				this.loading = false;
-				this.error = 'Failed to load community.';
-				if (this.$refs.contextStack.checkEmpty()) {
-					this.showing = false;
+				if (jqXHR && jqXHR.status === 403) {
+					this.error = 'You do not have access to the requested community space.';
+				} else {
+					alertError(jqXHR);
+					this.error = 'Failed to load community.';
 				}
 			});
 		},
@@ -374,6 +378,12 @@ export default {
 				this.onAdjustComments(direction);
 			}
 		},
+		commentUpdated(comment) {
+			if (this.targetType === TARGET_TYPE_COMMENT && this.target.id === comment.id) {
+				// Notify context
+				this.$emit('comment-updated', comment);
+			}
+		},
 		commentDeleted(commentId) {
 			if (this.targetType === TARGET_TYPE_COMMENT && this.target.id === commentId) {
 				let unread = this.$refs.previewComment.isUnread();
@@ -388,6 +398,8 @@ export default {
 				if (parentContext.onAdjustComments) {
 					parentContext.onAdjustComments(-1);
 				}
+				// Notify context
+				this.$emit('comment-deleted', commentId);
 			} else {
 				for (var i = 0; i < this.comments.length; i++) {
 					if (idsEq(this.comments[i].id, commentId)) {

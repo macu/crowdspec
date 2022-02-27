@@ -90,6 +90,10 @@
 			</label>
 		</section>
 
+		<section>
+			<policy-disclaimer/>
+		</section>
+
 	</template>
 
 	<template #footer>
@@ -116,6 +120,7 @@ import $ from 'jquery';
 import Moment from '../widgets/moment.vue';
 import RefForm from './ref-form.vue';
 import LoadingMessage from '../widgets/loading.vue';
+import PolicyDisclaimer from '../widgets/policy-disclaimer.vue';
 import {
 	ajaxLoadBlockForEditing, ajaxCreateBlock, ajaxSaveBlock,
 	ajaxRenderMarkdown,
@@ -138,6 +143,7 @@ export default {
 		Moment,
 		RefForm,
 		LoadingMessage,
+		PolicyDisclaimer,
 	},
 	props: {
 		specId: {

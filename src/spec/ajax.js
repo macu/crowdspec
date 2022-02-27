@@ -45,19 +45,21 @@ export function ajaxLoadSubspec(specId, subspecId, loadBlocks = true) {
 	});
 }
 
-export function ajaxCreateSubspec(specId, name, desc) {
+export function ajaxCreateSubspec(specId, name, desc, subspecPrivate) {
 	return $.post('/ajax/spec/create-subspec', {
 		specId, // required
 		name, // required
 		desc,
+		private: subspecPrivate,
 	}).fail(alertError);
 }
 
-export function ajaxSaveSubspec(subspecId, name, desc) {
+export function ajaxSaveSubspec(subspecId, name, desc, subspecPrivate) {
 	return $.post('/ajax/spec/save-subspec', {
 		subspecId, // required
 		name, // required
 		desc,
+		private: subspecPrivate,
 	}).fail(alertError);
 }
 
@@ -159,7 +161,7 @@ export function ajaxLoadCommunity(specId, targetType, targetId, unreadOnly, load
 		targetId,
 		unreadOnly,
 		loadStack,
-	}).fail(alertError);
+	});
 }
 
 export function ajaxLoadCommentsPage(specId, targetType, targetId, updatedBefore, unreadOnly) {

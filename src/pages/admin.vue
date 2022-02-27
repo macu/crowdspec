@@ -48,8 +48,7 @@
 				<el-table-column label="Actions" width="200">
 					<template #default="scope">
 						<el-button v-if="!scope.row.reviewed"
-							@click="openReviewSignupRequest(scope.row)"
-							size="small">
+							@click="openReviewSignupRequest(scope.row)">
 							Review
 						</el-button>
 					</template>

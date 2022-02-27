@@ -6,6 +6,9 @@
 		<div v-if="onSubspecRoute && !loading" class="right">
 
 			<template v-if="enableEditing">
+				<span v-if="subspec.private">
+					Private
+				</span>
 				<el-button
 					@click="openSubspecCommunity()"
 					:type="showUnread ? 'primary' : 'default'"
@@ -64,7 +67,6 @@ import Moment from '../widgets/moment.vue';
 import SpecView from '../spec/view.vue';
 import {ajaxLoadSubspec} from '../spec/ajax.js';
 import {
-	OWNER_TYPE_USER,
 	TARGET_TYPE_SUBSPEC,
 } from '../spec/const.js';
 import {setWindowSubtitle} from '../utils.js';
@@ -97,6 +99,9 @@ export default {
 		},
 		onSubspecRoute() {
 			return this.$route.name === 'subspec';
+		},
+		subspecPrivate() {
+			return this.subspec ? this.subspec.private : false;
 		},
 		choosingAddPosition() {
 			return this.$store.getters.currentlyMovingBlocks;
@@ -180,6 +185,7 @@ export default {
 				this.subspec.updated = updatedSubspec.updated;
 				this.subspec.name = updatedSubspec.name;
 				this.subspec.desc = updatedSubspec.desc;
+				this.subspec.private = updatedSubspec.private;
 				this.unreadCount = updatedSubspec.unreadCount || 0;
 				this.commentsCount = updatedSubspec.commentsCount || 0;
 				setWindowSubtitle(updatedSubspec.name);
@@ -233,14 +239,8 @@ export default {
 					display: block;
 					margin-bottom: 10px;
 				}
-				>*+* {
-					margin-left: 0;
-				}
 				>.el-button {
 					margin-bottom: 5px;
-				}
-				>.el-button + .el-button {
-					margin-left: 15px;
 				}
 			}
 		}

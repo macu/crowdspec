@@ -113,7 +113,7 @@ export default {
 		showCommunity: Boolean, // show unread count
 		showUnreadOnly: Boolean,
 	},
-	emits: ['update-unread', 'open-comments', 'deleted'],
+	emits: ['update-unread', 'open-comments', 'updated', 'deleted'],
 	data() {
 		return {
 			userRead: this.comment.userRead || false,
@@ -200,6 +200,12 @@ export default {
 				this.updated = response.updated;
 				this.body = response.body;
 				this.editingBody = '';
+				// Notify context
+				this.$emit('updated', {
+					id: this.comment.id,
+					body: response.body,
+					updated: response.updated,
+				});
 			}).fail(() => {
 				this.sendingEdit = false;
 			});
@@ -213,6 +219,7 @@ export default {
 				this.sendingDelete = true;
 				ajaxDeleteComment(this.specId, this.comment.id).then(() => {
 					this.sendingDelete = false;
+					// Notify context
 					this.$emit('deleted', this.comment.id);
 				}).fail(() => {
 					this.sendingDelete = false;

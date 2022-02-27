@@ -22,6 +22,14 @@
 		<el-input type="textarea" v-model="desc" :autosize="{minRows: 2}"/>
 	</label>
 
+	<label>
+		<el-checkbox v-model="subspecPrivate">
+			Keep this subspec private when the spec is published
+		</el-checkbox>
+	</label>
+
+	<policy-disclaimer/>
+
 	<template #footer>
 		<span class="dialog-footer">
 			<el-button @click="showing = false">Cancel</el-button>
@@ -37,10 +45,12 @@
 import $ from 'jquery';
 import Moment from '../widgets/moment.vue';
 import {ajaxCreateSubspec, ajaxSaveSubspec, ajaxDeleteSubspec} from './ajax.js';
+import PolicyDisclaimer from '../widgets/policy-disclaimer.vue';
 
 export default {
 	components: {
 		Moment,
+		PolicyDisclaimer,
 	},
 	props: {
 		specId: Number,
@@ -50,6 +60,7 @@ export default {
 			// user inputs
 			name: '',
 			desc: '',
+			subspecPrivate: false,
 			// passed in
 			subspec: null,
 			callback: null,
@@ -97,6 +108,7 @@ export default {
 			this.subspec = subspec;
 			this.name = subspec.name;
 			this.desc = subspec.desc;
+			this.subspecPrivate = subspec.private;
 			this.callback = callback;
 			this.showing = true;
 			this.$nextTick(() => {
@@ -122,7 +134,8 @@ export default {
 			ajaxCreateSubspec(
 				this.specId,
 				this.name,
-				this.desc
+				this.desc,
+				this.subspecPrivate
 			).then(newSubspec => {
 				callback(newSubspec.id);
 				this.showing = false;
@@ -137,7 +150,8 @@ export default {
 			ajaxSaveSubspec(
 				this.subspec.id,
 				this.name,
-				this.desc
+				this.desc,
+				this.subspecPrivate
 			).then(updatedSubspec => {
 				callback(updatedSubspec);
 				this.showing = false;
@@ -170,6 +184,7 @@ export default {
 			this.subspec = null;
 			this.name = '';
 			this.desc = '';
+			this.subspecPrivate = false;
 		},
 	},
 };

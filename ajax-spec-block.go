@@ -72,7 +72,7 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 		return nil, http.StatusBadRequest
 	}
 
-	if access, status := validateRefAccess(r, db, &userID, specID, refType, refID); !access {
+	if access, status := validateRefAccess(r, db, userID, specID, refType, refID); !access {
 		return nil, status
 	}
 
@@ -263,7 +263,7 @@ func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 		return nil, http.StatusBadRequest
 	}
 
-	if access, status := validateRefAccess(r, db, &userID, specID, refType, refID); !access {
+	if access, status := validateRefAccess(r, db, userID, specID, refType, refID); !access {
 		return nil, status
 	}
 
@@ -318,8 +318,7 @@ func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 		}
 
 		// Update block row
-		err = tx.QueryRow(`
-			UPDATE spec_block
+		err = tx.QueryRow(`UPDATE spec_block
 			SET updated_at=$4, style_type=$5, content_type=$6,
 				ref_type=$7, ref_id=$8, block_title=$9, block_body=$10, rendered_html=$11
 			WHERE id=$3 AND spec_id=$2

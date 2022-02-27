@@ -6,6 +6,7 @@
 			<router-link :to="{name: 'subspec', params: {specId: item.specId, subspecId: item.id}}">
 				{{item.name.trim()}}
 			</router-link>
+			<el-tag v-if="item.private" type="info" effect="dark" size="small">Private</el-tag>
 		</div>
 		<div v-if="item.desc" class="desc">{{item.desc.trim()}}</div>
 	</div>
@@ -29,11 +30,14 @@ export default {
 	>div {
 		>.title {
 			font-weight: bold;
-			>span {
+			>span:not([class]) {
 				font-weight: normal;
 				color: gray;
 				display: inline-block;
 				margin-right: 5px;
+			}
+			>.el-tag {
+				margin-left: 10px;
 			}
 		}
 		>.desc {

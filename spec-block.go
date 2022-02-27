@@ -76,7 +76,8 @@ func loadBlockForEditing(db DBConn, userID uint, specID, blockID int64) (*SpecBl
 		spec_block.subspec_id, spec_block.parent_id, spec_block.order_number,
 		spec_block.style_type, spec_block.content_type, spec_block.ref_type, spec_block.ref_id,
 		spec_block.block_title, spec_block.block_body, NULL AS rendered_html,
-		ref_subspec.spec_id AS subspec_spec_id, ref_subspec.subspec_name, ref_subspec.subspec_desc,
+		ref_subspec.spec_id AS subspec_spec_id,
+		ref_subspec.subspec_name, ref_subspec.subspec_desc, ref_subspec.is_private,
 		ref_url.spec_id AS url_spec_id, ref_url.created_at AS url_created, ref_url.updated_at AS url_updated,
 		ref_url.url AS url_url, ref_url.url_title, ref_url.url_desc, ref_url.url_image_data,
 		-- select number of unread comments
@@ -155,7 +156,8 @@ func loadBlocksByID(db DBConn, userID uint, specID int64, blockIDs ...int64) ([]
 		spec_block.block_title,
 		CASE WHEN spec_block.content_type = 'plaintext' THEN spec_block.block_body ELSE NULL END AS block_body,
 		CASE WHEN spec_block.content_type = 'markdown' THEN spec_block.rendered_html ELSE NULL END AS rendered_html,
-		ref_subspec.spec_id AS subspec_spec_id, ref_subspec.subspec_name, ref_subspec.subspec_desc,
+		ref_subspec.spec_id AS subspec_spec_id,
+		ref_subspec.subspec_name, ref_subspec.subspec_desc, ref_subspec.is_private,
 		ref_url.spec_id AS url_spec_id, ref_url.created_at AS url_created, ref_url.updated_at AS url_updated,
 		ref_url.url AS url_url, ref_url.url_title, ref_url.url_desc, ref_url.url_image_data,
 		-- select number of unread comments
@@ -230,7 +232,8 @@ func loadContextBlocks(db *sql.DB, userID *uint, specID int64, subspecID *int64)
 		spec_block.block_title,
 		CASE WHEN spec_block.content_type = 'plaintext' THEN spec_block.block_body ELSE NULL END AS block_body,
 		CASE WHEN spec_block.content_type = 'markdown' THEN spec_block.rendered_html ELSE NULL END AS rendered_html,
-		ref_subspec.spec_id AS subspec_spec_id, ref_subspec.subspec_name, ref_subspec.subspec_desc,
+		ref_subspec.spec_id AS subspec_spec_id,
+		ref_subspec.subspec_name, ref_subspec.subspec_desc, ref_subspec.is_private,
 		ref_url.spec_id AS url_spec_id, ref_url.created_at AS url_created, ref_url.updated_at AS url_updated,
 		ref_url.url AS url_url, ref_url.url_title, ref_url.url_desc, ref_url.url_image_data,
 		-- select number of unread comments
@@ -280,13 +283,14 @@ func readBlocks(rows *sql.Rows, blocks *[]*SpecBlock, blocksByID *map[int64]*Spe
 		b := &SpecBlock{}
 		var subspecSpecID, urlSpecID *int64
 		var subspecName, subspecDesc *string
+		var subspecPrivate *bool
 		var urlCreated, urlUpdated *time.Time
 		var urlURL, urlTitle, urlDesc, urlImageData *string
 
 		err := rows.Scan(&b.ID, &b.SpecID, &b.Created, &b.Updated,
 			&b.SubspecID, &b.ParentID, &b.OrderNumber,
 			&b.StyleType, &b.ContentType, &b.RefType, &b.RefID, &b.Title, &b.Body, &b.HTML,
-			&subspecSpecID, &subspecName, &subspecDesc,
+			&subspecSpecID, &subspecName, &subspecDesc, &subspecPrivate,
 			&urlSpecID, &urlCreated, &urlUpdated, &urlURL, &urlTitle, &urlDesc, &urlImageData,
 			&b.UnreadCount, &b.CommentsCount)
 		if err != nil {
@@ -314,10 +318,11 @@ func readBlocks(rows *sql.Rows, blocks *[]*SpecBlock, blocksByID *map[int64]*Spe
 			case BlockRefSubspec:
 				if subspecSpecID != nil {
 					b.RefItem = &SpecSubspec{
-						ID:     *b.RefID,
-						SpecID: *subspecSpecID,
-						Name:   *subspecName,
-						Desc:   subspecDesc,
+						ID:      *b.RefID,
+						SpecID:  *subspecSpecID,
+						Name:    *subspecName,
+						Desc:    subspecDesc,
+						Private: *subspecPrivate,
 					}
 				}
 			}

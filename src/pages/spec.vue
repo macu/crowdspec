@@ -14,14 +14,6 @@
 
 			<template v-if="onSpecRoute">
 				<template v-if="enableEditing">
-					<span v-if="spec.public">
-						Public
-					</span>
-					<span v-else>
-						<el-tooltip content="Unpublished" placement="left">
-							<i class="material-icons">lock</i>
-						</el-tooltip>
-					</span>
 					<el-button
 						@click="openSpecCommunity()"
 						:type="showUnread ? 'primary' : 'default'"
@@ -48,6 +40,16 @@
 						<span v-else-if="commentsCount">{{commentsCount}}</span>
 					</el-button>
 				</template>
+			</template>
+			<template v-else-if="enableEditing">
+				<span v-if="spec.public">
+					Public
+				</span>
+				<span v-else>
+					<el-tooltip content="Unpublished" placement="left">
+						<i class="material-icons">lock</i>
+					</el-tooltip>
+				</span>
 			</template>
 
 			<el-button @click="promptNavSpec()">

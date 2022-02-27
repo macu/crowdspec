@@ -122,7 +122,8 @@ func handleCreateRefItem(tx *sql.Tx, specID int64, fields url.Values) (*int64, i
 	case BlockRefSubspec:
 		refName := strings.TrimSpace(fields.Get("refName"))
 		refDesc := AtoPointerNilIfEmpty(strings.TrimSpace(fields.Get("refDesc")))
-		refItem, err := createSubspec(tx, specID, refName, refDesc)
+		refPrivate := AtoBool(fields.Get("refPrivate"))
+		refItem, err := createSubspec(tx, specID, refName, refDesc, refPrivate)
 		if err != nil {
 			return nil, nil, fmt.Errorf("creating subspec ref item: %w", err)
 		}
