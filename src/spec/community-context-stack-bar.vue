@@ -4,8 +4,11 @@
 		<i class="material-icons">north_west</i>
 	</el-button>
 	<span class="bar">
-		<span class="label">{{label || '...'}}</span>
+		<span class="label">
+			{{label || '...'}}
+		</span>
 		<span class="content" v-text="content || '...'"/>
+		<el-tag v-if="showPrivate" type="info" effect="dark" size="small">Private</el-tag>
 	</span>
 </div>
 </template>
@@ -38,6 +41,12 @@ export default {
 				}
 			}
 			return label;
+		},
+		showPrivate() {
+			if (this.targetType === TARGET_TYPE_SUBSPEC) {
+				return this.target.private;
+			}
+			return false;
 		},
 		content() {
 			switch (this.targetType) {
@@ -89,23 +98,32 @@ export default {
 		flex: 1;
 		display: flex;
 		flex-direction: row;
+		align-items: center;
 		font-size: 12px;
 		cursor: pointer;
 		border-radius: 8px;
 		overflow: hidden; // enables ellipsis
 
 		>.label {
+			align-self: stretch;
 			padding: 5px 20px;
 			font-weight: bold;
 			background-color: $shadow-bg;
 			border-radius: 8px;
+			display: flex;
+			flex-direction: row;
+			align-items: center;
+			white-space: nowrap;
 		}
 		>.content {
-			flex: 1;
 			padding: 5px 20px;
 			white-space: nowrap;
 			overflow: hidden;
 			text-overflow: ellipsis;
+		}
+		>.el-tag {
+			margin-left: -10px;
+			margin-right: 20px;
 		}
 	}
 

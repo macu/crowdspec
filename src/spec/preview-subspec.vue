@@ -1,6 +1,9 @@
 <template>
 <div class="spec-subspec-preview community-target-preview">
-	<div class="name">{{subspec.name}}</div>
+	<div class="name">
+		{{subspec.name}}
+		<el-tag v-if="subspec.private" type="info" effect="dark">Private</el-tag>
+	</div>
 	<div v-if="subspec.desc" class="desc">{{subspec.desc}}</div>
 </div>
 </template>
@@ -25,6 +28,9 @@ export default {
 	>.name {
 		font-weight: bold;
 		font-size: larger;
+		>.el-tag {
+			margin-left: 10px;
+		}
 	}
 
 	>.desc {
