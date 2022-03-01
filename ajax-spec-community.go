@@ -148,7 +148,7 @@ func extractValidCommunityTarget(r *http.Request, userID *uint) (int64, string, 
 func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
 	// GET
 
-	specID, err := AtoInt64(r.FormValue("specId"))
+	_, err := AtoInt64(r.FormValue("specId"))
 	if err != nil {
 		logError(r, userID, fmt.Errorf("invalid specId: %w", err))
 		return nil, http.StatusBadRequest
@@ -160,7 +160,7 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *h
 		return nil, status
 	}
 
-	if access, status := verifyReadCommunityTarget(r, db, userID, specID, targetType, targetID); !access {
+	if access, status := verifyReadTarget(r, db, userID, targetType, targetID); !access {
 		return nil, status
 	}
 
@@ -178,10 +178,6 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *h
 	switch targetType {
 
 	case CommunityTargetSpec:
-		if access, status := verifyReadSpec(r, db, userID, specID); !access {
-			return nil, status
-		}
-
 		sc := &specCommunity{
 			Comments:      comments,
 			UnreadCount:   unreadCount,
@@ -195,7 +191,7 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *h
 				spec_name, spec_desc
 			FROM spec
 			WHERE id=$1`,
-			specID,
+			targetID,
 		).Scan(&sc.Spec.ID, &sc.Spec.Created, &sc.Spec.Updated, &sc.Spec.Name, &sc.Spec.Desc)
 		if err != nil {
 			logError(r, userID, fmt.Errorf("reading spec: %w", err))
@@ -207,10 +203,6 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *h
 		return sc, http.StatusOK
 
 	case CommunityTargetSubspec:
-		if access, status := verifyReadSubspec(r, db, userID, targetID); !access {
-			return nil, status
-		}
-
 		sc := &subspecCommunity{
 			Comments:      comments,
 			UnreadCount:   unreadCount,
@@ -237,10 +229,6 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *h
 		return sc, http.StatusOK
 
 	case CommunityTargetBlock:
-		if access, status := verifyReadBlock(r, db, userID, specID, targetID); !access {
-			return nil, status
-		}
-
 		bc := &blockCommunity{
 			/*
 				Block struct {
@@ -310,10 +298,6 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *h
 		return bc, http.StatusOK
 
 	case CommunityTargetComment:
-		if access, status := verifyReadComment(r, db, userID, specID, targetID); !access {
-			return nil, status
-		}
-
 		cc := &commentCommunity{
 			/*
 				Comment struct {
@@ -497,7 +481,7 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *h
 func ajaxSpecCommunityLoadCommentsPage(db *sql.DB, userID *uint,
 	w http.ResponseWriter, r *http.Request) (interface{}, int) {
 
-	specID, err := AtoInt64(r.FormValue("specId"))
+	_, err := AtoInt64(r.FormValue("specId"))
 	if err != nil {
 		logError(r, userID, fmt.Errorf("invalid specId: %w", err))
 		return nil, http.StatusBadRequest
@@ -509,7 +493,7 @@ func ajaxSpecCommunityLoadCommentsPage(db *sql.DB, userID *uint,
 		return nil, status
 	}
 
-	if access, status := verifyReadCommunityTarget(r, db, userID, specID, targetType, targetID); !access {
+	if access, status := verifyReadTarget(r, db, userID, targetType, targetID); !access {
 		return nil, status
 	}
 
@@ -552,7 +536,8 @@ func ajaxSpecCommunityAddComment(db *sql.DB, userID uint, w http.ResponseWriter,
 		return nil, status
 	}
 
-	if access, status := verifyAddComment(r, db, &userID, specID, targetType, targetID); !access {
+	// allow adding comment under any readable target
+	if access, status := verifyReadTarget(r, db, &userID, targetType, targetID); !access {
 		return nil, status
 	}
 
@@ -607,7 +592,7 @@ func ajaxSpecCommunityUpdateComment(db *sql.DB, userID uint, w http.ResponseWrit
 	// POST
 	// TODO Retain history of edits
 
-	specID, err := AtoInt64(r.FormValue("specId"))
+	_, err := AtoInt64(r.FormValue("specId"))
 	if err != nil {
 		logError(r, &userID, fmt.Errorf("invalid specId: %w", err))
 		return nil, http.StatusBadRequest
@@ -619,7 +604,7 @@ func ajaxSpecCommunityUpdateComment(db *sql.DB, userID uint, w http.ResponseWrit
 		return nil, http.StatusBadRequest
 	}
 
-	if access, status := verifyUpdateComment(r, db, &userID, specID, commentID); !access {
+	if access, status := verifyWriteTarget(r, db, userID, CommunityTargetComment, commentID); !access {
 		return nil, status
 	}
 
@@ -659,7 +644,7 @@ func ajaxSpecCommunityUpdateComment(db *sql.DB, userID uint, w http.ResponseWrit
 func ajaxSpecCommunityDeleteComment(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
 	// POST
 
-	specID, err := AtoInt64(r.FormValue("specId"))
+	_, err := AtoInt64(r.FormValue("specId"))
 	if err != nil {
 		logError(r, &userID, fmt.Errorf("invalid specId: %w", err))
 		return nil, http.StatusBadRequest
@@ -671,7 +656,7 @@ func ajaxSpecCommunityDeleteComment(db *sql.DB, userID uint, w http.ResponseWrit
 		return nil, http.StatusBadRequest
 	}
 
-	if access, status := verifyDeleteComment(r, db, &userID, specID, commentID); !access {
+	if access, status := verifyDeleteTarget(r, db, userID, CommunityTargetComment, commentID); !access {
 		return nil, status
 	}
 
@@ -746,39 +731,3 @@ func ajaxSpecCommunityMarkRead(db *sql.DB, userID uint, w http.ResponseWriter, r
 		return nil, http.StatusOK
 	})
 }
-
-// func ajaxSpecSearchCommunity(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
-// 	// GET
-//
-// 	return nil, http.StatusOK
-// }
-//
-// func ajaxSpecLoadCommunityConfig(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
-// 	// GET
-//
-// 	return nil, http.StatusOK
-// }
-//
-// func ajaxSpecSaveCommunityConfig(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
-// 	// GET
-//
-// 	return nil, http.StatusOK
-// }
-//
-// func ajaxSpecAddCommunityTag(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
-// 	// GET
-//
-// 	return nil, http.StatusOK
-// }
-//
-// func ajaxUpdateSpecCommunityVote(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
-// 	// GET
-//
-// 	return nil, http.StatusOK
-// }
-//
-// func ajaxSpecAdminUpdateCommunityTag(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
-// 	// GET
-//
-// 	return nil, http.StatusOK
-// }

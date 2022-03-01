@@ -24,7 +24,7 @@ func ajaxSubspec(db *sql.DB, userID *uint, w http.ResponseWriter, r *http.Reques
 		return nil, http.StatusBadRequest
 	}
 
-	if access, status := verifyReadSubspec(r, db, userID, subspecID); !access {
+	if access, status := verifyReadTarget(r, db, userID, CommunityTargetSubspec, subspecID); !access {
 		return nil, status
 	}
 
@@ -111,7 +111,7 @@ func ajaxSubspecs(db *sql.DB, userID *uint, w http.ResponseWriter, r *http.Reque
 		return nil, http.StatusBadRequest
 	}
 
-	if access, status := verifyReadSpec(r, db, userID, specID); !access {
+	if access, status := verifyReadTarget(r, db, userID, CommunityTargetSpec, specID); !access {
 		return nil, status
 	}
 
@@ -180,7 +180,7 @@ func ajaxSpecCreateSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *ht
 		return nil, http.StatusBadRequest
 	}
 
-	if access, status := verifyCreateSubspec(r, db, &userID, specID); !access {
+	if access, status := verifyCreateSubspec(r, db, userID, specID); !access {
 		return nil, status
 	}
 
@@ -233,7 +233,7 @@ func ajaxSpecSaveSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 		return nil, http.StatusBadRequest
 	}
 
-	if access, status := verifyWriteSubspec(r, db, &userID, subspecID); !access {
+	if access, status := verifyWriteTarget(r, db, userID, CommunityTargetSubspec, subspecID); !access {
 		return nil, status
 	}
 
@@ -308,7 +308,7 @@ func ajaxSpecDeleteSubspec(db *sql.DB, userID uint, w http.ResponseWriter, r *ht
 		return nil, http.StatusBadRequest
 	}
 
-	if access, status := verifyWriteSubspec(r, db, &userID, subspecID); !access {
+	if access, status := verifyDeleteTarget(r, db, userID, CommunityTargetSubspec, subspecID); !access {
 		return nil, status
 	}
 

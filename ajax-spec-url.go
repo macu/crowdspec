@@ -29,7 +29,7 @@ func ajaxSpecURLs(db *sql.DB, userID *uint, w http.ResponseWriter, r *http.Reque
 		return nil, http.StatusBadRequest
 	}
 
-	if access, status := verifyReadSpec(r, db, userID, specID); !access {
+	if access, status := verifyReadTarget(r, db, userID, CommunityTargetSpec, specID); !access {
 		return nil, status
 	}
 
@@ -79,7 +79,7 @@ func ajaxSpecCreateURL(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 		return nil, http.StatusBadRequest
 	}
 
-	if access, status := verifyWriteSpec(r, db, &userID, specID); !access {
+	if access, status := verifyWriteTarget(r, db, userID, CommunityTargetSpec, specID); !access {
 		return nil, status
 	}
 
@@ -121,7 +121,7 @@ func ajaxSpecRefreshURL(db *sql.DB, userID uint, w http.ResponseWriter, r *http.
 		return nil, http.StatusBadRequest
 	}
 
-	if access, status := verifyWriteURL(r, db, &userID, id); !access {
+	if access, status := verifyWriteURL(r, db, userID, id); !access {
 		return nil, status
 	}
 
@@ -163,7 +163,7 @@ func ajaxSpecDeleteURL(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 		return nil, http.StatusBadRequest
 	}
 
-	if access, status := verifyWriteURL(r, db, &userID, id); !access {
+	if access, status := verifyWriteURL(r, db, userID, id); !access {
 		return nil, status
 	}
 

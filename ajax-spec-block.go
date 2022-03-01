@@ -49,7 +49,7 @@ func ajaxSpecCreateBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 	if insertBeforeID != nil {
 		verifyBlockIds = append(verifyBlockIds, *insertBeforeID)
 	}
-	if access, status := verifyWriteSpecSubspecBlocks(r, db, &userID, specID, subspecID,
+	if access, status := verifyWriteSpecSubspecBlocks(r, db, userID, specID, subspecID,
 		verifyBlockIds...); !access {
 		return nil, status
 	}
@@ -179,7 +179,7 @@ func ajaxLoadBlockForEditing(db *sql.DB, userID uint, w http.ResponseWriter, r *
 		return nil, http.StatusBadRequest
 	}
 
-	if access, status := verifyWriteSpecBlock(r, db, &userID, specID, blockID); !access {
+	if access, status := verifyWriteTarget(r, db, userID, CommunityTargetBlock, blockID); !access {
 		return nil, status
 	}
 
@@ -241,7 +241,7 @@ func ajaxSpecSaveBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http.R
 		return nil, http.StatusBadRequest
 	}
 
-	if access, status := verifyWriteSpecBlock(r, db, &userID, specID, blockID); !access {
+	if access, status := verifyWriteTarget(r, db, userID, CommunityTargetBlock, blockID); !access {
 		return nil, status
 	}
 
@@ -415,7 +415,7 @@ func ajaxSpecMoveBlocks(db *sql.DB, userID uint, w http.ResponseWriter, r *http.
 	if insertBeforeID != nil {
 		verifyBlockIds = append(verifyBlockIds, *insertBeforeID)
 	}
-	if access, status := verifyWriteSpecSubspecBlocks(r, db, &userID, specID, targetSubspecID,
+	if access, status := verifyWriteSpecSubspecBlocks(r, db, userID, specID, targetSubspecID,
 		verifyBlockIds...); !access {
 		return nil, status
 	}
@@ -539,7 +539,7 @@ func ajaxSpecDeleteBlock(db *sql.DB, userID uint, w http.ResponseWriter, r *http
 		return nil, http.StatusInternalServerError
 	}
 
-	if access, status := verifyWriteSpecSubspecBlocks(r, db, &userID, specID, subspecID, blockID); !access {
+	if access, status := verifyWriteSpecSubspecBlocks(r, db, userID, specID, subspecID, blockID); !access {
 		return nil, status
 	}
 

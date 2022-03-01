@@ -19,7 +19,7 @@ func ajaxSpec(db *sql.DB, userID *uint, w http.ResponseWriter, r *http.Request) 
 		return nil, http.StatusBadRequest
 	}
 
-	if access, status := verifyReadSpec(r, db, userID, specID); !access {
+	if access, status := verifyReadTarget(r, db, userID, CommunityTargetSpec, specID); !access {
 		return nil, status
 	}
 
@@ -106,7 +106,7 @@ func ajaxCreateSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Requ
 
 	// TODO ALlow creating within an org
 
-	if access, status := verifyCreateSpec(r, db, &userID); !access {
+	if access, status := verifyCreateSpec(r, db, userID); !access {
 		return nil, status
 	}
 
@@ -154,7 +154,7 @@ func ajaxSaveSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Reques
 		return nil, http.StatusBadRequest
 	}
 
-	if access, status := verifyWriteSpec(r, db, &userID, specID); !access {
+	if access, status := verifyWriteTarget(r, db, userID, CommunityTargetSpec, specID); !access {
 		return nil, status
 	}
 
@@ -219,7 +219,7 @@ func ajaxDeleteSpec(db *sql.DB, userID uint, w http.ResponseWriter, r *http.Requ
 		return nil, http.StatusBadRequest
 	}
 
-	if access, status := verifyWriteSpec(r, db, &userID, specID); !access {
+	if access, status := verifyDeleteTarget(r, db, userID, CommunityTargetSpec, specID); !access {
 		return nil, status
 	}
 

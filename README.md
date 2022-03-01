@@ -83,6 +83,7 @@ postgres=#
 
 - [x] Upgrade to Vue 3
 - [x] Make public specs publicly accessible
+- [x] Add PL/pgSQL functions to verify access permissions
 
 ### 2022-01
 
