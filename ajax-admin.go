@@ -128,6 +128,7 @@ func ajaxAdminSubmitSignupRequestReview(db *sql.DB,
 			"<p>Visit this link to set a password and log in: "+
 				`<a href="`+url+`">`+url+`</a></p>`+
 				messageHTML,
+			false,
 		)
 		if err != nil {
 			logError(r, &userID, fmt.Errorf("sending signup request approval email: %w", err))
@@ -142,6 +143,7 @@ func ajaxAdminSubmitSignupRequestReview(db *sql.DB,
 				messagePlain,
 			"<p>Sorry, I have decided not to approve your signup request.</p>"+
 				messageHTML,
+			false,
 		)
 		if err != nil {
 			logError(r, &userID, fmt.Errorf("sending signup request approval email: %w", err))
@@ -185,4 +187,79 @@ func ajaxAdminLoadUsers(db *sql.DB,
 	}
 
 	return users, http.StatusOK
+}
+
+func ajaxAdminSendEmail(db *sql.DB,
+	userID uint, w http.ResponseWriter, r *http.Request) (interface{}, int) {
+
+	recipientUserID, err := AtoInt64NilIfEmpty(r.FormValue("userId"))
+	if err != nil {
+		logError(r, &userID, fmt.Errorf("error parsing userID: %w", err))
+		return nil, http.StatusInternalServerError
+	}
+
+	emailSubject := strings.TrimSpace(r.FormValue("subject"))
+	emailBody := strings.TrimSpace(r.FormValue("body"))
+
+	if emailSubject == "" || emailBody == "" {
+		logError(r, &userID, fmt.Errorf("attempt to send email with empty subject or body"))
+		return nil, http.StatusBadRequest
+	}
+
+	if recipientUserID == nil {
+		// Send to all users
+
+		var usernames, emails []string
+
+		rows, err := db.Query(`SELECT username, email FROM user_account ORDER BY id`)
+		if err != nil {
+			logError(r, &userID, fmt.Errorf("selecting users for bulk email: %w", err))
+			return nil, http.StatusInternalServerError
+		}
+
+		for rows.Next() {
+			var username, email string
+			err = rows.Scan(&username, &email)
+			if err != nil {
+				if err2 := rows.Close(); err2 != nil {
+					logError(r, &userID, fmt.Errorf("closing rows: %s; on scan error: %w", err2, err))
+					return nil, http.StatusInternalServerError
+				}
+				logError(r, &userID, fmt.Errorf("scanning users for bulk email: %w", err))
+				return nil, http.StatusInternalServerError
+			}
+			usernames = append(usernames, username)
+			emails = append(emails, email)
+		}
+
+		// leave HTML blank
+		err = sendEmailBcc(usernames, emails, emailSubject, emailBody, "")
+		if err != nil {
+			logError(r, &userID, fmt.Errorf("sending bulk email: %w", err))
+			return nil, http.StatusInternalServerError
+		}
+
+	} else {
+		// Send to one user
+
+		var username, email string
+		err = db.QueryRow(
+			`SELECT username, email FROM user_account WHERE id=$1`, *recipientUserID,
+		).Scan(&username, &email)
+		if err != nil {
+			logError(r, &userID, fmt.Errorf("selecting username and email: %w", err))
+			return nil, http.StatusInternalServerError
+		}
+
+		// leave HTML blank
+		err = sendEmail(username, email, emailSubject, emailBody, "", true)
+		if err != nil {
+			logError(r, &userID, fmt.Errorf("sending single email: %w", err))
+			return nil, http.StatusInternalServerError
+		}
+
+	}
+
+	return nil, http.StatusOK
+
 }

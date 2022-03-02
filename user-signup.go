@@ -223,6 +223,7 @@ func makeRequestSignupHandler(db *sql.DB) func(w http.ResponseWriter, r *http.Re
 					strings.ReplaceAll(html.EscapeString(message), "\n", "<br/>")+
 					"</td></tr>\n"+
 					"</table>\n",
+				false,
 			)
 			if err != nil {
 				executeTemplate(w, r,
@@ -246,6 +247,7 @@ func makeRequestSignupHandler(db *sql.DB) func(w http.ResponseWriter, r *http.Re
 					"</table>\n"+
 					"<br/>\n"+
 					"<p>You'll receive another email with an activation link after I approve your username.</p>\n",
+				false,
 			)
 			if err != nil {
 				executeTemplate(w, r,

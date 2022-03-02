@@ -6,7 +6,6 @@ require (
 	cloud.google.com/go/errorreporting v0.1.0
 	cloud.google.com/go/logging v1.2.0
 	cloud.google.com/go/secretmanager v1.0.0
-	cloud.google.com/go/storage v1.15.0
 	github.com/gorilla/mux v1.8.0
 	github.com/jackc/pgx/v4 v4.10.0
 	github.com/keighl/metabolize v0.0.0-20150915210303-97ab655d4034

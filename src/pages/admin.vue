@@ -13,6 +13,10 @@
 		<p v-else-if="error === 403">Unauthorized</p>
 		<p v-else-if="error">Error {{error}}</p>
 
+		<section v-if="!loading && !error" class="actions">
+			<el-button @click="openEmailAll()">Email all users</el-button>
+		</section>
+
 		<section v-if="signupRequests" class="signup-requests">
 			<h3>Signup requests</h3>
 			<div class="options">
@@ -24,7 +28,7 @@
 			<el-table
 				v-else-if="signupRequests.length"
 				:data="signupRequests"
-				:max-height=".80 * $store.state.windowHeight">
+				max-height="80vh">
 				<el-table-column fixed prop="id" label="ID" width="40"/>
 				<el-table-column fixed prop="username" label="Username" width="150"/>
 				<el-table-column prop="email" label="Email address" width="300"/>
@@ -58,7 +62,7 @@
 			<p v-else>No pending requests</p>
 		</section>
 
-		<section class="users">
+		<section v-if="users" class="users">
 			<h3>Users</h3>
 			<p v-if="loadingUsers">
 				<loading-message message="Loading..."/>
@@ -66,7 +70,7 @@
 			<el-table
 				v-else
 				:data="users"
-				:max-height=".80 * $store.state.windowHeight">
+				max-height="80vh">
 				<el-table-column fixed label="Username" width="190">
 					<template #default="scope">
 						<username :username="scope.row.username" :highlight="scope.row.highlight"/>
@@ -80,6 +84,9 @@
 				</el-table-column>
 				<el-table-column prop="specs" label="Spec count" width="100"/>
 				<el-table-column label="Actions" width="200">
+					<template #default="scope">
+						<el-button @click="openEmailUser(scope.row.id)">Email</el-button>
+					</template>
 				</el-table-column>
 			</el-table>
 		</section>
@@ -87,12 +94,13 @@
 	</div>
 
 	<el-dialog
-		v-if="reviewingSignupRequest"
+		v-model="showingReviewSignupRequest"
 		title="Review signup request"
 		:close-on-click-modal="!sendingSignupRequestReview"
-		:width="$store.getters.dialogTinyWidth">
+		:width="$store.getters.dialogTinyWidth"
+		@closed="reviewSignupRequestModalClosed()">
 
-		<table>
+		<table v-if="reviewingSignupRequest">
 			<tr>
 				<td>Request ID&emsp;</td>
 				<td>{{reviewingSignupRequest.id}}</td>
@@ -151,6 +159,68 @@
 
 	</el-dialog>
 
+	<el-dialog
+		v-model="showingSendEmailModal"
+		title="Send email"
+		:close-on-click-modal="false"
+		:close-on-press-escape="!sendingEmail"
+		:width="$store.getters.dialogSmallWidth"
+		@closed="sendEmailModalClosed()">
+
+		<label>
+			<div>User</div>
+			<el-select v-model="sendEmailUserId">
+				<el-option value="" label="All users"/>
+				<template v-if="users">
+					<el-option v-for="u in users"
+						:key="u.id"
+						:value="u.id"
+						:label="u.username + ' (' + u.email + ')'"/>
+				</template>
+			</el-select>
+		</label>
+
+		<label>
+			<div>Subject</div>
+			<el-input
+				type="text"
+				v-model="sendEmailSubject"
+				:readonly="sendingEmail"
+				/>
+		</label>
+
+		<label>
+			<div>Body</div>
+			<el-input
+				type="textarea"
+				v-model="sendEmailBody"
+				:autosize="{minRows: 2}"
+				:readonly="sendingEmail"
+				/>
+		</label>
+
+		<p v-if="sendingEmail">
+			<loading-message message="Sending..."/>
+		</p>
+
+		<template #footer>
+			<span class="dialog-footer">
+				<el-button
+					@click="cancelSendEmail()"
+					:disabled="sendingEmail">
+					Cancel
+				</el-button>
+				<el-button
+					type="primary"
+					@click="sendEmail()"
+					:disabled="disableSendEmail">
+					Send
+				</el-button>
+			</span>
+		</template>
+
+	</el-dialog>
+
 </div>
 </template>
 
@@ -158,7 +228,11 @@
 import Moment from '../widgets/moment.vue';
 import Username from '../widgets/username.vue';
 import LoadingMessage from '../widgets/loading.vue';
-import {idsEq, alertError} from '../utils.js';
+import {
+	idsEq,
+	alertError,
+	notifySuccess,
+} from '../utils.js';
 
 export default {
 	components: {
@@ -168,23 +242,34 @@ export default {
 	},
 	data() {
 		return {
-			loadingSignupRequests: true,
-			loadingUsers: true,
 			error: null,
+
+			loadingSignupRequests: true,
 			showAllSignupRequests: false,
 			signupRequests: null,
+
 			reviewingSignupRequest: null,
+			showingReviewSignupRequest: false,
 			signupRequestResponse: '',
 			sendingSignupRequestReview: false,
-			users: [],
+
+			loadingUsers: true,
+			users: null,
+
+			showingSendEmailModal: false,
+			sendEmailUserId: '',
+			sendEmailSubject: '',
+			sendEmailBody: '',
+			sendingEmail: false,
 		};
 	},
 	computed: {
 		loading() {
-			return this.loadingSignupRequests;
+			return this.loadingSignupRequests || this.loadingUsers;
 		},
-		unauthorized() {
-			return !(this.loading || this.error || this.signupRequests);
+		disableSendEmail() {
+			return !this.sendEmailSubject.trim() || !this.sendEmailBody.trim() ||
+				this.sendingEmail;
 		},
 	},
 	watch: {
@@ -231,13 +316,13 @@ export default {
 				alertError(jqXHR);
 			});
 		},
+
 		openReviewSignupRequest(request) {
-			this.signupRequestResponse = '';
 			this.reviewingSignupRequest = request;
+			this.showingReviewSignupRequest = true;
 		},
 		cancelReviewSignupRequest() {
-			this.reviewingSignupRequest = null;
-			this.signupRequestResponse = '';
+			this.showingReviewSignupRequest = false;
 		},
 		submitSignupRequestReview(approve) {
 			if (!this.reviewingSignupRequest) {
@@ -262,12 +347,47 @@ export default {
 						break;
 					}
 				}
-				this.reviewingSignupRequest = null;
-				this.signupRequestResponse = '';
+				this.showingReviewSignupRequest = false;
 			}).fail(jqXHR => {
 				this.sendingSignupRequestReview = false;
 				alertError(jqXHR);
 			});
+		},
+		reviewSignupRequestModalClosed() {
+			this.reviewingSignupRequest = null;
+			this.signupRequestResponse = '';
+		},
+
+		openEmailAll() {
+			this.sendEmailUserId = '';
+			this.showingSendEmailModal = true;
+		},
+		openEmailUser(userId) {
+			this.sendEmailUserId = userId;
+			this.showingSendEmailModal = true;
+		},
+		cancelSendEmail() {
+			this.showingSendEmailModal = false;
+		},
+		sendEmail() {
+			this.sendingEmail = true;
+			$.post('/ajax/admin/send-email', {
+				userId: this.sendEmailUserId,
+				subject: this.sendEmailSubject.trim(),
+				body: this.sendEmailBody.trim(),
+			}).then(() => {
+				this.sendingEmail = false;
+				this.showingSendEmailModal = false;
+				notifySuccess('Email sent');
+			}).fail(jqXHR => {
+				this.sendingEmail = false;
+				alertError(jqXHR);
+			});
+		},
+		sendEmailModalClosed() {
+			this.sendEmailUserId = '';
+			this.sendEmailSubject = '';
+			this.sendEmailBody = '';
 		},
 	},
 };
@@ -305,6 +425,21 @@ export default {
 
 	.el-textarea {
 		width: 100%;
+	}
+
+	.el-dialog__body {
+		>label {
+			display: block;
+			>div:first-child:not([class]) {
+				margin-bottom: 5px;
+			}
+			>.el-select {
+				width: 100%;
+			}
+		}
+		>*+* {
+			margin-top: 20px;
+		}
 	}
 }
 </style>

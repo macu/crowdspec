@@ -138,6 +138,7 @@ func makeRequestPasswordResetHandler(db *sql.DB) func(w http.ResponseWriter, r *
 				"Visit the following link to reset your password: "+url,
 				"<p>Visit the following link to reset your password: "+
 					`<a href="`+url+`">`+url+`</a></p>`,
+				false,
 			)
 			if err != nil {
 				executeTemplate(w, r,

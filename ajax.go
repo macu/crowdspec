@@ -85,6 +85,7 @@ var ajaxHandlersAuthRequired = map[string]map[string]AjaxRouteAuthRequired{
 
 		// admin
 		"/ajax/admin/review-signup": ajaxAdminSubmitSignupRequestReview,
+		"/ajax/admin/send-email":    ajaxAdminSendEmail,
 	},
 }
 
