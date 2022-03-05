@@ -10,11 +10,14 @@ import (
 
 const commentsPageSize = 5
 
+// TODO pass owner info so community modal can determine readability of private content
+
 type specCommunity struct {
 	Spec struct {
 		ID      int64     `json:"id"`
 		Created time.Time `json:"created"`
 		Updated time.Time `json:"updated"`
+		Public  bool      `json:"public"`
 		Name    string    `json:"name"`
 		Desc    *string   `json:"desc"`
 	} `json:"spec"`
@@ -32,9 +35,9 @@ type subspecCommunity struct {
 		ID      int64     `json:"id"`
 		Created time.Time `json:"created"`
 		Updated time.Time `json:"updated"`
+		Private bool      `json:"private"`
 		Name    string    `json:"name"`
 		Desc    *string   `json:"desc"`
-		Private bool      `json:"private"`
 	} `json:"subspec"`
 
 	Tags          []*Tag     `json:"tags,omitempty"`
@@ -98,21 +101,25 @@ type commentCommunity struct {
 
 // mirror structure of payload delivered to community-context-stack.vue
 type communityStackElement struct {
-	TargetType string `json:"targetType"`
-	Target     struct {
-		ID             int64   `json:"id"`
-		Name           string  `json:"name"` // spec or subspec
-		SubspecPrivate bool    `json:"private"`
-		BlockRefType   *string `json:"refType"`
-		BlockTitle     *string `json:"title"`
-		Body           *string `json:"body"` // block or comment
-		BlockRefItem   struct {
+	Type    string   `json:"type"`
+	Element struct { // comment, block, spec, or subspec
+		ID             int64    `json:"id"`
+		Name           string   `json:"name"`    // spec or subspec
+		SpecPublic     bool     `json:"public"`  // spec
+		SubspecPrivate bool     `json:"private"` // subspec
+		BlockRefType   *string  `json:"refType"` // block
+		BlockTitle     *string  `json:"title"`   // block
+		Body           *string  `json:"body"`    // block or comment
+		BlockRefItem   struct { // ref item of block elements
 			SubspecName    string  `json:"name"`
 			SubspecPrivate bool    `json:"private"`
 			URLTitle       *string `json:"title"`
 			URL            string  `json:"url"`
 		} `json:"refItem"`
-	} `json:"target"`
+		CommentUserID            uint    `json:"userId"`
+		CommentUsername          string  `json:"username"`
+		CommentUsernameHighlight *string `json:"highlight"`
+	} `json:"element"`
 
 	// Include for null value
 	OnAdjustUnread   *struct{} `json:"onAdjustUnread"`
@@ -188,11 +195,12 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *h
 		err = db.QueryRow(`
 			SELECT id, created_at,
 				GREATEST(updated_at, blocks_updated_at) AS last_updated,
-				spec_name, spec_desc
+				is_public, spec_name, spec_desc
 			FROM spec
 			WHERE id=$1`,
 			targetID,
-		).Scan(&sc.Spec.ID, &sc.Spec.Created, &sc.Spec.Updated, &sc.Spec.Name, &sc.Spec.Desc)
+		).Scan(&sc.Spec.ID, &sc.Spec.Created, &sc.Spec.Updated,
+			&sc.Spec.Public, &sc.Spec.Name, &sc.Spec.Desc)
 		if err != nil {
 			logError(r, userID, fmt.Errorf("reading spec: %w", err))
 			return nil, http.StatusInternalServerError
@@ -213,12 +221,12 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *h
 		err = db.QueryRow(`
 			SELECT id, created_at,
 				GREATEST(updated_at, blocks_updated_at) AS last_updated,
-				subspec_name, subspec_desc, is_private
+				is_private, subspec_name, subspec_desc
 			FROM spec_subspec
 			WHERE id=$1`,
 			targetID,
 		).Scan(&sc.Subspec.ID, &sc.Subspec.Created, &sc.Subspec.Updated,
-			&sc.Subspec.Name, &sc.Subspec.Desc, &sc.Subspec.Private)
+			&sc.Subspec.Private, &sc.Subspec.Name, &sc.Subspec.Desc)
 		if err != nil {
 			logError(r, userID, fmt.Errorf("reading subspec: %w", err))
 			return nil, http.StatusInternalServerError
@@ -356,6 +364,9 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *h
 		// TODO load policy
 
 		if AtoBool(r.FormValue("loadStack")) {
+			// stack of comments up to a spec item
+			// is requested only for comment communities
+
 			var targetType = cc.Comment.TargetType
 			var targetID = cc.Comment.TargetID
 
@@ -373,8 +384,12 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *h
 						WHERE cs.target_type = $2
 							AND cs.target_id = cc.id
 					)
-					SELECT cc.id, cc.comment_body
+					SELECT cc.id, cc.comment_body, cc.user_id, u.username,
+						u.user_settings::json#>>'{userProfile,highlightUsername}' AS highlight,
+						cc.target_type, cc.target_id
 					FROM spec_community_comment cc
+					INNER JOIN user_account AS u
+						ON u.id = cc.user_id
 					INNER JOIN comment_stack cs
 					ON cs.id = cc.id
 					ORDER BY cs.level ASC`,
@@ -386,8 +401,13 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *h
 				}
 
 				for rows.Next() {
-					var context = communityStackElement{TargetType: CommunityTargetComment}
-					err = rows.Scan(&context.Target.ID, &context.Target.Body)
+					var context = communityStackElement{Type: CommunityTargetComment}
+					var nextTargetType string
+					var nextTargetID int64
+					err = rows.Scan(&context.Element.ID, &context.Element.Body,
+						&context.Element.CommentUserID, &context.Element.CommentUsername,
+						&context.Element.CommentUsernameHighlight,
+						&nextTargetType, &nextTargetID)
 					if err != nil {
 						if err2 := rows.Close(); err2 != nil {
 							logError(r, userID, fmt.Errorf("closing rows: %s; on scanning stack: %w", err2, err))
@@ -397,17 +417,18 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *h
 						return nil, http.StatusInternalServerError
 					}
 					cc.Stack = append(cc.Stack, &context)
-					targetType = context.TargetType
-					targetID = context.Target.ID
+					targetType = nextTargetType
+					targetID = nextTargetID
 				}
 			}
 
 			if targetType == CommunityTargetSpec {
 
-				var context = communityStackElement{TargetType: CommunityTargetSpec}
+				var context = communityStackElement{Type: CommunityTargetSpec}
 				err = db.QueryRow(
-					`SELECT id, spec_name FROM spec WHERE id = $1`, targetID,
-				).Scan(&context.Target.ID, &context.Target.Name)
+					`SELECT id, spec_name, is_public
+					FROM spec WHERE id = $1`, targetID,
+				).Scan(&context.Element.ID, &context.Element.Name, &context.Element.SpecPublic)
 				if err != nil {
 					logError(r, userID, fmt.Errorf("scanning stack spec: %w", err))
 					return nil, http.StatusInternalServerError
@@ -416,11 +437,11 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *h
 
 			} else if targetType == CommunityTargetSubspec {
 
-				var context = communityStackElement{TargetType: CommunityTargetSubspec}
+				var context = communityStackElement{Type: CommunityTargetSubspec}
 				err = db.QueryRow(
 					`SELECT id, subspec_name, is_private
 					FROM spec_subspec WHERE id = $1`, targetID,
-				).Scan(&context.Target.ID, &context.Target.Name, &context.Target.SubspecPrivate)
+				).Scan(&context.Element.ID, &context.Element.Name, &context.Element.SubspecPrivate)
 				if err != nil {
 					logError(r, userID, fmt.Errorf("scanning stack subspec: %w", err))
 					return nil, http.StatusInternalServerError
@@ -430,7 +451,7 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *h
 			} else if targetType == CommunityTargetBlock {
 
 				var context = communityStackElement{
-					TargetType: CommunityTargetBlock,
+					Type: CommunityTargetBlock,
 				}
 				err = db.QueryRow(
 					`SELECT b.id, b.ref_type,
@@ -452,11 +473,11 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *h
 						AND ref_url.spec_id = b.spec_id
 					WHERE b.id = $1`,
 					targetID, BlockRefSubspec, BlockRefURL,
-				).Scan(&context.Target.ID,
-					&context.Target.BlockRefType, &context.Target.BlockTitle, &context.Target.Body,
-					&context.Target.BlockRefItem.SubspecName,
-					&context.Target.BlockRefItem.SubspecPrivate,
-					&context.Target.BlockRefItem.URLTitle, &context.Target.BlockRefItem.URL)
+				).Scan(&context.Element.ID,
+					&context.Element.BlockRefType, &context.Element.BlockTitle, &context.Element.Body,
+					&context.Element.BlockRefItem.SubspecName,
+					&context.Element.BlockRefItem.SubspecPrivate,
+					&context.Element.BlockRefItem.URLTitle, &context.Element.BlockRefItem.URL)
 				if err != nil {
 					logError(r, userID, fmt.Errorf("scanning stack subspec: %w", err))
 					return nil, http.StatusInternalServerError

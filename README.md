@@ -2,16 +2,26 @@
 
 © Matt Cudmore 2020
 
-## Set up Postgres
+## Mac setup
+
+A postgres password must be set before the app can connect.
+
+```
+$ brew install postgresql go node jq
+$ psql postgres
+postgres=# ALTER USER matt WITH PASSWORD 'somepassword';
+postgres=# \q
+$ cd crowdspec
+// Update crowdspec/env.json
+$ npm install
+$ sh init.sh
+```
+
+## Create Postgres database
 
 ```
 $ psql postgres
 postgres=# CREATE DATABASE crowdspec;
-postgres=# CREATE ROLE dev WITH LOGIN ENCRYPTED PASSWORD 'devpw2020';
-postgres=# GRANT ALL PRIVILEGES ON DATABASE crowdspec TO dev;
-postgres=# ALTER DEFAULT PRIVILEGES FOR USER dev IN SCHEMA public GRANT ALL ON TABLES TO dev;
-postgres=# ALTER DEFAULT PRIVILEGES FOR USER dev IN SCHEMA public GRANT ALL ON SEQUENCES TO dev;
-postgres=# SELECT table_catalog, table_schema, table_name, privilege_type FROM information_schema.table_privileges WHERE grantee = 'dev';
 ```
 
 ### Access database from command line

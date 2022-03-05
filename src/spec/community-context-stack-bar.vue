@@ -1,11 +1,12 @@
 <template>
-<div class="community-context-stack-bar" :class="targetType">
+<div class="community-context-stack-bar" :class="elementType">
 	<el-button size="small" type="primary" circle>
 		<i class="material-icons">north_west</i>
 	</el-button>
 	<span class="bar">
 		<span class="label">
-			{{label || '...'}}
+			<username v-if="showUsername" :username="element.username" :highlight="element.highlight"/>
+			<template v-else>{{label || '...'}}</template>
 		</span>
 		<span class="content" v-text="content || '...'"/>
 		<el-tag v-if="showPrivate" type="info" effect="dark" size="small">Private</el-tag>
@@ -14,6 +15,7 @@
 </template>
 
 <script>
+import Username from '../widgets/username.vue';
 import {
 	TARGET_TYPE_SPEC,
 	TARGET_TYPE_SUBSPEC,
@@ -27,52 +29,61 @@ import {
 } from '../utils.js';
 
 export default {
+	components: {
+		Username,
+	},
 	props: {
-		target: Object,
-		targetType: String,
+		element: Object,
+		elementType: String,
 	},
 	computed: {
+		showUsername() {
+			return this.elementType === TARGET_TYPE_COMMENT;
+		},
 		label() {
-			let label = ucFirst(this.targetType);
-			if (this.targetType === TARGET_TYPE_BLOCK) {
-				if (this.target.refType) {
+			let label = ucFirst(this.elementType);
+			if (this.elementType === TARGET_TYPE_BLOCK) {
+				if (this.element.refType) {
 					// Show "(URL)" or "(Subspec)", etc.
-					label += ' (' + ucFirst(this.target.refType) + ')';
+					label += ' (' + ucFirst(this.element.refType) + ')';
 				}
 			}
 			return label;
 		},
 		showPrivate() {
-			if (this.targetType === TARGET_TYPE_SUBSPEC) {
-				return this.target.private;
+			switch (this.elementType) {
+				case TARGET_TYPE_SPEC:
+					return !this.element.public;
+				case TARGET_TYPE_SUBSPEC:
+					return this.element.private;
 			}
 			return false;
 		},
 		content() {
-			switch (this.targetType) {
+			switch (this.elementType) {
 				case TARGET_TYPE_SPEC:
 				case TARGET_TYPE_SUBSPEC:
-					return this.target.name;
+					return this.element.name;
 				case TARGET_TYPE_BLOCK:
 					let content;
-					if (content = (this.target.title || '').trim()) {
+					if (content = (this.element.title || '').trim()) {
 						return content;
 					}
-					if (content = (this.target.body || '').trim()) {
+					if (content = (this.element.body || '').trim()) {
 						return content;
 					}
-					if (this.target.refItem) {
-						switch (this.target.refType) {
+					if (this.element.refItem) {
+						switch (this.element.refType) {
 							case REF_TYPE_SUBSPEC:
-								return this.target.refItem.name;
+								return this.element.refItem.name;
 							case REF_TYPE_URL:
-								return this.target.refItem.title || this.target.refItem.url;
+								return this.element.refItem.title || this.element.refItem.url;
 						}
 					}
 					return '';
 
 				case TARGET_TYPE_COMMENT:
-					return this.target.body;
+					return this.element.body;
 			}
 		},
 	},
