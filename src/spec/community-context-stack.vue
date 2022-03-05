@@ -1,12 +1,13 @@
 <template>
 <div class="community-context-stack" :class="{empty}">
 	<transition
-		v-for="(s, i) in stack"
-		:key="s.type + '-' + s.element.id"
+		v-for="(s, i) in readAccessStack"
+		:key="s.item.type + '-' + s.item.element.id"
 		name="fade" appear>
 		<stack-bar
-			:element="s.element"
-			:element-type="s.type"
+			:restricted="s.restricted"
+			:element="s.item.element"
+			:element-type="s.item.type"
 			@click="jumpStack(i)"
 			/>
 	</transition>
@@ -16,12 +17,20 @@
 <script>
 import StackBar from './community-context-stack-bar.vue';
 import {idsEq} from '../utils.js';
+import {
+	TARGET_TYPE_COMMENT,
+} from './const.js';
 
 export default {
-	emits: ['pop-stack'],
 	components: {
 		StackBar,
 	},
+	props: {
+		specPublic: Boolean,
+		subspecPrivate: Boolean, // may be null
+		userSpecWriteAccess: Boolean,
+	},
+	emits: ['pop-stack'],
 	data() {
 		return {
 			stack: [],
@@ -32,6 +41,29 @@ export default {
 	computed: {
 		available() {
 			return this.stack.length;
+		},
+		readAccessStack() {
+			let items = [];
+			let restricted = !this.userSpecWriteAccess && (
+				!this.specPublic ||
+				this.subspecPrivate === true // non-null
+			);
+			for (let i = 0; i < this.stack.length; i++) {
+				if (
+					restricted &&
+					this.$store.getters.loggedIn &&
+					this.stack[i].type === TARGET_TYPE_COMMENT &&
+					this.$store.getters.currentUserId === this.stack[i].element.userId
+				) {
+					// Allow accessing at and below your own comment
+					restricted = false;
+				}
+				items.push({
+					restricted,
+					item: this.stack[i],
+				});
+			}
+			return items;
 		},
 	},
 	methods: {
@@ -63,6 +95,9 @@ export default {
 			return null;
 		},
 		jumpStack(i) {
+			if (this.readAccessStack[i].restricted) {
+				return;
+			}
 			let items = this.stack.splice(i, this.stack.length - i); // remove items
 			let item = items[0];
 			this.$emit('pop-stack', item.type, item.element.id,

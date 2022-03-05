@@ -13,6 +13,10 @@ const commentsPageSize = 5
 // TODO pass owner info so community modal can determine readability of private content
 
 type specCommunity struct {
+	// context owner
+	OwnerType string `json:"ownerType"`
+	OwnerID   uint   `json:"ownerId"`
+
 	Spec struct {
 		ID      int64     `json:"id"`
 		Created time.Time `json:"created"`
@@ -31,6 +35,11 @@ type specCommunity struct {
 }
 
 type subspecCommunity struct {
+	// context owner
+	OwnerType  string `json:"ownerType"`
+	OwnerID    uint   `json:"ownerId"`
+	SpecPublic bool   `json:"specPublic"`
+
 	Subspec struct {
 		ID      int64     `json:"id"`
 		Created time.Time `json:"created"`
@@ -49,6 +58,12 @@ type subspecCommunity struct {
 }
 
 type blockCommunity struct {
+	// context owner
+	OwnerType      string `json:"ownerType"`
+	OwnerID        uint   `json:"ownerId"`
+	SpecPublic     bool   `json:"specPublic"`
+	SubspecPrivate *bool  `json:"subspecPrivate"`
+
 	Block struct {
 		ID          int64     `json:"id"`
 		Created     time.Time `json:"created"`
@@ -74,6 +89,12 @@ type blockCommunity struct {
 }
 
 type commentCommunity struct {
+	// context owner
+	OwnerType      string `json:"ownerType"`
+	OwnerID        uint   `json:"ownerId"`
+	SpecPublic     bool   `json:"specPublic"`
+	SubspecPrivate *bool  `json:"subspecPrivate"`
+
 	Comment struct {
 		ID         int64     `json:"id"`
 		Created    time.Time `json:"created"`
@@ -101,27 +122,30 @@ type commentCommunity struct {
 
 // mirror structure of payload delivered to community-context-stack.vue
 type communityStackElement struct {
-	Type    string   `json:"type"`
+	ElementType string `json:"type"`
+
 	Element struct { // comment, block, spec, or subspec
 		ID             int64    `json:"id"`
-		Name           string   `json:"name"`    // spec or subspec
-		SpecPublic     bool     `json:"public"`  // spec
-		SubspecPrivate bool     `json:"private"` // subspec
+		Name           *string  `json:"name"` // spec or subspec
+		SpecPublic     *bool    `json:"public"`
+		SubspecPrivate *bool    `json:"private"`
 		BlockRefType   *string  `json:"refType"` // block
 		BlockTitle     *string  `json:"title"`   // block
 		Body           *string  `json:"body"`    // block or comment
 		BlockRefItem   struct { // ref item of block elements
-			SubspecName    string  `json:"name"`
-			SubspecPrivate bool    `json:"private"`
-			URLTitle       *string `json:"title"`
-			URL            string  `json:"url"`
+			// ref subspec
+			SubspecName    *string `json:"name"`
+			SubspecPrivate *bool   `json:"private"`
+			// ref url
+			URLTitle *string `json:"title"`
+			URL      *string `json:"url"`
 		} `json:"refItem"`
-		CommentUserID            uint    `json:"userId"`
-		CommentUsername          string  `json:"username"`
+		CommentUserID            *uint   `json:"userId"`
+		CommentUsername          *string `json:"username"`
 		CommentUsernameHighlight *string `json:"highlight"`
 	} `json:"element"`
 
-	// Include for null value
+	// Include for null value client-side
 	OnAdjustUnread   *struct{} `json:"onAdjustUnread"`
 	OnAdjustComments *struct{} `json:"onAdjustComments"`
 }
@@ -193,14 +217,15 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *h
 		}
 
 		err = db.QueryRow(`
-			SELECT id, created_at,
-				GREATEST(updated_at, blocks_updated_at) AS last_updated,
-				is_public, spec_name, spec_desc
+			SELECT owner_type, owner_id, is_public,
+				id, created_at, spec_name, spec_desc,
+				GREATEST(updated_at, blocks_updated_at) AS last_updated
 			FROM spec
 			WHERE id=$1`,
 			targetID,
-		).Scan(&sc.Spec.ID, &sc.Spec.Created, &sc.Spec.Updated,
-			&sc.Spec.Public, &sc.Spec.Name, &sc.Spec.Desc)
+		).Scan(&sc.OwnerType, &sc.OwnerID, &sc.Spec.Public,
+			&sc.Spec.ID, &sc.Spec.Created, &sc.Spec.Name, &sc.Spec.Desc,
+			&sc.Spec.Updated)
 		if err != nil {
 			logError(r, userID, fmt.Errorf("reading spec: %w", err))
 			return nil, http.StatusInternalServerError
@@ -219,14 +244,16 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *h
 		}
 
 		err = db.QueryRow(`
-			SELECT id, created_at,
-				GREATEST(updated_at, blocks_updated_at) AS last_updated,
-				is_private, subspec_name, subspec_desc
+			SELECT spec.owner_type, spec.owner_id, spec.is_public, spec_subspec.is_private,
+			 	spec_subspec.id, spec_subspec.created_at, subspec_name, subspec_desc,
+				GREATEST(spec_subspec.updated_at, spec_subspec.blocks_updated_at) AS last_updated
 			FROM spec_subspec
-			WHERE id=$1`,
+			INNER JOIN spec ON spec.id = spec_subspec.spec_id
+			WHERE spec_subspec.id=$1`,
 			targetID,
-		).Scan(&sc.Subspec.ID, &sc.Subspec.Created, &sc.Subspec.Updated,
-			&sc.Subspec.Private, &sc.Subspec.Name, &sc.Subspec.Desc)
+		).Scan(&sc.OwnerType, &sc.OwnerID, &sc.SpecPublic, &sc.Subspec.Private,
+			&sc.Subspec.ID, &sc.Subspec.Created, &sc.Subspec.Name, &sc.Subspec.Desc,
+			&sc.Subspec.Updated)
 		if err != nil {
 			logError(r, userID, fmt.Errorf("reading subspec: %w", err))
 			return nil, http.StatusInternalServerError
@@ -259,7 +286,9 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *h
 			RenderTime:    time.Now(),
 		}
 
-		err = db.QueryRow(`SELECT id, created_at, updated_at,
+		err = db.QueryRow(`SELECT spec.owner_type, spec.owner_id,
+				spec.is_public, spec_subspec.is_private,
+				spec_block.id, spec_block.created_at, spec_block.updated_at,
 				style_type, content_type, ref_type, ref_id, block_title,
 				CASE WHEN content_type = 'plaintext' THEN block_body ELSE NULL END AS block_body,
 				CASE WHEN content_type = 'markdown' THEN rendered_html ELSE NULL END AS rendered_html,
@@ -279,12 +308,15 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *h
 							)
 							AND sibs.style_type = 'numbered'
 						ORDER BY sibs.order_number
-					), id)
+					), spec_block.id)
 					END) AS number
 			FROM spec_block
-			WHERE id=$1`,
+			INNER JOIN spec ON spec.id = spec_block.spec_id
+			LEFT JOIN spec_subspec ON spec_subspec.id = spec_block.subspec_id
+			WHERE spec_block.id=$1`,
 			targetID,
-		).Scan(&bc.Block.ID, &bc.Block.Created, &bc.Block.Updated,
+		).Scan(&bc.OwnerType, &bc.OwnerID, &bc.SpecPublic, &bc.SubspecPrivate,
+			&bc.Block.ID, &bc.Block.Created, &bc.Block.Updated,
 			&bc.Block.StyleType, &bc.Block.ContentType, &bc.Block.RefType, &bc.Block.RefID,
 			&bc.Block.Title, &bc.Block.Body, &bc.Block.HTML, &bc.Block.Number)
 		if err != nil {
@@ -343,16 +375,19 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *h
 		}
 
 		err = db.QueryRow(`
-			SELECT c.id, c.created_at, c.updated_at, c.user_id, u.username,
+			SELECT spec.owner_type, spec.owner_id, spec.is_public,
+				c.id, c.created_at, c.updated_at, c.user_id, u.username,
 				u.user_settings::json#>>'{userProfile,highlightUsername}' AS highlight,
 				c.target_type, c.target_id, c.comment_body,
 				`+userReadField+`
 			FROM spec_community_comment AS c
+			INNER JOIN spec ON spec.id = c.spec_id
 			INNER JOIN user_account AS u
 				ON u.id = c.user_id
 			WHERE c.id = `+argPlaceholder(targetID, &commentArgs),
 			commentArgs...,
-		).Scan(&cc.Comment.ID, &cc.Comment.Created, &cc.Comment.Updated,
+		).Scan(&cc.OwnerType, &cc.OwnerID, &cc.SpecPublic,
+			&cc.Comment.ID, &cc.Comment.Created, &cc.Comment.Updated,
 			&cc.Comment.UserID, &cc.Comment.Username, &cc.Comment.Highlight,
 			&cc.Comment.TargetType, &cc.Comment.TargetID, &cc.Comment.Body,
 			&cc.Comment.UserRead)
@@ -401,7 +436,7 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *h
 				}
 
 				for rows.Next() {
-					var context = communityStackElement{Type: CommunityTargetComment}
+					var context = communityStackElement{ElementType: CommunityTargetComment}
 					var nextTargetType string
 					var nextTargetID int64
 					err = rows.Scan(&context.Element.ID, &context.Element.Body,
@@ -424,7 +459,7 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *h
 
 			if targetType == CommunityTargetSpec {
 
-				var context = communityStackElement{Type: CommunityTargetSpec}
+				var context = communityStackElement{ElementType: CommunityTargetSpec}
 				err = db.QueryRow(
 					`SELECT id, spec_name, is_public
 					FROM spec WHERE id = $1`, targetID,
@@ -435,11 +470,13 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *h
 				}
 				cc.Stack = append(cc.Stack, &context)
 
+				// SpecPubic is already known
+
 			} else if targetType == CommunityTargetSubspec {
 
-				var context = communityStackElement{Type: CommunityTargetSubspec}
+				var context = communityStackElement{ElementType: CommunityTargetSubspec}
 				err = db.QueryRow(
-					`SELECT id, subspec_name, is_private
+					`SELECT spec_subspec.id, subspec_name, is_private
 					FROM spec_subspec WHERE id = $1`, targetID,
 				).Scan(&context.Element.ID, &context.Element.Name, &context.Element.SubspecPrivate)
 				if err != nil {
@@ -448,13 +485,17 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *h
 				}
 				cc.Stack = append(cc.Stack, &context)
 
+				// SpecPubic is already known
+				// Copy value of SubspecPrivate to outer context
+				cc.SubspecPrivate = context.Element.SubspecPrivate
+
 			} else if targetType == CommunityTargetBlock {
 
-				var context = communityStackElement{
-					Type: CommunityTargetBlock,
-				}
+				// SpecPubic is already known
+				var context = communityStackElement{ElementType: CommunityTargetBlock}
 				err = db.QueryRow(
-					`SELECT b.id, b.ref_type,
+					`SELECT spec_subspec.is_private,
+						b.id, b.ref_type,
 						-- only take first 100 characters for single-line stack
 						substr(b.block_title, 0, 100) AS block_title,
 						substr(b.block_body, 0, 100) AS block_body,
@@ -463,6 +504,7 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *h
 						ref_url.url_title AS url_title,
 						COALESCE(ref_url.url, '') AS url
 					FROM spec_block b
+					LEFT JOIN spec_subspec ON spec_subspec.id = b.subspec_id
 					LEFT JOIN spec_subspec AS ref_subspec
 						ON b.ref_type = $2
 						AND ref_subspec.id = b.ref_id
@@ -473,8 +515,9 @@ func ajaxSpecLoadCommunity(db *sql.DB, userID *uint, w http.ResponseWriter, r *h
 						AND ref_url.spec_id = b.spec_id
 					WHERE b.id = $1`,
 					targetID, BlockRefSubspec, BlockRefURL,
-				).Scan(&context.Element.ID,
-					&context.Element.BlockRefType, &context.Element.BlockTitle, &context.Element.Body,
+				).Scan(&cc.SubspecPrivate, // Set value of SubspecPrivate on outer context
+					&context.Element.ID, &context.Element.BlockRefType,
+					&context.Element.BlockTitle, &context.Element.Body,
 					&context.Element.BlockRefItem.SubspecName,
 					&context.Element.BlockRefItem.SubspecPrivate,
 					&context.Element.BlockRefItem.URLTitle, &context.Element.BlockRefItem.URL)

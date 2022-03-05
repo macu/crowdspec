@@ -1,11 +1,14 @@
 <template>
-<div class="community-context-stack-bar" :class="elementType">
+<div class="community-context-stack-bar" :class="{[elementType]: true, restricted}">
 	<el-button size="small" type="primary" circle>
 		<i class="material-icons">north_west</i>
 	</el-button>
 	<span class="bar">
 		<span class="label">
-			<username v-if="showUsername" :username="element.username" :highlight="element.highlight"/>
+			<username v-if="showUsername"
+				:username="element.username"
+				:highlight="element.highlight"
+				/>
 			<template v-else>{{label || '...'}}</template>
 		</span>
 		<span class="content" v-text="content || '...'"/>
@@ -33,6 +36,7 @@ export default {
 		Username,
 	},
 	props: {
+		restricted: Boolean,
 		element: Object,
 		elementType: String,
 	},
@@ -97,7 +101,25 @@ export default {
 	display: flex;
 	flex-direction: row;
 	align-items: center; // vertical align
-	margin: 5px 0;
+	margin: 5px;
+
+	&.restricted {
+		margin: 0;
+		border: 5px solid lightgray;
+		background-color: lightgray;
+		&:not(:first-child) {
+			border-top: none;
+		}
+		>.el-button {
+			visibility: hidden;
+		}
+	}
+
+	&:not(.restricted) {
+		>.bar {
+			cursor: pointer;
+		}
+	}
 
 	>.el-button {
 		padding: 5px;
@@ -111,9 +133,9 @@ export default {
 		flex-direction: row;
 		align-items: center;
 		font-size: 12px;
-		cursor: pointer;
 		border-radius: 8px;
 		overflow: hidden; // enables ellipsis
+		background-color: white;
 
 		>.label {
 			align-self: stretch;

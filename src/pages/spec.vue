@@ -100,7 +100,6 @@
 	<community-modal
 		ref="communityModal"
 		:spec-id="specId"
-		:enable-write="enableWriteComments"
 		@play-video="playVideo"
 		/>
 
@@ -162,9 +161,6 @@ export default {
 		enableEditing() {
 			// Currently users may edit only their own specs
 			return this.currentUserOwns;
-		},
-		enableWriteComments() {
-			return this.$store.getters.loggedIn;
 		},
 		choosingAddPosition() {
 			return this.$store.getters.currentlyMovingBlocks;

@@ -188,7 +188,6 @@
 	<community-modal
 		ref="communityModal"
 		:spec-id="specId"
-		:enable-write="$store.getters.loggedIn"
 		@play-video="playVideo"
 		@comment-updated="commentUpdated"
 		@comment-deleted="commentDeleted"

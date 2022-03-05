@@ -9,6 +9,9 @@
 
 	<context-stack
 		ref="contextStack"
+		:spec-public="specPublic"
+		:subspec-private="subspecPrivate"
+		:user-spec-write-access="userSpecWriteAccess"
 		@pop-stack="popStack"
 		/>
 
@@ -46,7 +49,7 @@
 			@update-unread="contextUpdateUnread"
 			/>
 
-		<div v-if="enableWrite" class="new-comment-area">
+		<div v-if="enableWriteComments" class="new-comment-area">
 			<p v-if="sendingComment">
 				<loading-message message="Posting comment..."/>
 			</p>
@@ -144,6 +147,7 @@ import {
 	TARGET_TYPE_SUBSPEC,
 	TARGET_TYPE_BLOCK,
 	TARGET_TYPE_COMMENT,
+	OWNER_TYPE_USER,
 } from './const.js';
 
 export default {
@@ -158,7 +162,6 @@ export default {
 	},
 	props: {
 		specId: Number,
-		enableWrite: Boolean,
 	},
 	emits: ['play-video', 'comment-updated', 'comment-deleted'],
 	data() {
@@ -166,24 +169,38 @@ export default {
 			showing: false,
 			loading: false, // loading community space
 			error: null,
+
+			ownerType: null,
+			ownerId: null,
+			specPublic: null,
+			subspecPrivate: null,
+
 			targetType: null,
 			target: null,
 			comments: [],
 			unreadCount: 0,
+
 			filterUnreadOnly: false,
 			commentsCount: 0,
 			hasMoreComments: false,
 			loadingPage: false, // loading more comments
+
 			addingComment: false, // during new comment composition
 			newCommentBody: '',
 			sendingComment: false, // during POST
+
 			onAdjustUnread: null,
 			onAdjustComments: null,
+
 			reloadingComments: false,
 		};
 	},
 	computed: {
 		loggedIn() {
+			return this.$store.getters.loggedIn;
+		},
+		enableWriteComments() {
+			// Can comment on any accessible community space
 			return this.$store.getters.loggedIn;
 		},
 		TARGET_TYPE_SPEC() {
@@ -224,6 +241,13 @@ export default {
 			// whether the unread-only filter is applicable and enabled
 			return this.$store.getters.loggedIn && this.filterUnreadOnly;
 		},
+		userSpecWriteAccess() {
+			// Only spec owners are currently allowed to edit
+			// Check if current user owns the spec
+			return this.$store.getters.loggedIn &&
+				this.ownerType && this.ownerType === OWNER_TYPE_USER &&
+				this.ownerId === this.$store.getters.currentUserId;
+		},
 	},
 	watch: {
 		addingComment(adding) {
@@ -260,17 +284,35 @@ export default {
 				switch (targetType) {
 					case TARGET_TYPE_SPEC:
 						this.target = response.spec;
+						if (loadStack) {
+							this.specPublic = response.spec.public;
+							this.subspecPrivate = null;
+						}
 						break;
 					case TARGET_TYPE_SUBSPEC:
 						this.target = response.subspec;
+						if (loadStack) {
+							this.specPublic = response.specPublic;
+							this.subspecPrivate = response.subspec.private;
+						}
 						break;
 					case TARGET_TYPE_BLOCK:
 						this.target = response.block;
+						if (loadStack) {
+							this.specPublic = response.specPublic;
+							this.subspecPrivate = response.subspecPrivate;
+						}
 						break;
 					case TARGET_TYPE_COMMENT:
 						this.target = response.comment;
+						if (loadStack) {
+							this.specPublic = response.specPublic;
+							this.subspecPrivate = response.subspecPrivate;
+						}
 						break;
 				}
+				this.ownerType = response.ownerType;
+				this.ownerId = response.ownerId;
 				if (loadStack && response.stack) {
 					this.$refs.contextStack.replaceStack(response.stack);
 				}
@@ -425,8 +467,8 @@ export default {
 		popStack(targetType, targetId, onAdjustUnread, onAdjustComments) {
 			// Cache current view in case of interaction handlers
 			this.$refs.contextStack.cacheItemHandlers({
-				targetType: this.targetType,
-				target: this.target,
+				type: this.targetType,
+				element: this.target,
 				onAdjustUnread: this.onAdjustUnread,
 				onAdjustComments: this.onAdjustComments,
 			});
