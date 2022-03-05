@@ -69,6 +69,19 @@ Update cron jobs:
 $ gcloud app deploy cron.yaml
 ```
 
+## Reindex postgres collations after version upgrade
+
+To refresh a collation, run in postgres:
+
+```
+reindex table user_account;
+reindex table user_signup_request;
+reindex table spec;
+reindex table spec_subspec;
+reindex table spec_url;
+ALTER COLLATION public.case_insensitive REFRESH VERSION;
+```
+
 ## Vacuum
 
 ```
