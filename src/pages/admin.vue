@@ -10,90 +10,98 @@
 		<p v-if="loading">
 			<loading-message message="Loading..."/>
 		</p>
-		<p v-else-if="error === 403">Unauthorized</p>
+		<el-alert v-else-if="error === 403 || !$store.getters.userIsAdmin"
+			type="info" show-icon :closable="false">
+			On this page an administrator can manage signup requests and user accounts.
+		</el-alert>
 		<p v-else-if="error">Error {{error}}</p>
 
-		<section v-if="!loading && !error" class="actions">
-			<el-button @click="openEmailAll()">Email all users</el-button>
-		</section>
+		<template v-else>
 
-		<section v-if="signupRequests" class="signup-requests">
-			<h3>Signup requests</h3>
-			<div class="options">
-				<el-checkbox v-model="showAllSignupRequests">Show all</el-checkbox>
-			</div>
-			<p v-if="loadingSignupRequests">
-				<loading-message message="Loading..."/>
-			</p>
-			<el-table
-				v-else-if="signupRequests.length"
-				:data="signupRequests"
-				max-height="80vh">
-				<el-table-column fixed prop="id" label="ID" width="40"/>
-				<el-table-column fixed prop="username" label="Username" width="150"/>
-				<el-table-column prop="email" label="Email address" width="300"/>
-				<el-table-column label="Created" width="200">
-					<template #default="scope">
-						<moment :datetime="scope.row.created" :offset="true"/>
-					</template>
-				</el-table-column>
-				<template v-if="showAllSignupRequests">
-					<el-table-column label="Status" width="120">
+			<section v-if="!loading && !error" class="actions">
+				<el-button @click="openEmailAll()">Email all users</el-button>
+			</section>
+
+			<section v-if="signupRequests" class="signup-requests">
+				<h3>Signup requests</h3>
+				<div class="options">
+					<el-checkbox v-model="showAllSignupRequests">Show all</el-checkbox>
+				</div>
+				<p v-if="loadingSignupRequests">
+					<loading-message message="Loading..."/>
+				</p>
+				<el-table
+					v-else-if="signupRequests.length"
+					:data="signupRequests"
+					max-height="80vh">
+					<el-table-column fixed prop="id" label="ID" width="40"/>
+					<el-table-column fixed prop="username" label="Username" width="150"/>
+					<el-table-column prop="email" label="Email address" width="300"/>
+					<el-table-column label="Created" width="200">
 						<template #default="scope">
-							<template v-if="scope.row.reviewed">
-								<el-tag v-if="scope.row.approved" type="success">Approved</el-tag>
-								<el-tag v-else type="warning">Denied</el-tag>
-							</template>
-							<el-tag v-else>Pending</el-tag>
+							<moment :datetime="scope.row.created" :offset="true"/>
 						</template>
 					</el-table-column>
-					<el-table-column prop="userId" label="User ID" width="120"/>
-				</template>
-				<el-table-column label="Actions" width="200">
-					<template #default="scope">
-						<el-button v-if="!scope.row.reviewed"
-							@click="openReviewSignupRequest(scope.row)">
-							Review
-						</el-button>
+					<template v-if="showAllSignupRequests">
+						<el-table-column label="Status" width="120">
+							<template #default="scope">
+								<template v-if="scope.row.reviewed">
+									<el-tag v-if="scope.row.approved" type="success">Approved</el-tag>
+									<el-tag v-else type="warning">Denied</el-tag>
+								</template>
+								<el-tag v-else>Pending</el-tag>
+							</template>
+						</el-table-column>
+						<el-table-column prop="userId" label="User ID" width="120"/>
 					</template>
-				</el-table-column>
-			</el-table>
-			<p v-else-if="showAllSignupRequests">No data</p>
-			<p v-else>No pending requests</p>
-		</section>
+					<el-table-column label="Actions" width="200">
+						<template #default="scope">
+							<el-button v-if="!scope.row.reviewed"
+								@click="openReviewSignupRequest(scope.row)">
+								Review
+							</el-button>
+						</template>
+					</el-table-column>
+				</el-table>
+				<p v-else-if="showAllSignupRequests">No data</p>
+				<p v-else>No pending requests</p>
+			</section>
 
-		<section v-if="users" class="users">
-			<h3>Users</h3>
-			<p v-if="loadingUsers">
-				<loading-message message="Loading..."/>
-			</p>
-			<el-table
-				v-else
-				:data="users"
-				max-height="80vh">
-				<el-table-column fixed label="Username" width="190">
-					<template #default="scope">
-						<username :username="scope.row.username" :highlight="scope.row.highlight"/>
-					</template>
-				</el-table-column>
-				<el-table-column prop="email" label="Email address" width="300"/>
-				<el-table-column label="Created" width="200">
-					<template #default="scope">
-						<moment :datetime="scope.row.created" :offset="true"/>
-					</template>
-				</el-table-column>
-				<el-table-column prop="specs" label="Spec count" width="100"/>
-				<el-table-column label="Actions" width="200">
-					<template #default="scope">
-						<el-button @click="openEmailUser(scope.row.id)">Email</el-button>
-					</template>
-				</el-table-column>
-			</el-table>
-		</section>
+			<section v-if="users" class="users">
+				<h3>Users</h3>
+				<p v-if="loadingUsers">
+					<loading-message message="Loading..."/>
+				</p>
+				<el-table
+					v-else
+					:data="users"
+					max-height="80vh">
+					<el-table-column fixed label="Username" width="190">
+						<template #default="scope">
+							<username :username="scope.row.username" :highlight="scope.row.highlight"/>
+						</template>
+					</el-table-column>
+					<el-table-column prop="email" label="Email address" width="300"/>
+					<el-table-column label="Created" width="200">
+						<template #default="scope">
+							<moment :datetime="scope.row.created" :offset="true"/>
+						</template>
+					</el-table-column>
+					<el-table-column prop="specs" label="Spec count" width="100"/>
+					<el-table-column label="Actions" width="200">
+						<template #default="scope">
+							<el-button @click="openEmailUser(scope.row.id)">Email</el-button>
+						</template>
+					</el-table-column>
+				</el-table>
+			</section>
+
+		</template>
 
 	</div>
 
 	<el-dialog
+		v-if="$store.getters.userIsAdmin"
 		v-model="showingReviewSignupRequest"
 		title="Review signup request"
 		:close-on-click-modal="!sendingSignupRequestReview"
@@ -160,6 +168,7 @@
 	</el-dialog>
 
 	<el-dialog
+		v-if="$store.getters.userIsAdmin"
 		v-model="showingSendEmailModal"
 		title="Send email"
 		:close-on-click-modal="false"
@@ -288,9 +297,9 @@ export default {
 	},
 	methods: {
 		loadAdmin() {
-			this.error = null;
 			this.loadSignupRequests();
 			this.loadUsers();
+			this.error = null;
 		},
 		loadSignupRequests() {
 			this.loadingSignupRequests = true;
@@ -301,8 +310,9 @@ export default {
 				this.signupRequests = requests;
 			}).fail(jqXHR => {
 				this.loadingSignupRequests = false;
+				this.signupRequests = [];
 				this.error = jqXHR.status;
-				alertError(jqXHR);
+				console.error(jqXHR);
 			});
 		},
 		loadUsers() {
@@ -312,8 +322,9 @@ export default {
 				this.users = users;
 			}).fail(jqXHR => {
 				this.loadingUsers = false;
+				this.users = [];
 				this.error = jqXHR.status;
-				alertError(jqXHR);
+				console.error(jqXHR);
 			});
 		},
 
@@ -416,7 +427,10 @@ export default {
 
 	>.content-page {
 		>section {
-			margin-bottom: 60px;
+			margin: 60px 0;
+			&:first-child {
+				margin-top: 0;
+			}
 			>.options {
 				margin-bottom: 40px;
 			}

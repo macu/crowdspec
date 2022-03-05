@@ -11,13 +11,12 @@
 			<loading-message message="Loading..."/>
 		</p>
 
-		<template v-else>
+		<template v-else-if="$store.getters.loggedIn">
 
 			<section>
 
-				<h3>Your specs</h3>
-
 				<template v-if="specs.length">
+					<h3>Your specs</h3>
 					<div v-for="s in specs" :key="s.id" class="spec review">
 						<div class="flex-row">
 							<div class="flex-row nowrap fill">
@@ -117,7 +116,7 @@
 
 				<h3>Your comments</h3>
 
-				<div class="flex-row wrap-reverse">
+				<div class="flex-row wrap-reverse comment-filters">
 					<div class="fill nowraptext count-message">
 						<template v-if="showUnreadOnly">
 							<template v-if="totalComments === 1">
@@ -183,19 +182,25 @@
 
 		</template>
 
+		<el-alert v-else type="info" show-icon :closable="false">On this page a logged in user can view community spaces associated with their specs and comments.</el-alert>
+
 	</div>
 
-	<community-modal
-		ref="communityModal"
-		:spec-id="specId"
-		@play-video="playVideo"
-		@comment-updated="commentUpdated"
-		@comment-deleted="commentDeleted"
-		/>
+	<template v-if="$store.getters.loggedIn">
 
-	<play-video-modal
-		ref="playVideoModal"
-		/>
+		<community-modal
+			ref="communityModal"
+			:spec-id="specId"
+			@play-video="playVideo"
+			@comment-updated="commentUpdated"
+			@comment-deleted="commentDeleted"
+			/>
+
+		<play-video-modal
+			ref="playVideoModal"
+			/>
+
+	</template>
 
 </section>
 </template>
@@ -289,6 +294,11 @@ export default {
 				this.hasMoreComments = payload.hasMoreComments;
 				this.loading = false;
 			}).fail(jqXHR => {
+				if (jqXHR.status === 403) {
+					// Show not logged in message
+					this.loading = false;
+					return;
+				}
 				this.$router.replace({
 					name: 'ajax-error',
 					params: {code: jqXHR.status},
@@ -490,13 +500,18 @@ export default {
 	} // header
 
 	section {
-		margin-bottom: 100px;
+		margin-bottom: 60px;
 		>h3 {
-			margin: 40px 0;
+			margin: 0 0 40px 0;
 			padding: 20px;
 			background-color: $section-highlight;
 		}
-		>div.flex-row {
+		>div.flex-row.comment-filters {
+			padding: 0 10px;
+			>* {
+				margin-top: 0;
+				margin-bottom: 10px;
+			}
 			>div.count-message {
 				>em {
 					color: gray;
