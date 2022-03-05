@@ -1,6 +1,9 @@
 <template>
 <div class="spec-preview community-target-preview">
-	<div class="name">{{spec.name}}</div>
+	<div class="name">
+		{{spec.name}}
+		<el-tag v-if="!spec.public" type="info" effect="dark">Private</el-tag>
+	</div>
 	<div v-if="spec.desc" class="desc">{{spec.desc}}</div>
 </div>
 </template>
@@ -25,6 +28,9 @@ export default {
 	>.name {
 		font-weight: bold;
 		font-size: larger;
+		>.el-tag {
+			margin-left: 10px;
+		}
 	}
 
 	>.desc {

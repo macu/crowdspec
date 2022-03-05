@@ -2,11 +2,11 @@
 <div class="community-context-stack" :class="{empty}">
 	<transition
 		v-for="(s, i) in stack"
-		:key="s.targetType + '-' + s.target.id"
+		:key="s.type + '-' + s.element.id"
 		name="fade" appear>
 		<stack-bar
-			:target="s.target"
-			:target-type="s.targetType"
+			:element="s.element"
+			:element-type="s.type"
 			@click="jumpStack(i)"
 			/>
 	</transition>
@@ -40,11 +40,11 @@ export default {
 			this.cachedContext = [];
 			this.checkEmpty();
 		},
-		pushStack(targetType, target, onAdjustUnread, onAdjustComments) {
+		pushStack(type, element, onAdjustUnread, onAdjustComments) {
 			this.empty = false;
 			this.stack.push({
-				targetType,
-				target,
+				type,
+				element,
 				onAdjustUnread,
 				onAdjustComments,
 			});
@@ -54,7 +54,7 @@ export default {
 			if (this.stack.length) {
 				let items = this.stack.splice(this.stack.length - 1, 1); // remove last item
 				let item = items[0];
-				this.$emit('pop-stack', item.targetType, item.target.id,
+				this.$emit('pop-stack', item.type, item.element.id,
 					item.onAdjustUnread, item.onAdjustComments);
 				this.cacheItemHandlers(item);
 				this.checkEmpty();
@@ -65,7 +65,7 @@ export default {
 		jumpStack(i) {
 			let items = this.stack.splice(i, this.stack.length - i); // remove items
 			let item = items[0];
-			this.$emit('pop-stack', item.targetType, item.target.id,
+			this.$emit('pop-stack', item.type, item.element.id,
 				item.onAdjustUnread, item.onAdjustComments);
 			for (var i = 0; i < items.length; i++) {
 				this.cacheItemHandlers(items[i]);
@@ -78,8 +78,8 @@ export default {
 			for (var i = 0; i < this.cachedContext.length; i++) {
 				let c = this.cachedContext[i];
 				if (
-					c.targetType === item.targetType &&
-					idsEq(c.target.id, item.target.id)
+					c.type === item.type &&
+					idsEq(c.element.id, item.element.id)
 				) {
 					this.cachedContext.splice(i, 1); // remove from array
 					break;
@@ -90,13 +90,13 @@ export default {
 				this.cachedContext.push(item);
 			}
 		},
-		retrieveCachedHandlers(targetType, targetId) {
+		retrieveCachedHandlers(type, elementId) {
 			// Attempt to restore handlers from cached context
 			for (var i = 0; i < this.cachedContext.length; i++) {
 				let c = this.cachedContext[i];
 				if (
-					c.targetType === targetType &&
-					idsEq(c.target.id, targetId)
+					c.type === type &&
+					idsEq(c.element.id, elementId)
 				) {
 					let items = this.cachedContext.splice(i, 1);
 					let cachedItem = items[0];
