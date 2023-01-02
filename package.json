@@ -9,7 +9,7 @@
         "@babel/core": "^7.17.0",
         "@babel/preset-env": "^7.16.11",
         "@vue/compiler-sfc": "^3.2.30",
-        "babel-loader": "^8.2.3",
+        "babel-loader": "^8.3.0",
         "css-loader": "^6.6.0",
         "mini-css-extract-plugin": "^2.5.3",
         "sass": "^1.49.8",
